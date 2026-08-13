@@ -19,6 +19,8 @@ Before implementation, confirm `spec.md`, `plan.md`, `research.md`,
 - oldest-first backlog without completion/cancel/reorder/sort;
 - unique A→B→A membership reuse;
 - inclusive recurrence, D+1 changes, same-day coalescing, and future exceptions;
+- generated recurring occurrences appended after existing dated tasks without
+  otherwise changing their order;
 - habit boundary miss plus open-day correction with both events retained;
 - future-day closure rejection and independently eligible nonchronological closure;
 - boundary-trimmed free-form goals with whitespace-only rejection, preserved
@@ -27,15 +29,15 @@ Before implementation, confirm `spec.md`, `plan.md`, `research.md`,
   ties-upward;
 - factual load without configurable capacity, automatic load/capacity/overload
   threshold, classification, or warning;
-- Day/Week/Month read-only History and no workout history;
+- Day/Week/Month read-only History, preserved selection/mode anchors,
+  short-month clamping, bounded permitted Dynamics, and no workout history;
 - browser-profile-local persistence boundary.
 
-The Open Design reconciliation is serialized. The 2026-08-10 attempt failed with
-`Transport closed`; see `design-reconciliation.md`. Do not start affected visual,
-component, browser-journey, or other UI work until a successful pull records
-source version/availability, resolves differences, and obtains approval. Do not
-report the failed gate as passed. Toolchain, pure-domain, contract, and non-visual
-adapter work may continue.
+The serialized Open Design reconciliation passed on 2026-08-11 after a successful
+fresh read-only pull and explicit product-owner approval. The exact sources,
+deviations, six decisions, and authority order are recorded in
+`design-reconciliation.md`; dependent UI work may proceed without expanding
+those decisions.
 
 The approved manual acceptance procedure is already recorded in
 `usability-protocol.md`. Execute it only against the production build.
@@ -90,7 +92,8 @@ build. Tools ignore generated `dist`, `coverage`, `playwright-report`, and
   and leaves frozen scores unchanged
 - Backlog oldest-first creation sequence and no reorder/sort/checkbox/cancel
 - Inclusive recurrence, D+1 rule change, same-day coalescing, exception and
-  user-deletion preservation, future unmodified row reconciliation
+  user-deletion preservation, future unmodified row reconciliation, and append
+  placement that leaves every existing dated-task position unchanged
 - Boundary habit miss idempotence, automatic-miss correction, both durable events,
   and closure freeze
 - Future-day closure rejection, eligible out-of-order closure, full disposition
@@ -99,8 +102,10 @@ build. Tools ignore generated `dist`, `coverage`, `playwright-report`, and
   exact ties-upward, and weekly aggregation from raw counts—not daily averages
 - Duration-only load and pre-disposition snapshot with no configurable capacity,
   automatic load/capacity/overload threshold, or overload classification
-- Day/Week/Month History selectors, plan-versus-actual explanations, and direct
-  retrieval of finalized weekly progress with contributing counts/rates
+- Day/Week/Month History selectors, mode-switch retention, short-month clamping,
+  fixed eight-week/six-month Dynamics points using only the approved metrics,
+  plan-versus-actual explanations, and direct retrieval of finalized weekly
+  progress with contributing counts/rates
 - No `partial` or `suppressed` task/habit product outcome
 
 Critical policy modules target 100% functions and at least 95% branches, lines,
@@ -115,7 +120,8 @@ threshold.
 - `createdSequence` backlog order with no position field
 - Check/uncheck and equal-timestamp task-event ordering
 - A→B→A unique membership and mixed open/closed deletion transaction
-- Recurrence idempotence, rule coalescing, exception/tombstone preservation
+- Recurrence idempotence, rule coalescing, exception/tombstone preservation, and
+  append placement after the current final dated-task position
 - Habit boundary/correction embedded events after reload
 - Future closure rejection, nonchronological eligibility, destination and pending
   guards, frozen day/week snapshots
@@ -123,24 +129,25 @@ threshold.
   window API
 - Revision/immutability conflicts, quota/abort mapping, and upgrade blocking
 
-### UI integration (after design gate)
+### UI integration
 
 - Completion checkbox, completed edit/delete, and move-disabled-until-unchecked
 - Backlog actions/order and absence of completion/cancel/reorder/sort/filter
 - Free-form goal boundary trimming, whitespace-only rejection, internal-content
   preservation, and no measurability/numeric progress
 - Transparent Daily Score/Weekly Progress counts/rates and factual load without
-  overload copy
-- Recurrence inclusive end and final D+1 messaging
+  overload copy; Daily Score threshold colors and neutral/accent Weekly Progress
+- Recurrence inclusive end, final D+1 messaging, and generated append placement
 - Habit catch-up and allowed correction
 - Close Day eligibility, four explicit dispositions, pending/future/same-date guards
 - Weekly progress display/finalization
-- History current-Month default, Day/Week/Month controls/steps, Month calendar and
-  selected-day details, weekly-progress display, applicable Dynamics,
-  read-only/no workout behavior
+- History current-Month default, Day/Week/Month controls/steps, preserved selected
+  date on mode switch, permanent short-month clamp, Month calendar/details,
+  weekly-progress display, no Day Dynamics, eight-week Week Dynamics, six-month
+  Month Dynamics, and read-only/no-workout behavior
 - Loading/empty/error/immutable states and dialog focus behavior
 
-### Real browser (after design gate)
+### Real browser
 
 Keep seven canonical story journeys: week planning; task execution/movement;
 recurrence; deliberate closure; habits/state/score/load; weekly review/completion;
@@ -218,12 +225,17 @@ closure moves/cancels tasks. It produces no capacity/overload label.
 1. Close all seven days, review raw task/habit counts/rates and derived weekly
    progress, add reflection, and complete the week.
 2. Verify goals/state never enter progress and the frozen breakdown is immutable.
-3. Open History: expect current Month/current-date anchor. Exercise exact
-   previous/next steps in Day, Week, and Month; inspect Month selected-day details
-   and Dynamics where the reconciled design applies.
-4. Navigate to a completed week and locate its finalized weekly progress plus
+3. Open History: expect current Month/current-date anchor. Switch Day/Week/Month
+   modes and verify the selected date is preserved and becomes the anchor; verify
+   Day, containing Monday–Sunday Week, and containing Month scales respectively.
+4. Navigate January 31 to February and verify selection clamps permanently to
+   February 28 or 29, with no hidden preferred day.
+5. Verify Day has no Dynamics, Week shows the last eight weeks, and Month shows
+   the last six months, using only task rate, habit rate, and the 70/30 score.
+6. Navigate to a completed week and locate its finalized weekly progress plus
    contributing task/habit counts and rates.
-5. Verify all facts are read-only and no workout layer/tab/data exists.
+7. Verify all facts are read-only and no workout layer/tab/data, state analytics,
+   correlations, generated insights, or other metric exists.
 
 ### Device-local boundary
 
@@ -254,15 +266,17 @@ classification, or proactive overload warning.
 - React imports no IndexedDB implementation; domain imports no React/DOM/router.
 - FSD imports point downward; no empty layers, generic repository, backend,
   auth/sync, global cache, workout, PWA, capacity, or speculative formula system.
-- One shared scoring/calculation policy serves the Daily Score and Weekly
-  Progress and rounds once.
+- One shared scoring/calculation policy serves the Daily Score, Weekly Progress,
+  and permitted Dynamics score points and rounds once.
 - Membership/date identity, open-only deletion reach, and event order are tested.
 - Habit expiry/correction is idempotent, clock-driven, and auditable.
 - Backlog has immutable creation order; goals are boundary-trimmed free-form text
   with whitespace-only rejection and otherwise preserved internal content.
-- History uses only Day/Week/Month mode queries and contains no workout/editing.
-- UI tokens/layout/voice follow reconciled design sources after the gate succeeds.
-- Daily Score/Weekly Progress labels use 70/30; state is context; planned load
+- History uses only bounded Day/Week/Month-derived queries, preserves/clamps the
+  selected date as approved, and contains no workout/editing.
+- UI tokens/layout/voice follow the reconciled authority order and approved sources.
+- Daily Score/Weekly Progress use 70/30; state is context; Daily Score uses the
+  approved thresholds while the Weekly aggregate remains accent/neutral; planned load
   has no configurable capacity, automatic load/capacity/overload threshold, or
   overload classification.
 - Weekly progress counts/rates are visible and freeze at completion.

@@ -3,12 +3,11 @@
 **Branch**: `001-personal-planning-loop` (feature identifier; no Git branch hook is configured)  
 **Date**: 2026-08-10  
 **Spec**: [spec.md](spec.md)  
-**Planning status**: Phase 0/1 non-visual design artifacts are reconciled with
-the clarified specification; the external visual design gate remains pending.
-The approved usability protocol is recorded in `usability-protocol.md`. A fresh
-Open Design read was attempted on 2026-08-10 and failed with `Transport closed`,
-so affected UI/component/browser work remains blocked by the serialized design
-gate; toolchain, pure-domain, contract, and non-visual adapter work may continue.
+**Planning status**: The full serialized Open Design pull succeeded and the
+product owner approved all six reconciliation decisions on 2026-08-11. The
+governing artifacts now encode those decisions; visual, component, and browser
+implementation may proceed. The approved usability protocol remains recorded in
+`usability-protocol.md`.
 
 **Input**: The approved feature specification, project constitution, repository-root `DESIGN.md`, approved ORBIT Open Design context, and the technical direction supplied with `$speckit-plan`.
 
@@ -32,11 +31,12 @@ The UI follows the approved Weekly Dashboard v2, Daily View v2, History, shared 
    simplicity, and change control.
 2. `spec.md` governs observable product behavior, data semantics, business rules,
    and acceptance criteria within those constitutional constraints.
-3. Approved Open Design prototypes and `DESIGN.md` govern visual and interaction
-   direction, responsive behavior, motion, and accessibility, subject to the
-   specification's product semantics.
-4. This plan and its Phase 0/1 artifacts govern implementation structure.
-5. `tasks.md` governs implementation sequence but must remain consistent with the
+3. `contracts/ui-routes.md` governs explicit UI/prototype overrides.
+4. `DESIGN.md` governs the canonical visual system.
+5. Approved Open Design prototypes are reference material only where they do not
+   conflict with those sources.
+6. This plan and its Phase 0/1 artifacts govern implementation structure.
+7. `tasks.md` governs implementation sequence but must remain consistent with the
    specification and this plan.
 
 If implementation exposes a significant conflict or missing behavior, stop the affected work and update the governing source instead of hiding a choice in code.
@@ -58,7 +58,8 @@ If implementation exposes a significant conflict or missing behavior, stop the a
 **Performance Goals**: No product latency or frame-rate SLO is specified.
 Objective gates use a reproducible 52-week seeded fixture, require indexed reads
 for the selected Day (one date), Week (one fixed Monday–Sunday period), or Month
-(one calendar month) without unbounded store scans, keep recurrence work
+(one calendar month) plus only the approved bounded Dynamics windows (eight
+weeks or six months) without unbounded store scans, keep recurrence work
 range-bounded, and prove no horizontal overflow or lost essential action at the
 approved widths. Motion is reviewed for reduced-motion/design conformance, not
 against an invented subjective jank threshold.
@@ -78,7 +79,7 @@ promise.
 | Principle | Result | Evidence |
 |---|---|---|
 | I. Explicit Product Decisions | PASS | `spec.md` defines fixed calendar weeks, the checkbox task lifecycle, Close-Day-only cancellation, one membership per occurrence/date, open-membership deletion scope, recurrence and habit correction, closure eligibility, free-form goals, weekly progress, History modes, and factual non-classified load. |
-| II. Design Guidance and UX Consistency | PENDING — affected UI blocked | `DESIGN.md` and Open Design remain visual/interaction sources subject to `spec.md`. The serialized read-only refresh failed with `Transport closed` and is recorded in `design-reconciliation.md`; no pass is claimed. Toolchain, pure-domain, contract, and non-visual adapter work may continue. |
+| II. Design Guidance and UX Consistency | PASS | The 2026-08-11 serialized pull and product-owner approval are recorded in `design-reconciliation.md`; `spec.md`, `ui-routes.md`, and `DESIGN.md` encode the approved semantics and visual treatments. |
 | III. Simplicity and Maintainability | PASS | One SPA, five needed FSD layers, one cohesive planning slice, one repository seam, no backend/global cache/ORM/event sourcing/empty layers. Every additional runtime dependency has a concrete current purpose. |
 | IV. Quality Gates | PASS for planning | Technical gates are selected: strict type checking, typed lint, formatting, unit/integration/browser testing, policy coverage, accessibility checks, and production build validation. The specification-approved one-participant procedure is recorded in `usability-protocol.md`; execution waits for the production build. |
 | V. Controlled Evolution | PASS | No product scope is added. Design/spec defects become source-artifact changes before affected implementation proceeds. |
@@ -88,16 +89,14 @@ promise.
 | Principle | Result | Phase 1 confirmation |
 |---|---|---|
 | I. Explicit Product Decisions | PASS | Contracts encode fixed week identity, reversible completion, movement/member reuse, mixed open/closed deletion reach, backlog restrictions, recurrence, habit correction, closure date eligibility, the Daily Score and Weekly Progress, and Day/Week/Month History without adding product policy. |
-| II. Design Guidance and UX Consistency | PENDING — affected UI blocked | `contracts/ui-routes.md` fixes known responsive, accessibility, closure, History, and reconciliation rules, but fresh source evidence is unavailable. The failed attempt is recorded; a successful serialized pull and approval of significant deviations remain mandatory. |
+| II. Design Guidance and UX Consistency | PASS | `contracts/ui-routes.md` records the approved responsive, accessibility, score, History, Dynamics, recurrence insertion, and prototype-override rules. |
 | III. Simplicity and Maintainability | PASS | Data model uses eight focused stores, normalized facts plus compact closure summaries, embedded habit outcome audit facts, bounded lazy recurrence, and one domain repository—no speculative backend or formula-version machinery. |
 | IV. Quality Gates | PASS for planning | `quickstart.md` defines scripts, test layers, responsive widths, the `verify` gate, and the approved external usability procedure. Manual execution remains a release activity, not a planning unknown. |
-| V. Controlled Evolution | PASS | All approved behavior was added to `spec.md` before Phase 1 artifacts were revised; known design conflicts remain explicitly blocked rather than silently implemented. |
+| V. Controlled Evolution | PASS | All approved behavior was added to `spec.md` before implementation resumed; every reconciled conflict has an explicit recorded disposition rather than a hidden code choice. |
 
-No constitutional exception is requested. Design-source freshness is a real
-serialized pre-UI gate and is not waived or silently passed. The usability
-protocol itself is approved and recorded; only its production-build execution
-remains. Neither statement authorizes affected visual implementation while the
-design gate is blocked.
+No constitutional exception is requested. The serialized pre-UI gate passed on
+2026-08-11 with explicit product-owner approval. The usability protocol itself
+is approved and recorded; only its production-build execution remains.
 
 ## Project Structure
 
@@ -493,7 +492,8 @@ requested open date range
   -> preserve past/current day, user-deleted tombstones, and future exceptions
   -> for repeated edits on D, retain only the final pending D + 1 version
   -> reconcile only unmodified dates from the rule version's next-date boundary
-  -> insert only missing unmodified occurrences
+  -> insert only missing unmodified occurrences at the next final position for
+     each date without changing existing order or applying an implicit sort
 ```
 
 Day closure repeats bounded materialization for correctness; UI loading is not the only trigger.
@@ -510,9 +510,14 @@ Day closure repeats bounded materialization for correctness; UI loading is not t
   cancellation, reorder, sort, or filter surface.
 - History first opens in Month mode for the current calendar month anchored to
   `currentLocalDate`. Day/Week/Month previous/next moves exactly one day, one
-  fixed Monday–Sunday week, or one calendar month. Month retains its calendar,
-  selected-day details, and applicable Dynamics; all History facts are read-only
-  and no workout layer, tab, or data is present.
+  fixed Monday–Sunday week, or one calendar month. Mode switching preserves
+  `selectedDate` and makes it the anchor. Month navigation clamps a missing day
+  number to the destination month's last day with no hidden preferred day.
+  Month retains its calendar and selected-day details. Day has no Dynamics;
+  Week shows the last eight weeks and Month the last six months using only task
+  rate, habit rate, and the 70/30 score. All History facts are read-only and no
+  workout layer, tab, data, state analytics, correlations, generated insights,
+  or invented metrics are present.
 - Before a History read, its page service prepares only open dates inside the
   derived mode range so lazy recurrence and habit-boundary catch-up are current;
   the History repository query itself remains read-only and closed dates are
@@ -536,13 +541,17 @@ Day closure repeats bounded materialization for correctness; UI loading is not t
 |---|---|
 | Prototype/DESIGN formula 50/30/20 | Specification formula 70/30; daily state is context only |
 | Fixed 360-minute capacity or automatic load/capacity/overload thresholds | Duration-derived planned load only; no configurable capacity, hidden load/capacity/overload threshold, automatic overload classification, or proactive warning |
-| DESIGN score color/status/presentation semantics | Settle them through the serialized Open Design reconciliation; the load/overload prohibition is not a general ban on score visual semantics |
+| DESIGN score color/status/presentation semantics | Daily Score uses `>=70` good, `50–69` neutral/warning, `<50` low; Weekly Progress keeps the primary aggregate accent/neutral and daily bars may use those thresholds; both show numeric percentage and task/habit counts or rates |
 | Workout Session/navigation/history | No workout route, storage, feature, navigation, or History layer/tab/data in MVP |
 | localStorage wording or implied sync | IndexedDB in one browser profile/device; no account or synchronization |
 | “Tomorrow” carry-forward shortcut/default | Explicit selected open date; no silent/default movement |
 | Any sub-44px or color-only prototype control | Constitution/spec/DESIGN accessibility requirements take precedence |
 
-The Open Design project previously verified for this feature is `Личная операционная система`, including Weekly Dashboard v2, Daily View v2, History, shared flow CSS/JS, Workout Session reference, and the root ORBIT design-system artifact. The serialized read-only attempt on 2026-08-10 returned `Transport closed`; `design-reconciliation.md` records the failure and does not claim a pass or source version. A successful fresh pull, version/availability record, conflict review, and approval of every significant deviation remain mandatory before affected UI/component/browser work. Until then, toolchain, pure-domain, contract, and non-visual adapter work may continue. Exact score color/status/presentation semantics, History mode-switch/short-month selection, and Dynamics presentation remain within this blocked design reconciliation and must not be invented in UI code.
+The linked Open Design project is `Личная операционная система`, including
+Weekly Dashboard v2, Daily View v2, History, shared flow CSS/JS, Workout Session
+reference, and the ORBIT design-system artifact. The full serialized read-only
+pull succeeded on 2026-08-11; `design-reconciliation.md` records identifiers,
+versions, conflicts, the six decisions, and explicit product-owner approval.
 
 ## Testing Strategy
 
@@ -635,10 +644,7 @@ journeys with manual touch, keyboard, status, motion, and viewport review.
 
 **Exit**: Current design sources and approvals are recorded, material conflicts
 have approved resolutions, and `usability-protocol.md` is approved. **Current
-status: partially met**—the protocol is approved/recorded, but the serialized
-design pull failed and is recorded in `design-reconciliation.md`. Until a fresh
-pull clears that gate, affected UI/component/browser work remains blocked;
-toolchain, pure-domain, contract, and non-visual adapter work may proceed.
+status: met on 2026-08-11.**
 
 ### Phase 1 — Toolchain and architectural skeleton
 
@@ -647,7 +653,9 @@ toolchain, pure-domain, contract, and non-visual adapter work may proceed.
 - Create only the FSD directories immediately needed. After the Phase 0 design gate,
   implement app initialization/loading/error shell and canonical tokens.
 
-**Exit**: The toolchain-only scaffold passes format, lint, typecheck, tests, and build. After the Phase 0 design gate clears, routing and the responsive shell also render in Russian at approved widths; that visual portion cannot satisfy exit while the gate is blocked.
+**Exit**: The toolchain-only scaffold passes format, lint, typecheck, tests, and
+build. The Phase 0 gate is clear; routing and the responsive shell can now be
+implemented in Russian at the approved widths.
 
 ### Phase 2 — Shared foundation only
 
@@ -746,13 +754,17 @@ mutation while future-plan changes leave completed-week facts unchanged.
 ### Phase 9 — User Story 7: Day/Week/Month History (P2)
 
 - Start with default current-date/Month state, exact Day/Week/Month period-step,
-  indexed period selector, Month calendar/selected-day, deterministic-order, and
-  historical-detail tests; do not add a filter/search/edit/workout contract.
+  selected-date-as-anchor mode switching, permanent short-month clamping,
+  indexed period selectors, Month calendar/selected-day, deterministic order,
+  and historical-detail tests; do not add a filter/search/edit/workout contract.
 - Implement deterministic event order and plan/disposition/outcome explanations using
   only the specification's user-visible vocabulary; `partial` is absent from types,
-  fixtures, labels, and views. Present weekly progress, Month selected-day details,
-  and Dynamics only as settled by the successful design reconciliation; internal
-  planning/reconciliation markers are never presented as outcomes.
+  fixtures, labels, and views. Present weekly progress and Month selected-day
+  details. Day has no Dynamics; Week uses the last eight weeks and Month the last
+  six months, with task completion rate, habit completion rate, and the shared
+  70/30 score only. Internal planning/reconciliation markers, workout/state
+  analytics, correlations, generated insights, and invented metrics are never
+  presented.
 
 **Exit**: Story 7 navigates and explains prior Day/Week/Month facts without
 unbounded store scans, editing immutable records, or exposing workout history.
@@ -800,7 +812,7 @@ complexity have recorded approvals/justifications.
 | Risk/decision | Impact | Mitigation/gate |
 |---|---|---|
 | Browser storage can be evicted or cleared | Device-local storage is not backup-grade durability | Follow the approved normal-profile/site-storage boundary, request persistence where supported, explain exclusions/locality, and never hide write failures |
-| Latest Open Design refresh attempt unavailable | The previously verified prototype may no longer be current | Failure is recorded in `design-reconciliation.md`; mandatory successful serialized read-only pull before affected UI code, with version/differences/approvals |
+| Open Design conflicts with approved product semantics | Prototype behavior could silently reverse current decisions | The 2026-08-11 source inventory and explicit approvals are recorded in `design-reconciliation.md`; authority remains spec → UI overrides → DESIGN → nonconflicting prototype reference |
 | Rule-version reconciliation is date-sensitive | An off-by-one or overwrite could change current-day facts or user exceptions | Derive `D + 1` from the injected clock, retain effective intervals/exception flags, reconcile only unmodified future occurrences, and table-test boundaries |
 | Browser suspension spans a local-date boundary | A pending applicable habit could remain stale after midnight | Run the same bounded idempotent expiry command on startup, visibility resume, affected-range preparation, and rollover; test catch-up without depending on a live timer |
 | Completion toggles or deletion rewrite facts | Earlier checkbox events or closed memberships could disappear | Append ordered toggle/deletion events; deletion scans all memberships, changes open ones only, and preserves frozen closed facts atomically |
@@ -810,7 +822,7 @@ complexity have recorded approvals/justifications.
 | Monday-first seven-day week | Calendar grouping must be consistent across routes and recurrence | Validate `weekStart` as Monday and derive Monday–Sunday dates with the shared local-date utility |
 | IndexedDB transaction lifetime | Unrelated async work can auto-close a transaction | Prepare external input first; only IDB requests/pure calculation inside; await `tx.done`; integration-test rollback |
 | Schema evolution | Migration could rewrite historical truth | Keep sequential schema migrations and never recompute or rewrite finalized snapshots |
-| Design details await fresh source | Score color/status/presentation semantics, History mode-switch/short-month selection, Dynamics visuals, and generated-recurring-task insertion position are not defined locally | Keep affected UI blocked; add no new metric/default, and resolve through the successful design reconciliation before implementation |
+| Approved design details drift during implementation | Score semantics, History navigation/Dynamics, or generated insertion could be expanded beyond approval | Implement only the six recorded decisions and re-check them during T105 conformance |
 | Multiple open tabs | Stale commands could conflict despite no sync feature | Same-transaction revisions/guards; reject/reload; no cross-tab synchronization machinery in MVP |
 | `BrowserRouter` on static hosting | Deep links fail without fallback | Require host rewrite to `index.html`, or explicitly revisit routing if the chosen host cannot support it |
 | FSD over-structuring | Empty slices and artificial dependencies slow the MVP | Start with five layers/one planning slice; add slices/layers only after concrete reuse/change boundaries |

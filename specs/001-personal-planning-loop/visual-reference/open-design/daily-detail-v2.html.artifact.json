@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "daily-detail-v2.html",
+  "entry": "daily-detail-v2.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-08-07T09:38:24.836Z",
+  "updatedAt": "2026-08-07T09:38:24.836Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}

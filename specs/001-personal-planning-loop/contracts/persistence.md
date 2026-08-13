@@ -106,7 +106,9 @@ For each mode/page-derived open date range:
    materialization emits no TaskEvent, so no orphan event remains. Re-materialize
    a new bundle later if a rule again applies. Do not persist or expose a
    `suppressed` task/habit outcome.
-5. Insert only missing applicable occurrences and assign creation sequences.
+5. Insert only missing applicable occurrences and assign creation sequences. A
+   generated recurring task takes the next final `dayPosition` for its date;
+   existing task positions remain unchanged and no implicit sort is applied.
 6. For a pending applicable habit where `date < currentLocalDate`, append one
    `date-boundary/not-completed` outcome event and update outcome idempotently.
 7. When the allowed correction command succeeds on an open day, append

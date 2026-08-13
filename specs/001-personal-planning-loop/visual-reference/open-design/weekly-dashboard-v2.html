@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#121318">
+  <title>ORBIT — Неделя</title>
+  <link rel="stylesheet" href="orbit-flow-v2.css">
+</head>
+<body data-page="weekly">
+  <div class="app-shell" data-od-id="weekly-dashboard-v2">
+    <aside class="rail" data-od-id="primary-navigation">
+      <a class="brand" href="index.html" aria-label="ORBIT — обзор концепта"><span class="brand-mark" aria-hidden="true"></span><span>Orbit</span></a>
+      <nav class="rail-nav" aria-label="Основная навигация">
+        <a class="rail-link" href="daily-detail-v2.html" data-od-id="nav-today">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12a2 2 0 0 1 2 2v14H4V6a2 2 0 0 1 2-2Z"/><path d="M8 2v4m8-4v4M4 9h16"/></svg><span>Сегодня</span>
+        </a>
+        <a class="rail-link active" href="weekly-dashboard-v2.html" data-od-id="nav-week">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h16v15H4zM8 2v6m8-6v6M4 10h16"/><path d="M8 14h2m4 0h2m-8 3h2"/></svg><span>Неделя</span>
+        </a>
+        <a class="rail-link" href="workout-session.html" data-od-id="nav-workouts">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 8v8m10-8v8M4 10v4m16-4v4M7 12h10M2 9v6m20-6v6"/></svg><span>Тренировки</span>
+        </a>
+        <a class="rail-link" href="history.html" data-od-id="nav-history">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.34-5.66L4 8.68"/><path d="M4 4v4.68h4.68M12 7v5l3 2"/></svg><span>История</span>
+        </a>
+      </nav>
+      <div class="rail-footer"><div class="sync-state" role="status" aria-live="polite"><i class="sync-dot"></i><span>Сохранено на устройстве</span></div></div>
+    </aside>
+
+    <main class="screen">
+      <header class="context-header" data-od-id="weekly-heading">
+        <div class="context-copy">
+          <p class="eyebrow">Неделя 21 · 2026</p>
+          <h1 class="context-title">18—24 мая</h1>
+          <p class="context-note">Главное на неделе — завершить прототип. Два незакрытых дела уже запланированы на сегодня.</p>
+        </div>
+        <div class="header-actions" aria-label="Управление неделей">
+          <button class="icon-button" type="button" aria-label="Предыдущая неделя" data-period-prev><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+          <button class="icon-button" type="button" aria-label="Следующая неделя" data-period-next><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+          <button class="quiet-action" type="button" data-finish-week>Итог недели</button>
+          <button class="primary-action" type="button" data-plan-week data-od-id="plan-week-action">Планировать неделю</button>
+        </div>
+      </header>
+
+      <section class="weekly-grid" aria-label="Прогресс и план недели">
+        <div>
+          <article class="card orbit-panel" data-od-id="weekly-orbit" aria-label="Результат текущей недели">
+            <canvas class="orbit-canvas" aria-hidden="true"></canvas>
+            <div class="motion-label" id="week-orbit-label">Итог · учитываются заполненные блоки</div>
+            <div class="orbit-core">
+              <div class="orbit-value" id="week-progress">—</div>
+              <div class="orbit-caption">результат недели</div>
+            </div>
+            <div class="motion-state"><span class="signal"></span><span id="week-gap">Состояние: <strong>не заполнено</strong></span></div>
+          </article>
+          <div class="week-summary" data-od-id="weekly-summary">
+            <div class="summary-stat summary-stat-progress">
+              <div class="summary-stat-head"><span>Задачи недели</span><strong id="week-task-percent">0%</strong></div>
+              <div class="summary-track" id="week-task-track" role="progressbar" aria-label="Выполнение задач недели" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="week-task-fill"></span></div>
+              <div class="summary-breakdown"><span><strong id="week-done">0</strong> выполнено</span><span><strong id="week-left">0</strong> осталось</span></div>
+              <small id="week-task-note">Добавьте первую задачу недели</small><span id="week-total" hidden>0</span>
+            </div>
+            <div class="summary-stat summary-stat-habits"><span>Привычки</span><strong><span id="week-habits">0</span> отметок</strong><small id="week-habit-note">Ритм складывается из дневных отметок</small></div>
+          </div>
+        </div>
+
+        <div class="weekly-side">
+          <article class="card" data-od-id="daily-trend-card">
+            <header class="card-head"><h2 class="card-title">Дни недели</h2><span class="card-meta">ср · сегодня</span></header>
+            <p class="card-description">Высота показывает общий результат дня. Нажмите, чтобы открыть детали.</p>
+            <div class="week-bars" role="list" aria-label="Результат по дням недели">
+              <a class="day-bar is-low" data-date="2026-05-18" href="history.html?day=18" style="--score:48" role="listitem" aria-label="Понедельник, 48 процентов"><span class="day-bar-score">48</span><span class="day-bar-track"><span class="day-bar-fill"></span></span><span class="day-bar-label">Пн</span></a>
+              <a class="day-bar is-warning" data-date="2026-05-19" href="history.html?day=19" style="--score:69" role="listitem" aria-label="Вторник, 69 процентов"><span class="day-bar-score">69</span><span class="day-bar-track"><span class="day-bar-fill"></span></span><span class="day-bar-label">Вт</span></a>
+              <a class="day-bar is-warning is-current" data-date="2026-05-20" href="daily-detail-v2.html" style="--score:58" role="listitem" aria-label="Среда, 58 процентов"><span class="day-bar-score" id="current-day-score">58</span><span class="day-bar-track"><span class="day-bar-fill"></span></span><span class="day-bar-label">Ср</span></a>
+              <a class="day-bar" data-date="2026-05-21" href="daily-detail-v2.html?date=2026-05-21" style="--score:0" role="listitem" aria-label="Четверг, ещё не начался"><span class="day-bar-score">—</span><span class="day-bar-track"><span class="day-bar-fill"></span></span><span class="day-bar-label">Чт</span></a>
+              <a class="day-bar" data-date="2026-05-22" href="daily-detail-v2.html?date=2026-05-22" style="--score:0" role="listitem" aria-label="Пятница, ещё не началась"><span class="day-bar-score">—</span><span class="day-bar-track"><span class="day-bar-fill"></span></span><span class="day-bar-label">Пт</span></a>
+              <a class="day-bar" data-date="2026-05-23" href="daily-detail-v2.html?date=2026-05-23" style="--score:0" role="listitem" aria-label="Суббота, ещё не началась"><span class="day-bar-score">—</span><span class="day-bar-track"><span class="day-bar-fill"></span></span><span class="day-bar-label">Сб</span></a>
+              <a class="day-bar" data-date="2026-05-24" href="daily-detail-v2.html?date=2026-05-24" style="--score:0" role="listitem" aria-label="Воскресенье, ещё не началось"><span class="day-bar-score">—</span><span class="day-bar-track"><span class="day-bar-fill"></span></span><span class="day-bar-label">Вс</span></a>
+            </div>
+          </article>
+
+          <article class="card" data-od-id="weekly-habits-card">
+            <header class="card-head"><h2 class="card-title">Привычки</h2><button class="card-link" type="button" data-add-habit>Добавить</button></header>
+            <div class="habit-list">
+              <div class="habit-line" data-habit-id="water"><strong>Вода после пробуждения</strong><div class="habit-days" aria-label="Выполнение по дням"><button class="habit-dot done" aria-label="Понедельник выполнено"></button><button class="habit-dot done" aria-label="Вторник выполнено"></button><button class="habit-dot done" aria-label="Среда выполнено"></button><button class="habit-dot" aria-label="Четверг"></button><button class="habit-dot" aria-label="Пятница"></button><button class="habit-dot" aria-label="Суббота"></button><button class="habit-dot" aria-label="Воскресенье"></button></div></div>
+              <div class="habit-line" data-habit-id="stretch"><strong>Утренняя разминка</strong><div class="habit-days" aria-label="Выполнение по дням"><button class="habit-dot done" aria-label="Понедельник выполнено"></button><button class="habit-dot" aria-label="Вторник"></button><button class="habit-dot done" aria-label="Среда выполнено"></button><button class="habit-dot" aria-label="Четверг"></button><button class="habit-dot" aria-label="Пятница"></button><button class="habit-dot" aria-label="Суббота"></button><button class="habit-dot" aria-label="Воскресенье"></button></div></div>
+              <div class="habit-line" data-habit-id="silence"><strong>Десять минут тишины</strong><div class="habit-days" aria-label="Выполнение по дням"><button class="habit-dot" aria-label="Понедельник"></button><button class="habit-dot done" aria-label="Вторник выполнено"></button><button class="habit-dot" aria-label="Среда"></button><button class="habit-dot" aria-label="Четверг"></button><button class="habit-dot" aria-label="Пятница"></button><button class="habit-dot" aria-label="Суббота"></button><button class="habit-dot" aria-label="Воскресенье"></button></div></div>
+              <div class="habit-line" data-habit-id="screen"><strong>Без экрана после 22:00</strong><div class="habit-days" aria-label="Выполнение по дням"><button class="habit-dot done" aria-label="Понедельник выполнено"></button><button class="habit-dot done" aria-label="Вторник выполнено"></button><button class="habit-dot" aria-label="Среда"></button><button class="habit-dot" aria-label="Четверг"></button><button class="habit-dot" aria-label="Пятница"></button><button class="habit-dot" aria-label="Суббота"></button><button class="habit-dot" aria-label="Воскресенье"></button></div></div>
+            </div>
+            <div class="card-foot"><span class="card-meta" id="habit-week-ratio">9 / 28 выполнено</span></div>
+          </article>
+        </div>
+
+        <article class="card history-tabs" data-od-id="weekly-goals-card">
+          <header class="card-head"><div><h2 class="card-title">Цели недели</h2><span class="toolbar-note">Конкретные результаты, а не список всех задач</span></div><button class="card-link" type="button" data-plan-week data-focus-goal>Добавить цель</button></header>
+          <div class="goal-list" id="week-goal-list">
+            <div class="goal-row"><span class="goal-name">Завершить прототип</span><div class="track"><span style="--progress:84%"></span></div><span class="goal-value">84%</span></div>
+            <div class="goal-row"><span class="goal-name">Три тренировки</span><div class="track"><span style="--progress:67%"></span></div><span class="goal-value">2 / 3</span></div>
+            <div class="goal-row"><span class="goal-name">Сон до 23:30</span><div class="track"><span style="--progress:60%"></span></div><span class="goal-value">3 / 5</span></div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Мобильная навигация">
+    <a href="daily-detail-v2.html">Сегодня</a><a class="active" href="weekly-dashboard-v2.html">Неделя</a><a href="workout-session.html">Тренировка</a><a href="history.html">История</a>
+  </nav>
+  <dialog class="sheet-dialog" id="week-plan-dialog" data-od-id="week-plan-dialog">
+    <div class="dialog-shell">
+      <header class="dialog-head"><div><p class="eyebrow">18—24 мая</p><h2>План недели</h2><p>Сначала задайте результаты недели, затем распределите конкретные задачи по дням.</p></div><button class="icon-button" type="button" data-close-week-plan aria-label="Закрыть"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>
+      <div class="dialog-body">
+        <form class="planner-section" id="week-goal-form"><div><h3>Цель недели</h3><p>Формулируйте как проверяемый результат.</p></div><label class="field"><span>Результат</span><input id="week-goal-title" required placeholder="Например, подготовить прототип к тестированию"></label><label class="field"><span>Критерий готовности</span><input id="week-goal-criterion" required placeholder="Например, пройдены 3 ключевых сценария"></label><button class="secondary-action" type="submit">Добавить цель</button></form>
+        <form class="planner-section" id="week-task-form"><div><h3>Задача на день</h3><p>Каждая задача получает конкретную дату внутри недели.</p></div><label class="field"><span>Название</span><input id="week-task-title" required placeholder="Что нужно сделать"></label><div class="field-grid"><label class="field"><span>Дата</span><input id="week-task-date" type="date" min="2026-05-18" max="2026-05-24" value="2026-05-21" required></label><label class="field"><span>Время</span><input id="week-task-time" type="time"></label></div><button class="secondary-action" type="submit">Добавить задачу</button></form>
+        <div class="planner-queue" id="planner-queue"><span class="field-helper">Добавленные задачи появятся в соответствующем дне.</span></div>
+      </div>
+      <footer class="dialog-actions"><button class="primary-action" type="button" data-close-week-plan>Готово</button></footer>
+    </div>
+  </dialog>
+
+  <dialog class="modal-dialog" id="week-summary-dialog" data-od-id="week-summary-dialog">
+    <form class="dialog-shell" id="week-summary-form" method="dialog"><header class="dialog-head"><div><p class="eyebrow">Итог недели</p><h2>Зафиксировать результат</h2><p>Незавершённые цели остаются в истории. Перенос в следующую неделю выполняется вручную.</p></div></header><div class="dialog-body"><div class="review-stats three"><div class="review-stat"><strong id="week-summary-tasks">0 / 0</strong><span>задачи</span></div><div class="review-stat"><strong id="week-summary-habits">0 / 0</strong><span>привычки</span></div><div class="review-stat"><strong id="week-state-days">0 / 7</strong><span>состояние заполнено</span></div></div><label class="field"><span>Что сработало</span><textarea id="week-win-field" placeholder="Коротко зафиксируйте удачные решения"></textarea></label><label class="field"><span>Что изменить на следующей неделе</span><textarea id="week-change-field" placeholder="Одна корректировка нагрузки или процесса"></textarea></label></div><footer class="dialog-actions"><button class="quiet-action" type="button" data-close-week-summary>Вернуться</button><button class="primary-action" type="submit">Сохранить итог</button></footer></form>
+  </dialog>
+
+  <dialog class="sheet-dialog" id="habit-dialog" data-od-id="weekly-habit-editor">
+    <form class="dialog-shell" id="habit-form" method="dialog"><header class="dialog-head"><div><p class="eyebrow" id="habit-dialog-mode">Новая привычка</p><h2 id="habit-dialog-title">Добавить в неделю</h2><p id="habit-dialog-note">Выберите ритм — ORBIT разложит привычку по нужным дням.</p></div><button class="icon-button" type="button" data-close-habit aria-label="Закрыть"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header><div class="dialog-body"><label class="field"><span>Название</span><input id="habit-name-field" required placeholder="Например, прогулка после обеда"></label><label class="field"><span>Расписание</span><select id="habit-frequency-field"><option>Каждый день</option><option>По будням</option><option>3 раза в неделю</option><option>Выбранные дни…</option></select></label><label class="field"><span>Когда напомнить</span><input id="habit-time-field" type="time"></label></div><footer class="dialog-actions"><button class="danger-action" type="button" data-archive-habit hidden>Удалить из плана</button><button class="quiet-action" type="button" data-close-habit>Отмена</button><button class="primary-action" id="habit-submit-button" type="submit">Добавить привычку</button></footer></form>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"><span id="toast-message">План недели обновлён</span></div>
+  <script src="orbit-flow-v2.js"></script>
+</body>
+</html>

@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#121318">
+  <title>ORBIT — История</title>
+  <link rel="stylesheet" href="orbit-flow-v2.css">
+  <style>
+    body[data-page="history"] .history-grid {
+      grid-template-columns: minmax(340px, .86fr) minmax(0, 1.14fr);
+      gap: var(--space-5);
+    }
+
+    body[data-page="history"] .calendar-card,
+    body[data-page="history"] [data-od-id="selected-day-review"],
+    body[data-page="history"] .history-tabs { overflow: hidden; }
+
+    body[data-page="history"] .calendar-card .card-head { align-items: flex-start; }
+    body[data-page="history"] .history-legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 12px; }
+    body[data-page="history"] .history-legend span { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; letter-spacing: .02em; }
+    body[data-page="history"] .history-legend i { width: 13px; height: 4px; border-radius: var(--radius-round); background: var(--border); }
+    body[data-page="history"] .history-legend .is-done { background: var(--success); }
+    body[data-page="history"] .history-legend .is-partial { background: var(--warn); }
+    body[data-page="history"] .history-legend .is-workout { background: var(--accent); }
+
+    body[data-page="history"] .calendar-day {
+      transition: background var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+    }
+    body[data-page="history"] .calendar-day:hover { background: color-mix(in oklch, var(--surface-raised) 78%, var(--fg)); color: var(--fg); }
+    body[data-page="history"] .calendar-day[aria-pressed="true"] { border-color: var(--fg); background: var(--bg); color: var(--fg); }
+    body[data-page="history"] .calendar-day:disabled { cursor: not-allowed; opacity: .42; }
+
+    body[data-page="history"] .day-review { padding: 24px; }
+    body[data-page="history"] .history-day-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+    body[data-page="history"] .review-date { margin: 0; font-family: var(--font-display); font-size: clamp(24px, 2.4vw, 34px); font-weight: var(--weight-announce); letter-spacing: -.02em; line-height: 1.08; }
+    body[data-page="history"] .history-status-chip { flex: 0 0 auto; padding: 6px 9px; border: 1px solid var(--border); border-radius: var(--radius-round); color: var(--muted); font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+    body[data-page="history"] .history-status-chip.is-done { border-color: color-mix(in oklch, var(--success) 58%, var(--border)); color: var(--success); }
+    body[data-page="history"] .history-status-chip.is-partial { border-color: color-mix(in oklch, var(--warn) 58%, var(--border)); color: var(--warn); }
+    body[data-page="history"] .review-result { max-width: 56ch; margin: 10px 0 22px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    body[data-page="history"] .day-review .review-stats { margin: 0 0 18px; }
+    body[data-page="history"] .day-review .review-list { border-top: 1px solid var(--border); }
+    body[data-page="history"] .day-review .review-item { min-height: 54px; padding: 12px 0; }
+    body[data-page="history"] .day-review .review-item:first-child { border-top: 0; }
+    body[data-page="history"] .day-review .review-item span { min-width: 0; overflow-wrap: anywhere; }
+    body[data-page="history"] .day-review .review-item.history-empty { grid-template-columns: 1fr; min-height: 160px; padding: 32px; place-items: center; border: 1px dashed var(--border); border-radius: var(--radius-field); color: var(--muted); text-align: center; }
+    body[data-page="history"] .day-review .review-item.history-empty i { display: none; }
+    body[data-page="history"] .day-review .review-item.history-empty span { max-width: 34ch; font-family: var(--font-display); font-size: 18px; font-weight: var(--weight-announce); }
+    body[data-page="history"] .day-review .review-item.history-empty small { margin-top: 7px; font-family: var(--font-body); font-size: 12px; font-weight: var(--weight-read); line-height: 1.5; }
+    body[data-page="history"] #review-open-plan { display: inline-flex; min-height: 44px; align-items: center; color: var(--fg); text-decoration: underline; text-decoration-color: var(--border); text-underline-offset: 4px; }
+
+    body[data-page="history"] .history-analytics-head { align-items: center; }
+    body[data-page="history"] .history-analytics-copy p { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+    body[data-page="history"] .history-analytics-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px 16px; }
+    body[data-page="history"] .segmented button { min-height: 44px; }
+    body[data-page="history"] .segment[aria-selected="true"] { color: var(--fg); }
+    body[data-page="history"] .history-panel { min-width: 0; }
+    body[data-page="history"] .history-panel:focus-visible { outline: 2px solid var(--fg); outline-offset: -4px; }
+    body[data-page="history"] .analytics-panel { padding: 22px; }
+    body[data-page="history"] .analytics-panel h3 { font-size: 18px; }
+    body[data-page="history"] .analytics-panel p { max-width: 58ch; line-height: 1.55; }
+    body[data-page="history"] .trend-bar { transition: opacity var(--motion-fast) var(--ease-standard); }
+    body[data-page="history"] .trend-bar:hover { opacity: 1; }
+    body[data-page="history"] .history-record button { min-height: 44px; transition: background var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard); }
+    body[data-page="history"] .history-record button:hover { background: var(--surface-raised); color: var(--fg); }
+
+    body[data-page="history"] .history-system-state { display: grid; min-height: 330px; padding: 42px 24px; place-items: center; text-align: center; }
+    body[data-page="history"] .history-system-state[hidden] { display: none; }
+    body[data-page="history"] .history-system-state > div { display: grid; max-width: 420px; justify-items: center; }
+    body[data-page="history"] .history-system-state h3 { margin: 18px 0 7px; font-family: var(--font-display); font-size: 24px; font-weight: var(--weight-announce); letter-spacing: -.01em; }
+    body[data-page="history"] .history-system-state p { max-width: 48ch; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    body[data-page="history"] .history-system-state .secondary-action { min-height: 44px; margin-top: 20px; }
+    body[data-page="history"] .history-state-mark { display: grid; width: 48px; height: 48px; place-items: center; border: 1px solid var(--border); border-radius: 50%; color: var(--muted); font-family: var(--font-mono); font-size: 13px; }
+    body[data-page="history"] .history-state-lines { display: grid; width: min(280px, 72vw); gap: 9px; }
+    body[data-page="history"] .history-state-lines i { display: block; height: 8px; border-radius: var(--radius-round); background: var(--surface-raised); }
+    body[data-page="history"] .history-state-lines i:nth-child(2) { width: 76%; }
+    body[data-page="history"] .history-state-lines i:nth-child(3) { width: 54%; }
+    body[data-page="history"] .history-tabs.has-system-state .history-panel,
+    body[data-page="history"] .history-tabs.has-system-state .history-analytics-head { display: none; }
+
+    body[data-page="history"] :is(.calendar-day, .period-switch button, .segment, .history-record button, #review-open-plan):focus-visible {
+      outline: 2px solid var(--fg);
+      outline-offset: 3px;
+    }
+
+    @media (max-width: 1050px) {
+      body[data-page="history"] .history-grid { grid-template-columns: 1fr; }
+      body[data-page="history"] .history-tabs { grid-column: auto; }
+    }
+
+    @media (max-width: 720px) {
+      body[data-page="history"] [data-od-id="selected-day-review"] { order: 1; }
+      body[data-page="history"] .calendar-card { order: 2; }
+      body[data-page="history"] .history-tabs { order: 3; }
+      body[data-page="history"] .day-review { padding: 20px; }
+      body[data-page="history"] .history-day-heading { align-items: flex-start; flex-direction: column; gap: 10px; }
+      body[data-page="history"] .history-legend { justify-content: flex-start; }
+      body[data-page="history"] .history-analytics-head { align-items: flex-start; }
+      body[data-page="history"] .history-analytics-tools { width: 100%; align-items: flex-start; flex-direction: column; }
+      body[data-page="history"] .segmented { width: 100%; }
+      body[data-page="history"] .segmented button { flex: 1; }
+      body[data-page="history"] .calendar-grid { gap: 3px; padding: 0 12px; }
+      body[data-page="history"] .calendar-weekdays { padding-inline: 12px; }
+      body[data-page="history"] .calendar-day { min-height: 50px; padding: 5px; border-radius: 9px; }
+    }
+  </style>
+</head>
+<body data-page="history">
+  <div class="app-shell" data-od-id="history-screen">
+    <aside class="rail" data-od-id="primary-navigation">
+      <a class="brand" href="index.html" aria-label="ORBIT — обзор концепта"><span class="brand-mark" aria-hidden="true"></span><span>Orbit</span></a>
+      <nav class="rail-nav" aria-label="Основная навигация">
+        <a class="rail-link" href="daily-detail-v2.html" data-od-id="nav-today"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12a2 2 0 0 1 2 2v14H4V6a2 2 0 0 1 2-2Z"/><path d="M8 2v4m8-4v4M4 9h16"/></svg><span>Сегодня</span></a>
+        <a class="rail-link" href="weekly-dashboard-v2.html" data-od-id="nav-week"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h16v15H4zM8 2v6m8-6v6M4 10h16"/><path d="M8 14h2m4 0h2m-8 3h2"/></svg><span>Неделя</span></a>
+        <a class="rail-link" href="workout-session.html" data-od-id="nav-workouts"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 8v8m10-8v8M4 10v4m16-4v4M7 12h10M2 9v6m20-6v6"/></svg><span>Тренировки</span></a>
+        <a class="rail-link active" href="history.html" data-od-id="nav-history" aria-current="page"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.34-5.66L4 8.68"/><path d="M4 4v4.68h4.68M12 7v5l3 2"/></svg><span>История</span></a>
+      </nav>
+      <div class="rail-footer"><div class="sync-state" role="status" aria-live="polite"><i class="sync-dot"></i><span>Обновлено сейчас</span></div></div>
+    </aside>
+
+    <main class="screen">
+      <header class="context-header" data-od-id="history-heading">
+        <div class="context-copy">
+          <p class="eyebrow">История и динамика</p>
+          <h1 class="context-title" id="history-period-title">Май 2026</h1>
+          <p class="context-note">Выберите день, чтобы сверить план с фактом. Переключайте слой истории — задачи, тренировки или общий ритм.</p>
+        </div>
+        <div class="header-actions">
+          <button class="icon-button" type="button" aria-label="Предыдущий период" data-history-prev><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+          <div class="period-switch" role="group" aria-label="Масштаб истории"><button type="button" data-history-scale="day" aria-pressed="false">День</button><button type="button" data-history-scale="week" aria-pressed="false">Неделя</button><button class="active" type="button" data-history-scale="month" aria-pressed="true">Месяц</button></div>
+          <button class="icon-button" type="button" aria-label="Следующий период" data-history-next><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+        </div>
+      </header>
+
+      <section class="history-grid" aria-label="Календарь и выбранный день">
+        <article class="card calendar-card" data-od-id="history-calendar">
+          <header class="card-head"><h2 class="card-title">Календарь</h2><div class="history-legend" aria-label="Обозначения календаря"><span><i class="is-done" aria-hidden="true"></i>Выполнено</span><span><i class="is-partial" aria-hidden="true"></i>Частично</span><span><i class="is-workout" aria-hidden="true"></i>Тренировка</span></div></header>
+          <div class="calendar-weekdays" aria-hidden="true"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
+          <div class="calendar-grid" aria-label="Май 2026">
+            <button class="calendar-day is-outside" type="button" data-day="27"><time>27</time></button><button class="calendar-day is-outside" type="button" data-day="28"><time>28</time></button><button class="calendar-day is-outside" type="button" data-day="29"><time>29</time></button><button class="calendar-day is-outside" type="button" data-day="30"><time>30</time></button>
+            <button class="calendar-day" type="button" data-day="1"><time>1</time><span class="day-signals"><i class="done"></i><i class="partial"></i></span></button><button class="calendar-day" type="button" data-day="2"><time>2</time><span class="day-signals"><i class="done"></i></span></button><button class="calendar-day" type="button" data-day="3"><time>3</time><span class="day-signals"><i class="partial"></i><i class="workout"></i></span></button>
+            <button class="calendar-day" type="button" data-day="4"><time>4</time><span class="day-signals"><i class="done"></i><i class="done"></i></span></button><button class="calendar-day" type="button" data-day="5"><time>5</time><span class="day-signals"><i class="partial"></i></span></button><button class="calendar-day" type="button" data-day="6"><time>6</time><span class="day-signals"><i class="done"></i></span></button><button class="calendar-day" type="button" data-day="7"><time>7</time><span class="day-signals"><i class="done"></i><i class="workout"></i></span></button><button class="calendar-day" type="button" data-day="8"><time>8</time><span class="day-signals"><i class="partial"></i></span></button><button class="calendar-day" type="button" data-day="9"><time>9</time><span class="day-signals"><i class="done"></i></span></button><button class="calendar-day" type="button" data-day="10"><time>10</time><span class="day-signals"><i class="done"></i></span></button>
+            <button class="calendar-day" type="button" data-day="11"><time>11</time><span class="day-signals"><i class="done"></i><i class="workout"></i></span></button><button class="calendar-day" type="button" data-day="12"><time>12</time><span class="day-signals"><i class="partial"></i></span></button><button class="calendar-day" type="button" data-day="13"><time>13</time><span class="day-signals"><i class="done"></i></span></button><button class="calendar-day" type="button" data-day="14"><time>14</time><span class="day-signals"><i class="done"></i><i class="workout"></i></span></button><button class="calendar-day" type="button" data-day="15"><time>15</time><span class="day-signals"><i class="partial"></i></span></button><button class="calendar-day" type="button" data-day="16"><time>16</time><span class="day-signals"><i class="done"></i></span></button><button class="calendar-day" type="button" data-day="17"><time>17</time><span class="day-signals"><i class="done"></i><i class="workout"></i></span></button>
+            <button class="calendar-day" type="button" data-day="18"><time>18</time><span class="day-signals"><i class="partial"></i></span></button><button class="calendar-day" type="button" data-day="19"><time>19</time><span class="day-signals"><i class="done"></i><i class="done"></i></span></button><button class="calendar-day selected" type="button" data-day="20"><time>20</time><span class="day-signals"><i class="partial"></i><i class="workout"></i></span></button><button class="calendar-day" type="button" data-day="21"><time>21</time></button><button class="calendar-day" type="button" data-day="22"><time>22</time></button><button class="calendar-day" type="button" data-day="23"><time>23</time></button><button class="calendar-day" type="button" data-day="24"><time>24</time></button>
+            <button class="calendar-day" type="button" data-day="25"><time>25</time></button><button class="calendar-day" type="button" data-day="26"><time>26</time></button><button class="calendar-day" type="button" data-day="27"><time>27</time></button><button class="calendar-day" type="button" data-day="28"><time>28</time></button><button class="calendar-day" type="button" data-day="29"><time>29</time></button><button class="calendar-day" type="button" data-day="30"><time>30</time></button><button class="calendar-day" type="button" data-day="31"><time>31</time></button>
+          </div>
+        </article>
+
+        <article class="card" data-od-id="selected-day-review">
+          <header class="card-head"><h2 class="card-title">Выбранный день</h2><a class="card-meta" id="review-open-plan" href="daily-detail-v2.html?date=2026-05-20">Открыть план →</a></header>
+          <div class="day-review">
+            <div class="history-day-heading"><p class="review-date" id="review-date">Среда, 20 мая</p><span class="history-status-chip is-partial" id="review-status-chip">Частично</span></div>
+            <p class="review-result" id="review-result" aria-live="polite">План выполнен частично · незавершённые задачи перенесены</p>
+            <div class="review-stats"><div class="review-stat"><strong id="review-tasks">3 / 5</strong><span>задачи</span></div><div class="review-stat"><strong id="review-habits">2 / 4</strong><span>привычки</span></div></div>
+            <div class="review-list" id="review-list">
+              <div class="review-item done"><i></i><span>Каркас стратегии на квартал<small>08:30 · завершено</small></span></div>
+              <div class="review-item done"><i></i><span>Ответить команде по блокерам<small>12:20 · завершено</small></span></div>
+              <div class="review-item"><i></i><span>Проверить сценарий первого запуска<small>Перенесено на 21 мая</small></span></div>
+              <div class="review-item done"><i></i><span>Силовая A<small>18:45 · 7 подходов</small></span></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card history-tabs" data-od-id="history-analytics">
+          <header class="card-head history-analytics-head">
+            <div class="history-analytics-copy"><h2 class="card-title">Динамика</h2><p>Сравнивайте только те слои, по которым уже накоплены данные.</p></div>
+            <div class="history-analytics-tools"><div class="segmented" role="tablist" aria-label="Раздел истории"><button class="segment active" id="history-tab-overview" type="button" data-history-tab="overview" role="tab" aria-controls="history-panel-overview" aria-selected="true" tabindex="0">Обзор</button><button class="segment" id="history-tab-tasks" type="button" data-history-tab="tasks" role="tab" aria-controls="history-panel-tasks" aria-selected="false" tabindex="-1">Задачи</button><button class="segment" id="history-tab-workouts" type="button" data-history-tab="workouts" role="tab" aria-controls="history-panel-workouts" aria-selected="false" tabindex="-1">Тренировки</button></div><span class="card-meta">последние 8 недель</span></div>
+          </header>
+
+          <section class="history-system-state" data-history-system-state="loading" data-od-id="history-loading-state" hidden role="status" aria-live="polite"><div><div class="history-state-lines" aria-hidden="true"><i></i><i></i><i></i></div><h3>Загружаем историю</h3><p>Собираем выполненные задачи, привычки и тренировки.</p></div></section>
+          <section class="history-system-state" data-history-system-state="empty" data-od-id="history-empty-state" hidden><div><span class="history-state-mark" aria-hidden="true">0</span><h3>История пока пуста</h3><p>Завершите первый день — здесь появятся факты и динамика без ручного ввода.</p><a class="secondary-action" href="daily-detail-v2.html">Перейти к сегодняшнему плану</a></div></section>
+          <section class="history-system-state" data-history-system-state="error" data-od-id="history-error-state" hidden role="alert"><div><span class="history-state-mark" aria-hidden="true">!</span><h3>Не удалось обновить историю</h3><p>Сохранённые записи остаются на месте. Попробуйте загрузить данные ещё раз.</p><button class="secondary-action" type="button" data-history-retry>Повторить</button></div></section>
+
+          <div class="history-panel active" id="history-panel-overview" data-history-panel="overview" role="tabpanel" aria-labelledby="history-tab-overview" aria-hidden="false" tabindex="0">
+            <div class="analytics-grid">
+              <section class="analytics-panel"><h3>Выполнение задач</h3><p>Доля завершённых задач от запланированных по неделям.</p><div class="trend-bars" role="img" aria-label="Выполнение задач менялось от 58 до 76 процентов"><div class="trend-bar" style="--bar:58%"><span>14н</span></div><div class="trend-bar" style="--bar:65%"><span>15н</span></div><div class="trend-bar" style="--bar:61%"><span>16н</span></div><div class="trend-bar" style="--bar:70%"><span>17н</span></div><div class="trend-bar" style="--bar:74%"><span>18н</span></div><div class="trend-bar" style="--bar:68%"><span>19н</span></div><div class="trend-bar" style="--bar:76%"><span>20н</span></div><div class="trend-bar" style="--bar:72%"><span>21н</span></div></div></section>
+              <section class="analytics-panel"><h3>Стабильность привычек</h3><p>Не общий балл, а доля дней, когда привычка была выполнена.</p><div class="goal-list" style="padding:12px 0 0"><div class="goal-row"><span class="goal-name">Подъём до 07:00</span><div class="track"><span style="--progress:78%"></span></div><span class="goal-value">78%</span></div><div class="goal-row"><span class="goal-name">Движение</span><div class="track"><span style="--progress:64%"></span></div><span class="goal-value">64%</span></div><div class="goal-row"><span class="goal-name">Без экрана</span><div class="track"><span style="--progress:51%"></span></div><span class="goal-value">51%</span></div></div></section>
+            </div>
+          </div>
+
+          <div class="history-panel" id="history-panel-tasks" data-history-panel="tasks" role="tabpanel" aria-labelledby="history-tab-tasks" aria-hidden="true" tabindex="0">
+            <div class="analytics-grid"><section class="analytics-panel"><h3>Завершено по сферам</h3><p>Работа 18 · личное 9 · здоровье 7.</p><div class="goal-list" style="padding:12px 0 0"><div class="goal-row"><span class="goal-name">Работа</span><div class="track"><span style="--progress:76%"></span></div><span class="goal-value">18 / 24</span></div><div class="goal-row"><span class="goal-name">Личное</span><div class="track"><span style="--progress:69%"></span></div><span class="goal-value">9 / 13</span></div><div class="goal-row"><span class="goal-name">Здоровье</span><div class="track"><span style="--progress:88%"></span></div><span class="goal-value">7 / 8</span></div></div></section><section class="analytics-panel"><h3>Переносы</h3><p>Показываем только паттерн, который можно изменить.</p><p class="progress-number" style="margin-top:24px">6 <small>задач перенесено дважды</small></p><p>Чаще всего перенос происходит после 16:00. Можно сократить вторую половину дня.</p></section></div>
+            <div class="history-records" aria-label="Последние задачи"><div class="history-record"><time>20 мая</time><span><strong>Каркас стратегии на квартал</strong><small>Работа · завершено в 10:04</small></span><button type="button" data-history-day="20">Открыть день</button></div><div class="history-record"><time>19 мая</time><span><strong>Интервью с пользователем</strong><small>Исследование · завершено</small></span><button type="button" data-history-day="19">Открыть день</button></div><div class="history-record"><time>18 мая</time><span><strong>Согласовать бюджет</strong><small>Работа · перенесено на 19 мая</small></span><button type="button" data-history-day="18">Открыть день</button></div></div>
+          </div>
+
+          <div class="history-panel" id="history-panel-workouts" data-history-panel="workouts" role="tabpanel" aria-labelledby="history-tab-workouts" aria-hidden="true" tabindex="0">
+            <div class="analytics-grid"><section class="analytics-panel"><h3>Динамика упражнения</h3><p>Рабочий вес и лучший подход.</p><label class="field" style="margin-top:14px"><span>Упражнение</span><select id="exercise-history-select"><option value="bench">Жим лёжа</option><option value="row">Тяга в наклоне</option><option value="squat">Присед</option></select></label><div class="trend-bars" id="exercise-trend" role="img" aria-label="Динамика рабочего веса"><div class="trend-bar" style="--bar:58%"><span>77,5</span></div><div class="trend-bar" style="--bar:64%"><span>80</span></div><div class="trend-bar" style="--bar:64%"><span>80</span></div><div class="trend-bar" style="--bar:72%"><span>82,5</span></div><div class="trend-bar" style="--bar:80%"><span>85</span></div><div class="trend-bar" style="--bar:80%"><span>85</span></div><div class="trend-bar" style="--bar:86%"><span>87,5</span></div><div class="trend-bar" style="--bar:86%"><span>87,5</span></div></div></section><section class="analytics-panel"><h3>Личные рекорды</h3><p>Последние изменения, а не полный журнал.</p><div class="review-list"><div class="review-item done"><i></i><span>Жим лёжа · 85 кг × 8<small>20 мая · рабочий подход</small></span></div><div class="review-item done"><i></i><span>Тяга в наклоне · 67,5 кг × 10<small>17 мая · рабочий подход</small></span></div><div class="review-item done"><i></i><span>Планка · 75 секунд<small>14 мая · длительность</small></span></div></div></section></div>
+            <div class="history-records"><div class="history-record"><time>20 мая</time><span><strong>Силовая A</strong><small>4 упражнения · 7 подходов</small></span><button type="button" data-open-workout-history data-workout-date="20 мая">Открыть</button></div><div class="history-record"><time>17 мая</time><span><strong>Силовая B</strong><small>5 упражнений · 12 подходов</small></span><button type="button" data-open-workout-history data-workout-date="17 мая">Открыть</button></div><div class="history-record"><time>14 мая</time><span><strong>Мобилизация</strong><small>25 минут · без веса</small></span><button type="button" data-open-workout-history data-workout-date="14 мая">Открыть</button></div></div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Мобильная навигация"><a href="daily-detail-v2.html">Сегодня</a><a href="weekly-dashboard-v2.html">Неделя</a><a href="workout-session.html">Тренировка</a><a class="active" href="history.html" aria-current="page">История</a></nav>
+
+  <dialog class="modal-dialog" id="workout-history-dialog" data-od-id="workout-history-detail" aria-labelledby="workout-history-title">
+    <div class="dialog-shell"><header class="dialog-head"><div><p class="eyebrow">Тренировка · <span id="workout-history-date">20 мая</span></p><h2 id="workout-history-title">Силовая A</h2><p>Сохранённые показатели и комментарии.</p></div><button class="icon-button" type="button" data-close-workout-history aria-label="Закрыть"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header><div class="dialog-body"><div class="review-stats"><div class="review-stat"><strong>7 / 7</strong><span>подходы</span></div><div class="review-stat"><strong>52 мин</strong><span>время</span></div></div><div class="review-list"><div class="review-item done"><i></i><span>Жим лёжа<small>85 × 8 · 85 × 8 · 82,5 × 9</small></span></div><div class="review-item done"><i></i><span>Тяга в наклоне<small>65 × 10 · 65 × 9 · 62,5 × 10</small></span></div><div class="review-item done"><i></i><span>Болгарские выпады<small>24 × 10 · 3 подхода</small></span></div></div></div><footer class="dialog-actions"><button class="secondary-action" type="button" data-copy-history-workout>Использовать как основу</button><button class="primary-action" type="button" data-close-workout-history>Готово</button></footer></div>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"><span id="toast-message">Тренировка добавлена в план на сегодня</span></div>
+  <script src="orbit-flow-v2.js"></script>
+  <script>
+    (() => {
+      const calendarDays = [...document.querySelectorAll('.calendar-day')];
+      const scaleButtons = [...document.querySelectorAll('[data-history-scale]')];
+      const historyTabs = [...document.querySelectorAll('[data-history-tab]')];
+      const historyPanels = [...document.querySelectorAll('[data-history-panel]')];
+      const reviewResult = document.querySelector('#review-result');
+      const reviewList = document.querySelector('#review-list');
+      const reviewStatus = document.querySelector('#review-status-chip');
+      const analytics = document.querySelector('.history-tabs');
+
+      const calendarLabel = (button) => {
+        const day = button.dataset.day;
+        if (button.classList.contains('is-outside')) return `${day} апреля, вне текущего месяца`;
+        const signals = [...new Set([...button.querySelectorAll('.day-signals i')].map((signal) => {
+          if (signal.classList.contains('done')) return 'выполнено';
+          if (signal.classList.contains('partial')) return 'частично';
+          if (signal.classList.contains('workout')) return 'тренировка';
+          return '';
+        }).filter(Boolean))];
+        const suffix = signals.length ? signals.join(', ') : Number(day) > 20 ? 'нет записей' : 'день сохранён';
+        const selected = button.classList.contains('selected') ? ', выбран' : '';
+        return `${day} мая: ${suffix}${selected}`;
+      };
+
+      const syncCalendar = () => {
+        calendarDays.forEach((button) => {
+          const outside = button.classList.contains('is-outside');
+          button.disabled = outside;
+          button.setAttribute('aria-pressed', String(button.classList.contains('selected')));
+          button.setAttribute('aria-label', calendarLabel(button));
+        });
+      };
+
+      const syncScale = () => scaleButtons.forEach((button) => {
+        button.setAttribute('aria-pressed', String(button.classList.contains('active')));
+      });
+
+      const syncHistoryTabs = () => {
+        historyTabs.forEach((tab) => {
+          const active = tab.classList.contains('active');
+          tab.setAttribute('aria-selected', String(active));
+          tab.tabIndex = active ? 0 : -1;
+        });
+        historyPanels.forEach((panel) => panel.setAttribute('aria-hidden', String(!panel.classList.contains('active'))));
+      };
+
+      const syncReviewState = () => {
+        const result = reviewResult.textContent.trim().toLowerCase();
+        reviewStatus.classList.remove('is-done', 'is-partial');
+        if (result.includes('частич') || result.includes('в процессе')) {
+          reviewStatus.textContent = result.includes('в процессе') ? 'В процессе' : 'Частично';
+          reviewStatus.classList.add('is-partial');
+        } else if (result.includes('не заполнен') || result.includes('ещё не') || result.includes('нет событий')) {
+          reviewStatus.textContent = 'Нет данных';
+        } else if (result.includes('выполнен') || result.includes('сохранён')) {
+          reviewStatus.textContent = 'Завершён';
+          reviewStatus.classList.add('is-done');
+        } else {
+          reviewStatus.textContent = 'Без статуса';
+        }
+
+        [...reviewList.querySelectorAll('.review-item')].forEach((item) => {
+          item.classList.toggle('history-empty', item.textContent.includes('Нет событий'));
+        });
+      };
+
+      const setHistoryState = (state = 'ready') => {
+        document.querySelectorAll('[data-history-system-state]').forEach((panel) => {
+          panel.hidden = panel.dataset.historySystemState !== state;
+        });
+        const hasSystemState = ['loading', 'empty', 'error'].includes(state);
+        analytics.classList.toggle('has-system-state', hasSystemState);
+        analytics.setAttribute('aria-busy', String(state === 'loading'));
+      };
+
+      calendarDays.forEach((button) => button.addEventListener('click', () => {
+        syncCalendar();
+        syncReviewState();
+      }));
+      scaleButtons.forEach((button) => button.addEventListener('click', syncScale));
+      historyTabs.forEach((tab, index) => {
+        tab.addEventListener('click', syncHistoryTabs);
+        tab.addEventListener('keydown', (event) => {
+          const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+          if (!keys.includes(event.key)) return;
+          event.preventDefault();
+          let nextIndex = index;
+          if (event.key === 'ArrowLeft') nextIndex = (index - 1 + historyTabs.length) % historyTabs.length;
+          if (event.key === 'ArrowRight') nextIndex = (index + 1) % historyTabs.length;
+          if (event.key === 'Home') nextIndex = 0;
+          if (event.key === 'End') nextIndex = historyTabs.length - 1;
+          historyTabs[nextIndex].focus();
+          historyTabs[nextIndex].click();
+        });
+      });
+
+      new MutationObserver(syncReviewState).observe(reviewResult, { childList: true, characterData: true, subtree: true });
+      new MutationObserver(syncReviewState).observe(reviewList, { childList: true, subtree: true });
+      window.addEventListener('orbit:history-state', (event) => setHistoryState(event.detail?.state));
+      document.querySelector('[data-history-retry]')?.addEventListener('click', () => window.location.reload());
+
+      syncCalendar();
+      syncScale();
+      syncHistoryTabs();
+      syncReviewState();
+      setHistoryState('ready');
+    })();
+  </script>
+</body>
+</html>

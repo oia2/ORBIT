@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#121318">
+  <title>ORBIT — Сегодня</title>
+  <link rel="stylesheet" href="orbit-flow-v2.css">
+</head>
+<body data-page="daily">
+  <div class="app-shell" data-od-id="daily-detail-v2">
+    <aside class="rail" data-od-id="primary-navigation">
+      <a class="brand" href="index.html" aria-label="ORBIT — обзор концепта"><span class="brand-mark" aria-hidden="true"></span><span>Orbit</span></a>
+      <nav class="rail-nav" aria-label="Основная навигация">
+        <a class="rail-link active" href="daily-detail-v2.html" data-od-id="nav-today"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12a2 2 0 0 1 2 2v14H4V6a2 2 0 0 1 2-2Z"/><path d="M8 2v4m8-4v4M4 9h16"/></svg><span>Сегодня</span></a>
+        <a class="rail-link" href="weekly-dashboard-v2.html" data-od-id="nav-week"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h16v15H4zM8 2v6m8-6v6M4 10h16"/><path d="M8 14h2m4 0h2m-8 3h2"/></svg><span>Неделя</span></a>
+        <a class="rail-link" href="workout-session.html" data-od-id="nav-workouts"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 8v8m10-8v8M4 10v4m16-4v4M7 12h10M2 9v6m20-6v6"/></svg><span>Тренировки</span></a>
+        <a class="rail-link" href="history.html" data-od-id="nav-history"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.34-5.66L4 8.68"/><path d="M4 4v4.68h4.68M12 7v5l3 2"/></svg><span>История</span></a>
+      </nav>
+      <div class="rail-footer"><div class="sync-state" role="status" aria-live="polite"><i class="sync-dot"></i><span>Сохранено на устройстве</span></div></div>
+    </aside>
+
+    <main class="screen">
+      <header class="context-header" data-od-id="daily-heading">
+        <div class="context-copy">
+          <p class="eyebrow" id="selected-day-label">Среда · 20 мая</p>
+          <h1 class="context-title" id="selected-day-title">Сегодня</h1>
+          <p class="context-note" id="selected-day-note">Свободное окно до 11:30. Сначала ключевая задача, затем короткие дела.</p>
+        </div>
+        <div class="header-actions" aria-label="Выбранный день и создание задачи">
+          <button class="icon-button" type="button" data-day-prev aria-label="Предыдущий день"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+          <button class="quiet-action date-context" type="button" data-day-today>20 мая</button>
+          <button class="icon-button" type="button" data-day-next aria-label="Следующий день"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+          <button class="primary-action" type="button" data-open-task data-mode="create" data-od-id="create-task">Новая задача</button>
+        </div>
+      </header>
+
+      <section class="daily-grid" aria-label="План дня">
+        <div class="daily-main">
+          <article class="card capacity-card" data-od-id="daily-capacity">
+            <header class="card-head"><div><h2 class="card-title">Ёмкость дня</h2><span class="toolbar-note" id="capacity-window">Рабочий ритм · 6 часов на задачи</span></div><strong class="capacity-ratio" id="capacity-ratio">4 ч 10 мин / 6 ч</strong></header>
+            <div class="capacity-body">
+              <div class="capacity-track" role="progressbar" aria-label="Плановая загрузка дня" aria-valuemin="0" aria-valuemax="360" aria-valuenow="250"><span id="capacity-fill"></span></div>
+              <div class="capacity-stats"><span><strong id="capacity-planned">4 ч 10 мин</strong>в задачах</span><span><strong id="capacity-reserve">1 ч 50 мин</strong>резерв</span><span><strong id="capacity-finish">18:40</strong>последнее дело</span></div>
+              <p class="capacity-note" id="capacity-note">План помещается в выбранный ритм. Резерв остаётся на переключения и незапланированное.</p>
+            </div>
+          </article>
+
+          <article class="card" data-od-id="daily-task-list">
+            <div class="task-toolbar">
+              <div><h2 class="card-title">Задачи</h2><span class="toolbar-note">Нажмите на задачу, чтобы изменить дату и детали</span></div>
+              <span class="task-count" id="task-count">2 выполнено · 3 осталось</span>
+            </div>
+
+            <div class="task-list" id="task-list">
+              <article class="task-item" data-task-id="strategy" data-kind="focus" data-title="Каркас стратегии на квартал" data-date="2026-05-20" data-time="08:30" data-duration="90" data-priority="Высокий" data-category="Работа" data-repeat="Не повторять" data-notes="Один документ, три решения. Без входящих.">
+                <label class="check-control"><input type="checkbox" checked aria-label="Каркас стратегии на квартал завершён"><span class="check-box"></span></label>
+                <button class="task-main" type="button" data-open-task data-mode="edit"><time class="task-time">08:30</time><span><span class="task-title">Каркас стратегии на квартал</span><span class="task-meta"><span>90 мин</span><span class="priority-high">Высокий приоритет</span><span>Работа</span></span></span></button>
+                <div class="task-actions"><button class="inline-action" type="button" data-edit-task aria-label="Редактировать задачу"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/></svg><span class="action-label">Изменить</span></button></div>
+              </article>
+
+              <article class="task-item" data-task-id="prototype" data-kind="focus" data-title="Проверить сценарий первого запуска" data-date="2026-05-20" data-time="10:15" data-duration="60" data-priority="Высокий" data-category="Дизайн" data-repeat="Не повторять" data-notes="Пройти путь без подсказок и отметить три точки трения.">
+                <label class="check-control"><input type="checkbox" aria-label="Проверить сценарий первого запуска"><span class="check-box"></span></label>
+                <button class="task-main" type="button" data-open-task data-mode="edit"><time class="task-time">10:15</time><span><span class="task-title">Проверить сценарий первого запуска</span><span class="task-meta"><span>60 мин</span><span class="priority-high">Высокий приоритет</span><span>Дизайн</span></span></span></button>
+                <div class="task-actions"><button class="inline-action" type="button" data-edit-task aria-label="Редактировать задачу"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/></svg><span class="action-label">Изменить</span></button></div>
+              </article>
+
+              <article class="task-item" data-task-id="reply" data-kind="quick" data-title="Ответить команде по блокерам" data-date="2026-05-20" data-time="12:20" data-duration="15" data-priority="Обычный" data-category="Работа" data-repeat="Не повторять" data-notes="Решение, владелец, следующий шаг.">
+                <label class="check-control"><input type="checkbox" checked aria-label="Ответить команде по блокерам завершено"><span class="check-box"></span></label>
+                <button class="task-main" type="button" data-open-task data-mode="edit"><time class="task-time">12:20</time><span><span class="task-title">Ответить команде по блокерам</span><span class="task-meta"><span>15 мин</span><span>Работа</span></span></span></button>
+                <div class="task-actions"><button class="inline-action" type="button" data-edit-task aria-label="Редактировать задачу"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/></svg><span class="action-label">Изменить</span></button></div>
+              </article>
+
+              <article class="task-item" data-task-id="research" data-kind="focus" data-title="Разобрать пять интервью" data-date="2026-05-20" data-time="15:00" data-duration="75" data-priority="Обычный" data-category="Исследование" data-repeat="Не повторять" data-notes="Свести повторяющиеся паттерны в карту наблюдений.">
+                <label class="check-control"><input type="checkbox" aria-label="Разобрать пять интервью"><span class="check-box"></span></label>
+                <button class="task-main" type="button" data-open-task data-mode="edit"><time class="task-time">15:00</time><span><span class="task-title">Разобрать пять интервью</span><span class="task-meta"><span>75 мин</span><span>Исследование</span></span></span></button>
+                <div class="task-actions"><button class="inline-action" type="button" data-edit-task aria-label="Редактировать задачу"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/></svg><span class="action-label">Изменить</span></button></div>
+              </article>
+
+              <article class="task-item" data-task-id="shutdown" data-kind="quick" data-title="Закрыть рабочий день" data-date="2026-05-20" data-time="18:30" data-duration="10" data-priority="Обычный" data-category="Личное" data-repeat="По будням" data-notes="Выгрузить мысли и выбрать первый шаг на завтра.">
+                <label class="check-control"><input type="checkbox" aria-label="Закрыть рабочий день"><span class="check-box"></span></label>
+                <button class="task-main" type="button" data-open-task data-mode="edit"><time class="task-time">18:30</time><span><span class="task-title">Закрыть рабочий день</span><span class="task-meta"><span>10 мин</span><span>По будням</span><span>Личное</span></span></span></button>
+                <div class="task-actions"><button class="inline-action" type="button" data-edit-task aria-label="Редактировать задачу"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/></svg><span class="action-label">Изменить</span></button></div>
+              </article>
+              <article class="task-item" data-task-id="brief" data-kind="focus" data-title="Согласовать бриф следующего этапа" data-date="2026-05-21" data-time="10:00" data-duration="45" data-priority="Высокий" data-category="Работа" data-repeat="Не повторять" data-notes="Зафиксировать объём и критерии готовности.">
+                <label class="check-control"><input type="checkbox" aria-label="Согласовать бриф следующего этапа"><span class="check-box"></span></label>
+                <button class="task-main" type="button" data-open-task data-mode="edit"><time class="task-time">10:00</time><span><span class="task-title">Согласовать бриф следующего этапа</span><span class="task-meta"><span>45 мин</span><span class="priority-high">Высокий приоритет</span><span>Работа</span></span></span></button>
+                <div class="task-actions"><button class="inline-action" type="button" data-edit-task aria-label="Редактировать задачу"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/></svg><span class="action-label">Изменить</span></button></div>
+              </article>
+              <article class="task-item" data-task-id="metrics" data-kind="quick" data-title="Собрать метрики недели" data-date="2026-05-21" data-time="16:00" data-duration="30" data-priority="Обычный" data-category="Работа" data-repeat="Каждую неделю" data-notes="Обновить статус целей и блокеры.">
+                <label class="check-control"><input type="checkbox" aria-label="Собрать метрики недели"><span class="check-box"></span></label>
+                <button class="task-main" type="button" data-open-task data-mode="edit"><time class="task-time">16:00</time><span><span class="task-title">Собрать метрики недели</span><span class="task-meta"><span>30 мин</span><span>Каждую неделю</span><span>Работа</span></span></span></button>
+                <div class="task-actions"><button class="inline-action" type="button" data-edit-task aria-label="Редактировать задачу"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/></svg><span class="action-label">Изменить</span></button></div>
+              </article>
+              <div class="empty-state" id="task-empty" hidden><strong>На этот день задач нет</strong><p>Создайте задачу — выбранная дата уже будет подставлена в форму.</p><button class="secondary-action" type="button" data-open-task data-mode="create">Новая задача</button></div>
+            </div>
+          </article>
+
+          <article class="card day-event" data-od-id="optional-workout">
+            <div><p class="eyebrow">События дня</p><h2 class="card-title" id="workout-status-title">Тренировка не запланирована</h2><p id="workout-status-note">Она не влияет на план дня, пока вы сами не добавите её в расписание.</p></div>
+            <button class="secondary-action" type="button" data-schedule-workout>Запланировать</button>
+          </article>
+        </div>
+
+        <aside class="daily-side">
+          <article class="card orbit-panel compact day-orbit" data-od-id="daily-orbit" aria-label="Промежуточный результат дня">
+            <canvas class="orbit-canvas" aria-hidden="true"></canvas>
+            <div class="motion-label" id="day-orbit-label">Сегодня · учитываются задачи и привычки</div>
+            <div class="orbit-core"><div class="orbit-value" id="day-score">—</div><div class="orbit-caption"><span class="score-status" id="day-status">в процессе</span></div></div>
+            <div class="motion-state"><span class="signal"></span><span id="day-next">Следом: <strong>прототип</strong></span></div>
+          </article>
+
+          <article class="card" data-od-id="today-habits">
+            <header class="card-head"><h2 class="card-title">Привычки сегодня</h2><button class="card-link" type="button" data-add-habit>Добавить</button></header>
+            <div class="habit-list">
+              <button class="habit-toggle done" type="button" data-habit-id="water"><strong>Вода после пробуждения</strong><span aria-hidden="true"></span></button>
+              <button class="habit-toggle done" type="button" data-habit-id="stretch"><strong>Утренняя разминка</strong><span aria-hidden="true"></span></button>
+              <button class="habit-toggle" type="button" data-habit-id="silence"><strong>Десять минут тишины</strong><span aria-hidden="true"></span></button>
+              <button class="habit-toggle" type="button" data-habit-id="screen"><strong>Без экрана после 22:00</strong><span aria-hidden="true"></span></button>
+            </div>
+            <div class="card-foot"><span class="card-meta" id="habit-count">2 / 4 выполнено</span></div>
+          </article>
+
+          <article class="card" data-od-id="daily-state">
+            <header class="card-head"><h2 class="card-title">Состояние</h2><span class="card-meta" id="state-status">не заполнено</span></header>
+            <div class="state-form">
+              <div class="state-row"><span>Энергия</span><div class="state-scale" role="group" aria-label="Энергия от одного до пяти"><button type="button" data-energy="1">1</button><button type="button" data-energy="2">2</button><button type="button" data-energy="3">3</button><button type="button" data-energy="4">4</button><button type="button" data-energy="5">5</button></div></div>
+              <div class="state-row"><span>Настрой</span><div class="state-scale mood-scale" role="group" aria-label="Настрой"><button type="button" data-mood="Сложно">Сложно</button><button type="button" data-mood="Ровно">Ровно</button><button type="button" data-mood="Хорошо">Хорошо</button></div></div>
+              <label class="state-row"><span>Сон</span><span class="state-input"><input id="sleep-hours" type="number" min="0" max="14" step="0.25" placeholder="7,5"><small>часов</small></span></label>
+              <button class="primary-action" type="button" data-finish-day>Подвести итог дня</button>
+            </div>
+          </article>
+        </aside>
+      </section>
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Мобильная навигация"><a class="active" href="daily-detail-v2.html">Сегодня</a><a href="weekly-dashboard-v2.html">Неделя</a><a href="workout-session.html">Тренировка</a><a href="history.html">История</a></nav>
+
+  <dialog class="sheet-dialog" id="task-dialog" data-od-id="task-editor">
+    <form class="dialog-shell" id="task-form" method="dialog">
+      <header class="dialog-head">
+        <div><p class="eyebrow" id="task-dialog-mode">Новая задача</p><h2 id="task-dialog-title">Что нужно сделать?</h2><p>Обязательно только название. Остальное помогает поставить задачу в день.</p></div>
+        <button class="icon-button" type="button" data-close-task aria-label="Закрыть форму"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </header>
+      <div class="dialog-body">
+        <label class="field"><span>Название</span><input id="task-title-field" name="title" required autocomplete="off"></label>
+        <div class="field-grid">
+          <label class="field"><span>Дата</span><input id="task-date-field" name="date" type="date" value="2026-05-20"></label>
+          <label class="field"><span>Время</span><input id="task-time-field" name="time" type="time"></label>
+        </div>
+        <div class="field-grid">
+          <label class="field"><span>Примерная длительность</span><select id="task-duration-field" name="duration"><option value="">Не указывать</option><option value="10">10 минут</option><option value="15">15 минут</option><option value="30">30 минут</option><option value="45">45 минут</option><option value="60">1 час</option><option value="75">1 ч 15 мин</option><option value="90">1 ч 30 мин</option></select></label>
+          <label class="field"><span>Приоритет</span><select id="task-priority-field" name="priority"><option>Обычный</option><option>Высокий</option><option>Низкий</option></select></label>
+        </div>
+        <label class="field"><span>Сфера</span><select id="task-category-field" name="category"><option>Работа</option><option>Дизайн</option><option>Исследование</option><option>Здоровье</option><option>Личное</option></select></label>
+        <label class="field"><span>Повтор</span><select id="task-repeat-field" name="repeat"><option>Не повторять</option><option>Каждый день</option><option>По будням</option><option>Каждую неделю</option><option>Свой график…</option></select><small class="field-helper">Если похожая задача создаётся часто, ORBIT предложит повтор при следующем редактировании.</small></label>
+        <label class="field"><span>Комментарий</span><textarea id="task-notes-field" name="notes" placeholder="Контекст, результат или ссылка"></textarea></label>
+      </div>
+      <footer class="dialog-actions"><button class="danger-action" id="delete-task-button" type="button">Удалить</button><button class="quiet-action" type="button" data-close-task>Отмена</button><button class="primary-action" type="submit">Сохранить</button></footer>
+    </form>
+  </dialog>
+
+  <dialog class="modal-dialog" id="delete-dialog" data-od-id="delete-task-confirmation">
+    <div class="dialog-shell">
+      <header class="dialog-head"><div><p class="eyebrow">Удаление задачи</p><h2>Удалить безвозвратно?</h2><p>Завершённая история этой задачи тоже будет удалена.</p></div></header>
+      <footer class="dialog-actions"><button class="quiet-action" type="button" data-cancel-delete>Оставить</button><button class="danger-action" type="button" data-confirm-delete>Удалить</button></footer>
+    </div>
+  </dialog>
+
+  <dialog class="sheet-dialog" id="habit-dialog" data-od-id="habit-editor">
+    <form class="dialog-shell" id="habit-form" method="dialog">
+      <header class="dialog-head"><div><p class="eyebrow" id="habit-dialog-mode">Новая привычка</p><h2 id="habit-dialog-title">Что хотите закрепить?</h2><p id="habit-dialog-note">Выберите ритм, по которому привычка будет появляться в днях.</p></div><button class="icon-button" type="button" data-close-habit aria-label="Закрыть"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>
+      <div class="dialog-body"><label class="field"><span>Название</span><input id="habit-name-field" required placeholder="Например, прогулка после обеда"></label><label class="field"><span>Расписание</span><select id="habit-frequency-field"><option>Каждый день</option><option>По будням</option><option>3 раза в неделю</option><option>Выбранные дни…</option></select></label><label class="field"><span>Когда напомнить</span><input id="habit-time-field" type="time"></label></div>
+      <footer class="dialog-actions"><button class="danger-action" type="button" data-archive-habit hidden>Удалить из плана</button><button class="quiet-action" type="button" data-close-habit>Отмена</button><button class="primary-action" id="habit-submit-button" type="submit">Добавить привычку</button></footer>
+    </form>
+  </dialog>
+
+  <dialog class="modal-dialog" id="workout-schedule-dialog" data-od-id="workout-schedule-dialog">
+    <form class="dialog-shell" id="workout-schedule-form" method="dialog">
+      <header class="dialog-head"><div><p class="eyebrow">Событие дня</p><h2>Запланировать тренировку</h2><p>Тренировка появится только в выбранном дне.</p></div></header>
+      <div class="dialog-body"><label class="field"><span>План</span><select id="scheduled-workout-name"><option>Силовая A</option><option>Силовая B</option><option>Мобилизация</option><option>Свободная тренировка</option></select></label><label class="field"><span>Время</span><input id="scheduled-workout-time" type="time" value="18:45"></label></div>
+      <footer class="dialog-actions"><button class="quiet-action" type="button" data-close-workout-schedule>Отмена</button><button class="primary-action" type="submit">Добавить в день</button></footer>
+    </form>
+  </dialog>
+
+  <dialog class="modal-dialog" id="day-summary-dialog" data-od-id="day-summary-dialog">
+    <form class="dialog-shell" id="day-summary-form" method="dialog">
+      <header class="dialog-head"><div><p class="eyebrow">Итог дня</p><h2>Зафиксировать день</h2><p>Проверьте незавершённые задачи и выберите судьбу каждой. ORBIT ничего не переносит молча.</p></div></header>
+      <div class="dialog-body">
+        <div class="review-stats"><div class="review-stat"><strong id="summary-task-count">2 / 5</strong><span>задачи</span></div><div class="review-stat"><strong id="summary-habit-count">2 / 4</strong><span>привычки</span></div></div>
+        <section class="carryover-section" aria-labelledby="carryover-title"><div><h3 id="carryover-title">Незавершённые задачи</h3><p>Оставьте историю дня точной и решите, что произойдёт дальше.</p></div><div class="carryover-list" id="carryover-list"></div></section>
+        <label class="field"><span>Короткая заметка</span><textarea id="day-note-field" placeholder="Что помогло и что учесть завтра"></textarea></label>
+      </div>
+      <footer class="dialog-actions"><button class="quiet-action" type="button" data-close-day-summary>Вернуться</button><button class="primary-action" type="submit">Сохранить итог</button></footer>
+    </form>
+  </dialog>
+
+  <template id="task-template">
+    <article class="task-item" data-kind="quick">
+      <label class="check-control"><input type="checkbox"><span class="check-box"></span></label>
+      <button class="task-main" type="button" data-open-task data-mode="edit"><time class="task-time">—</time><span><span class="task-title"></span><span class="task-meta"><span>Без времени</span></span></span></button>
+      <div class="task-actions"><button class="inline-action" type="button" data-edit-task aria-label="Редактировать задачу"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/></svg><span class="action-label">Изменить</span></button></div>
+    </article>
+  </template>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"><span id="toast-message">Изменения сохранены</span></div>
+  <script src="orbit-flow-v2.js"></script>
+</body>
+</html>

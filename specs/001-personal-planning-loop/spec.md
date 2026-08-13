@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-10
 
-**Status**: Ready for Planning
+**Status**: Approved for Implementation
 
 **Input**: Define the first usable ORBIT release around the loop
 plan → execute → record → review → adjust, covering weekly and daily planning,
@@ -128,6 +128,38 @@ reflection, and trustworthy history.
 - Q: What is the canonical product term for the derived weekly aggregate? → A:
   Weekly Progress is the sole product, UI, and entity term. The underlying 70/30
   logic is the shared scoring/calculation policy, not a separate Weekly Score.
+
+### Session 2026-08-11
+
+- The product owner approved the fresh Open Design reconciliation and every
+  significant prototype deviation recorded in `design-reconciliation.md`.
+- Daily Score uses semantic threshold coloring: `>=70%` good, `50–69%`
+  neutral/warning, and `<50%` low. Weekly Progress keeps its primary aggregate
+  orbit accent/neutral, while its individual daily bars may use those thresholds.
+  Both aggregates show the numeric percentage and task/habit completion counts
+  or rates. No additional textual score label is required for MVP.
+- Switching Day, Week, or Month History mode preserves `selectedDate` and sets
+  `anchorDate` to it. The mode changes viewing scale only: Day shows that date,
+  Week shows its containing Monday–Sunday week, and Month shows its containing
+  month.
+- Month navigation clamps a selected day number that does not exist in the
+  destination month to that month's last valid day. The clamped date becomes the
+  actual `selectedDate`; no hidden preferred day-of-month is retained.
+- Dynamics is absent from Day History. Week History covers the last eight weeks;
+  Month History covers the last six months. It may show only task completion
+  rate, habit completion rate, and the specification-defined 70/30 score. It has
+  no workout data, state analytics, correlations, generated insights, invented
+  metrics, or additional analytics.
+- A newly materialized recurring-task occurrence is appended to the end of its
+  date's ordered task list. Existing order is otherwise unchanged; no recurrence
+  source, time, priority, or other implicit sort is introduced.
+- Authority is constitution, then `spec.md` for behavior/data semantics, then
+  `contracts/ui-routes.md` for explicit UI/prototype overrides, then `DESIGN.md`
+  for the canonical visual system. Open Design prototypes are references only
+  where they do not conflict. The approved deviations include 70/30 scoring with
+  state excluded, factual load without capacity/overload semantics, descriptive
+  goals, IndexedDB, complete workout omission, no Close Day default, and only
+  explicit valid-date carry-forward.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -545,7 +577,9 @@ facts or encountering workout-history functionality.
   an optional inclusive end date or explicit stop action. If the end date
   matches the rule, that date MUST produce an occurrence.
 - **FR-016**: Each applicable date MUST produce a separate task or habit
-  occurrence with its own identity and outcome.
+  occurrence with its own identity and outcome. A newly materialized recurring
+  task occurrence MUST be appended to the end of that date's ordered task list
+  without otherwise changing existing order or applying an implicit sort.
 - **FR-017**: Editing one occurrence MUST affect only that occurrence and MUST
   NOT modify the recurrence rule or other occurrences.
 - **FR-018**: Deleting one occurrence in an open period MUST remove only that
@@ -618,7 +652,9 @@ facts or encountering workout-history functionality.
 - **FR-033**: When neither tasks nor habits are applicable, ORBIT MUST present
   the daily score as unavailable rather than zero.
 - **FR-034**: ORBIT MUST display the score's contributing task and habit rates so
-  that the result is explainable.
+  that the result is explainable. It MUST display the numeric whole percentage.
+  Daily Score MUST use semantic threshold coloring: `>=70%` good, `50–69%`
+  neutral/warning, and `<50%` low. No additional textual score label is required.
 - **FR-035**: While a day is open, its score MUST reflect current outcomes as a
   live preview. The displayed score MUST be rounded to the nearest whole
   percentage, with an exact half-percentage tie rounded upward: 74.4% becomes
@@ -682,7 +718,10 @@ facts or encountering workout-history functionality.
   and daily-state values MUST NOT contribute directly. The Weekly Progress result
   MUST be rounded to the nearest whole percentage using the same
   exact-half-ties-upward rule as the Daily Score and finalized with its
-  contributing counts when the week is completed.
+  contributing counts when the week is completed. Its primary aggregate orbit
+  MUST retain the primary accent/neutral treatment; individual daily bars MAY
+  use the Daily Score semantic thresholds. No additional textual score label is
+  required.
 - **FR-049**: Adjusting a future plan after review MUST NOT change the facts of a
   completed week.
 - **FR-050**: ORBIT MUST provide a read-only History experience with Day, Week,
@@ -692,9 +731,16 @@ facts or encountering workout-history functionality.
   default to Month mode for the current calendar month. Previous/next navigation
   MUST move exactly one local day in Day mode, one fixed Monday–Sunday week in
   Week mode, and one calendar month in Month mode. Month mode MUST show its
-  calendar and selected-day details panel, and History MUST retain the Dynamics
-  section where applicable. History MUST NOT provide editing or workout-history
-  layers, tabs, or data.
+  calendar and selected-day details panel. Switching modes MUST preserve
+  `selectedDate`, set `anchorDate` to that date, and change only the viewing
+  scale. Month navigation MUST clamp a selected day number missing in the
+  destination month to its last valid date and retain no hidden preferred day.
+  Day History MUST have no Dynamics. Week History MUST show Dynamics across the
+  last eight weeks, and Month History across the last six months, using only task
+  completion rate, habit completion rate, and the specification-defined 70/30
+  score. Dynamics MUST NOT add state analytics, correlations, generated
+  insights, invented metrics, or additional analytics. History MUST NOT provide
+  editing or workout-history layers, tabs, or data.
 - **FR-051**: Historical views MUST preserve unfinished, not-completed, moved,
   backlogged, canceled, completed, and deleted-occurrence facts needed to explain
   the record. They MUST retain repeated-movement events plus automatic habit
@@ -736,10 +782,10 @@ facts or encountering workout-history functionality.
   MVP visual and interaction references. Product behavior defined by this
   specification takes precedence when a prototype conflicts with the approved
   semantics. Workout Session remains design context but is outside MVP behavior.
-- Score color, status, and presentation semantics MUST be verified and settled by
-  the serialized Open Design reconciliation before affected UI work. The ban on
-  automatic overload inference and hidden or configurable load/capacity/overload
-  thresholds MUST NOT be interpreted as a general ban on score visual semantics.
+- Daily Score and Weekly Progress MUST follow the approved presentation in
+  FR-034 and FR-048. The ban on automatic overload inference and hidden or
+  configurable load/capacity/overload thresholds is independent of score visual
+  semantics.
 - The approved general History layout, Month calendar, selected-day details, and
   applicable Dynamics section remain the interaction reference; workout-history
   layers, tabs, and data are omitted from the MVP even if an older prototype
@@ -964,18 +1010,12 @@ telemetry, accounts, or a backend solely to collect this evidence.
 
 ## Dependencies
 
-- The approved ORBIT Open Design prototypes and DESIGN.md remain the governing
-  visual and interaction references during planning, implementation, and review.
-- A fresh read-only Open Design reconciliation is a serialized pre-UI gate.
-  Before affected visual, component, browser-journey, or other UI work begins,
-  it MUST record source version and availability, reconcile the current design
-  with DESIGN.md and this specification, and obtain product-owner approval for
-  every significant deviation. Because the gate may change governing artifacts,
-  it MUST NOT run in parallel with dependent work.
-- If the Open Design source is unavailable, the failure MUST be recorded, the
-  gate MUST NOT be reported as passed, and affected UI/component/browser work
-  MUST remain blocked until a successful fresh check. Toolchain, pure-domain,
-  contract, and non-visual adapter work MAY continue.
+- The 2026-08-11 serialized read-only Open Design reconciliation and explicit
+  product-owner approval are recorded in `design-reconciliation.md`; the pre-UI
+  gate is complete. `spec.md` governs behavior/data semantics,
+  `contracts/ui-routes.md` governs explicit UI/prototype overrides, and
+  `DESIGN.md` governs the canonical visual system. Open Design prototypes are
+  reference material only where they do not conflict.
 - The MVP usability protocol MUST be recorded and product-owner approved before
   affected UI/component/browser work or manual usability acceptance begins.
 - No runtime service, third-party integration, or implementation dependency is

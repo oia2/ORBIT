@@ -130,7 +130,7 @@ Represents a one-off task or one logical instance of a recurring task.
 | `state` | `active`, `finalized`, or `deleted` |
 | `completion` | Optional `incomplete` or `completed`; present only on an active dated placement |
 | `actualCompletedAt` | Current completion instant when checked |
-| `dayPosition` | Optional dated-list order; never used in backlog; generated insertion awaits the design gate |
+| `dayPosition` | Optional dated-list order; never used in backlog; a newly materialized recurring task appends after the current final position |
 | `createdSequence` | Immutable creation order used by backlog |
 | `revision` | Command concurrency guard |
 
@@ -239,8 +239,8 @@ value: integer percentage | unavailable
 weightsApplied: normalized task/habit weights
 ```
 
-The shared scoring/calculation policy builds the Daily Score and Weekly Progress
-breakdowns:
+The shared scoring/calculation policy builds the Daily Score, Weekly Progress,
+and each permitted bounded History Dynamics score point:
 
 1. A zero-applicable category is absent, not a zero rate.
 2. Both present: `taskRate * 0.70 + habitRate * 0.30`.
@@ -326,12 +326,16 @@ closed occurrence -- any mutation --> rejected
 - `HistoryDayView`: one anchored date and its specified read-only facts.
 - `HistoryWeekView`: one anchored fixed Monday–Sunday period and its facts.
 - `HistoryMonthView`: one calendar month, its calendar, selected-day details,
-  weekly progress/reflections where applicable, and a Dynamics presentation whose
-  exact visual content remains gated on fresh approved design evidence.
+  weekly progress/reflections where applicable, and six-month Dynamics containing
+  only task completion rate, habit completion rate, and the 70/30 score.
+- Week History Dynamics covers the last eight weeks with those same three
+  metrics. Day History has no Dynamics. These are derived read projections, not
+  stored analytics records.
 
-History exposes no editing or workout layers/tabs/data. Mode switching and
-short-month selected-date behavior are presentation decisions blocked on the
-successful design reconciliation; no extra stored entity is introduced for them.
+History exposes no editing or workout layers/tabs/data. Mode switching preserves
+`selectedDate` and makes it the anchor; month navigation permanently clamps a
+missing day number to the destination month's last date with no hidden preferred
+day. These remain page state and introduce no extra stored entity.
 
 ## 7. IndexedDB persistence shape
 
@@ -355,7 +359,8 @@ history, snapshot, or habit-event store is needed in version 1.
 - A week key is Monday and owns exactly the following seven dates through Sunday.
 - A dated active task has a positive duration and exactly one current membership
   for that placement. Explicitly organized tasks have an integer day position;
-  generated-occurrence insertion position awaits the approved design gate.
+  a newly materialized recurring task takes the next final position without
+  changing existing order or applying any other implicit sort.
 - A direct-backlog task has no membership, duration requirement, completion
   state, or manual position; backlog order is immutable creation order.
 - One occurrence has at most one membership per date and one current placement.

@@ -1,0 +1,87 @@
+{
+  "referenceRoot": "C:\\Projects\\harness-sdd-lab\\specs\\001-personal-planning-loop\\visual-reference\\open-design",
+  "captureRoot": "C:\\Users\\oleg2\\AppData\\Local\\Temp\\orbit-frozen-reference-20260813-171127",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "deviceScaleFactor": 1,
+  "reducedMotion": true,
+  "results": [
+    {
+      "file": "weekly-dashboard-v2.html",
+      "url": "http://127.0.0.1:55878/weekly-dashboard-v2.html",
+      "viewportPath": "C:\\Users\\oleg2\\AppData\\Local\\Temp\\orbit-frozen-reference-20260813-171127\\weekly-dashboard-v2.viewport-1440x900.png",
+      "fullPath": "C:\\Users\\oleg2\\AppData\\Local\\Temp\\orbit-frozen-reference-20260813-171127\\weekly-dashboard-v2.full.png",
+      "viewportPng": {
+        "width": 1440,
+        "height": 900
+      },
+      "fullPng": {
+        "width": 1440,
+        "height": 1271
+      },
+      "document": {
+        "width": 1440,
+        "height": 1271,
+        "devicePixelRatio": 1,
+        "reducedMotion": true
+      },
+      "externalRequests": [],
+      "requestFailures": [],
+      "badResponses": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "file": "daily-detail-v2.html",
+      "url": "http://127.0.0.1:55878/daily-detail-v2.html",
+      "viewportPath": "C:\\Users\\oleg2\\AppData\\Local\\Temp\\orbit-frozen-reference-20260813-171127\\daily-detail-v2.viewport-1440x900.png",
+      "fullPath": "C:\\Users\\oleg2\\AppData\\Local\\Temp\\orbit-frozen-reference-20260813-171127\\daily-detail-v2.full.png",
+      "viewportPng": {
+        "width": 1440,
+        "height": 900
+      },
+      "fullPng": {
+        "width": 1440,
+        "height": 1237
+      },
+      "document": {
+        "width": 1440,
+        "height": 1237,
+        "devicePixelRatio": 1,
+        "reducedMotion": true
+      },
+      "externalRequests": [],
+      "requestFailures": [],
+      "badResponses": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "file": "history.html",
+      "url": "http://127.0.0.1:55878/history.html",
+      "viewportPath": "C:\\Users\\oleg2\\AppData\\Local\\Temp\\orbit-frozen-reference-20260813-171127\\history.viewport-1440x900.png",
+      "fullPath": "C:\\Users\\oleg2\\AppData\\Local\\Temp\\orbit-frozen-reference-20260813-171127\\history.full.png",
+      "viewportPng": {
+        "width": 1440,
+        "height": 900
+      },
+      "fullPng": {
+        "width": 1440,
+        "height": 1278
+      },
+      "document": {
+        "width": 1440,
+        "height": 1278,
+        "devicePixelRatio": 1,
+        "reducedMotion": true
+      },
+      "externalRequests": [],
+      "requestFailures": [],
+      "badResponses": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    }
+  ]
+}

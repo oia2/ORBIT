@@ -1,13 +1,18 @@
 # ORBIT Design System
 
-Status: canonical source of truth  
-Version: 0.1  
+Status: canonical visual-system source of truth
+Version: 0.2
 Platform: responsive web  
 Language: Russian UI by default  
 
 ORBIT is a calm, atmospheric personal planning system: graphite surfaces, industrial display typography, precise data, restrained semantic color, and one slow orbital motion accent around the primary aggregate metric.
 
-This file is the visual and interaction contract for every new ORBIT screen. `orbit-tokens.css` is the executable token mirror; `orbit-design-system.html` is the living component reference. If an implementation conflicts with this file, this file wins and the tokens/examples must be brought back into sync.
+This file is the canonical visual-system contract for every new ORBIT screen.
+`orbit-tokens.css` is the executable token mirror; `orbit-design-system.html` is
+the living component reference. Product behavior and data semantics remain
+governed by `spec.md`, and explicit UI/prototype overrides remain governed by
+`contracts/ui-routes.md`. Open Design prototypes are reference material only
+where they do not conflict with those sources or this visual contract.
 
 ## 1. Visual posture
 
@@ -106,9 +111,9 @@ Bind these tokens verbatim. Do not replace OKLCH values with guessed hex values.
 | Muted | `--muted` | Supporting copy, labels, timestamps, inactive navigation |
 | Border | `--border` | All structural 1px dividers and component outlines |
 | Accent | `--accent` | Current context and the orbital motion accent only |
-| Success | `--success` | Completed actions, score ≥70, positive status |
-| Warning | `--warn` | Partial state, score 50–69, attention without alarm |
-| Danger | `--danger` | Score <50, destructive action, real error only |
+| Success | `--success` | Completed actions, Daily Score ≥70, positive status |
+| Warning | `--warn` | Daily Score 50–69 and attention without alarm |
+| Danger | `--danger` | Daily Score <50, destructive action, real error only |
 
 ### Accent discipline
 
@@ -250,7 +255,9 @@ ORBIT is one responsive product, not a scaled desktop screenshot.
 5. Concrete next action.
 
 - Use one dominant metric area and compact supporting analytics.
-- Show formula weights beside aggregate scores. Current ORBIT formula: tasks 50%, habits 30%, state 20%.
+- Show the specification-defined task/habit counts or rates beside aggregate
+  scores. Current ORBIT formula: tasks 70%, habits 30%; state is context only and
+  does not contribute.
 - Values must match between weekly and daily screens. A current-day update must propagate to the weekly chart.
 - Use percentage for a normalized 0–100 result. Do not display both `%` and “из 100”.
 - Use visible fills for magnitude. Bare outlined charts are not allowed.
@@ -259,12 +266,18 @@ ORBIT is one responsive product, not a scaled desktop screenshot.
 
 ### Semantic score thresholds
 
-- Success: ≥70.
-- Warning / partial: 50–69.
-- Danger / incomplete: <50.
+- Daily Score good: ≥70.
+- Daily Score neutral/warning: 50–69.
+- Daily Score low: <50.
 - Show the number in addition to color.
-- Use semantic color in bars, dots, and short labels. Keep card backgrounds neutral.
-- Prefer “частично”, “нуждается во внимании”, or a next-step message over punitive wording.
+- Daily Score uses those semantic colors. Weekly Progress keeps its primary
+  aggregate orbit accent/neutral; individual daily bars may use the same Daily
+  Score thresholds.
+- No additional textual score label is required for MVP. The numeric percentage
+  and adjacent task/habit counts or rates provide the non-color explanation.
+- Keep card backgrounds neutral.
+- When explanatory copy is otherwise required, prefer a factual next step over
+  punitive wording; do not introduce an additional textual score label.
 
 ### Chart language
 
@@ -312,7 +325,9 @@ ORBIT is one responsive product, not a scaled desktop screenshot.
 - Controls have accessible labels; charts expose useful Russian `aria-label` summaries.
 - Status is conveyed by color plus number, label, icon, or position.
 - Dialogs use a real `<dialog>` or equivalent accessible modal behavior.
-- Persist device-local planning state in local storage only when appropriate; never hide required information behind hover.
+- Persist device-local planning state through the specified IndexedDB repository;
+  never substitute prototype `localStorage` or hide required information behind
+  hover.
 
 ## 13. Copy posture
 

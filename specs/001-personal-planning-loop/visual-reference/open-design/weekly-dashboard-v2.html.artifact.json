@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "weekly-dashboard-v2.html",
+  "entry": "weekly-dashboard-v2.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-08-07T09:36:45.558Z",
+  "updatedAt": "2026-08-07T09:36:45.558Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}

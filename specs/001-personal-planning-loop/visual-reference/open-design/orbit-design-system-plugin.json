@@ -1,0 +1,22 @@
+{
+  "$schema": "https://open-design.ai/schemas/plugin.v1.json",
+  "specVersion": "1.0.0",
+  "name": "orbit-design-system-msiq61l3",
+  "title": "ORBIT Design System",
+  "version": "0.1.0",
+  "description": "Status: canonical source of truth Version: 0.1 Platform: responsive web Language: Russian UI by default",
+  "od": {
+    "kind": "skill",
+    "taskKind": "new-generation",
+    "context": {
+      "skills": [
+        {
+          "path": "./SKILL.md"
+        }
+      ]
+    },
+    "capabilities": [
+      "prompt:inject"
+    ]
+  }
+}

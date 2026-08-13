@@ -1,9 +1,10 @@
 # Contract: Routes, Responsive Shell, and UX States
 
-**Authority**: `spec.md` governs behavior/data semantics. `DESIGN.md` and approved
-Open Design artifacts govern visual/interaction direction only after the
-serialized reconciliation gate succeeds. Workout Session has no MVP route or
-History layer.
+**Authority**: The constitution governs project/process obligations; `spec.md`
+governs behavior/data semantics; this contract governs explicit UI/prototype
+overrides; `DESIGN.md` governs the canonical visual system; and Open Design
+prototypes are references only where they do not conflict. Workout Session has
+no MVP route or History layer.
 
 ## 1. Canonical routes
 
@@ -55,21 +56,27 @@ exclude the current source date and every closed date.
 - First entry derives `currentLocalDate`, selects Month mode, shows the current
   calendar month, and selects the anchored date.
 - Day/Week/Month mode controls are visible and keyboard/touch operable.
+- Switching mode preserves `selectedDate`, sets `anchorDate` to it, and changes
+  viewing scale only. Day shows that date, Week its containing Monday–Sunday
+  week, and Month its containing calendar month.
 - Previous/next changes the displayed period by exactly one local day, one fixed
   Monday–Sunday week, or one calendar month according to the active mode.
 - Day and Week show their full specified facts. Month shows its calendar and a
   selected-day details panel.
-- The applicable Dynamics section uses only existing specified facts; no new
-  stored metric, recommendation, automatic overload classification, or
-  load/capacity/overload threshold is invented.
+- Month navigation clamps a missing selected day number to the destination
+  month's last valid day. That clamped date becomes the actual `selectedDate`;
+  no hidden preferred day-of-month is retained.
+- Day History has no Dynamics. Week History shows the last eight weeks and Month
+  History the last six months. Dynamics uses only task completion rate, habit
+  completion rate, and the specification-defined 70/30 score; it has no workout
+  data, state analytics, correlations, generated insights, invented metrics, or
+  other analytics.
 - Finalized facts are read-only. History has no edit controls, workout layer,
   workout tab, or workout data.
 - The same facts remain understandable at every responsive layout.
 
-Mode-switch anchor behavior, selected-day handling across unequal-length months,
-and exact Dynamics applicability/presentation must come from the successful
-fresh design reconciliation. `design-reconciliation.md` records the current
-blocked state; implementation must not guess these UI details.
+These History decisions were explicitly approved by the product owner on
+2026-08-11 and are recorded in `design-reconciliation.md`.
 
 ## 4. Recurrence editor
 
@@ -82,7 +89,7 @@ the explanation and require confirmation against the new date.
 
 ## 5. Responsive shell
 
-Use the `DESIGN.md` breakpoints after the design gate clears:
+Use the reconciled `DESIGN.md` breakpoints:
 
 | Width | Contract |
 |---|---|
@@ -92,7 +99,15 @@ Use the `DESIGN.md` breakpoints after the design gate clears:
 
 Essential actions/explanations remain at every breakpoint. Verify no horizontal
 page scroll at `360, 390, 430, 600, 768, 820, 1024, 1366, 1440, 1920` CSS pixels.
-The shell exposes Week, Day/Today, Backlog, and History only. Russian is default.
+The shell exposes, in canonical order, Today, Week, Backlog, and History only.
+Backlog occupies the approved reference rail position that previously linked to
+the out-of-scope Workouts destination. Russian is default.
+
+In the normal ready state, the rail footer presents the non-color status text
+`Сохранено на устройстве` and an accessible info/details affordance for the full
+device/browser-profile persistence disclosure. The full disclosure remains
+discoverable without permanently displacing the application layout. Persistence
+failures remain prominent error states and never collapse into the passive footer.
 
 ## 6. Required page states
 
@@ -161,21 +176,27 @@ explicit completion freezes reflection, counts/rates, and progress.
 | Workout navigation/history | No workout route, data, command, navigation, History layer, or tab |
 | localStorage/sync implication | IndexedDB in one browser profile/device; no account/sync |
 | “Tomorrow” shortcut/default | Explicit selected open date; no automatic carry-forward |
-| DESIGN score-color/status thresholds | Defer exact score semantic treatment to the successful design reconciliation; always show numeric result/counts/rates, neutral copy, and non-color cues |
+| DESIGN score-color/status thresholds | Daily Score uses `>=70` good, `50–69` neutral/warning, `<50` low; Weekly Progress keeps a primary accent/neutral aggregate while daily bars may use those thresholds; numeric result and task/habit counts or rates remain visible |
 | Sub-44px or color-only control | Accessibility requirements take precedence |
 
-The ambient orbit may surround one primary aggregate but cannot encode a capacity
-or unsupported classification. User-visible outcomes never include `partial` or
-persistence-only recurrence markers.
+The primary Daily Score and Weekly Progress use the approved orbit composition;
+Weekly Progress retains its required primary accent/neutral treatment. An orbit
+cannot encode capacity or an unsupported classification. User-visible outcomes
+never include `partial` or persistence-only recurrence markers.
+
+The Daily planning/load region retains the approved prominence and card hierarchy
+but presents factual scheduled-task values only. It has no capacity denominator,
+reserve, utilization progress, threshold, overload classification, or proactive
+warning. Weekly goals remain descriptive and use compact contextual CRUD actions,
+never numeric progress. History Dynamics retains the approved chart/card hierarchy
+while visualizing only task completion rate, habit completion rate, and the shared
+70/30 score.
 
 ## 11. Serialized gate status
 
-The 2026-08-10 fresh read-only Open Design attempt failed with `Transport closed`.
-The failure and unknown source version are recorded in `design-reconciliation.md`;
-the gate has not passed. A successful serialized pull, version/availability
-record, comparison with `DESIGN.md`/`spec.md`, and approval of significant
-deviations are required before affected UI/component/browser work. Toolchain,
-pure-domain, contract, and non-visual adapter work may continue.
+The full serialized read-only Open Design pull succeeded on 2026-08-11. The
+source inventory, comparison, six explicit decisions, and product-owner approval
+are recorded in `design-reconciliation.md`; the pre-UI gate has passed.
 
 `usability-protocol.md` is already approved/recorded and must be used against the
 production build for SC-001/002/003/010; it requires no product telemetry.

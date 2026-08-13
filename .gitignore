@@ -1,0 +1,22 @@
+# Dependencies and generated output
+node_modules/
+node_modules.incomplete/
+.cache-deps/
+dist/
+build/
+coverage/
+playwright-report/
+test-results/
+
+# Logs and local environment
+*.log
+.env*
+!.env.example
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/

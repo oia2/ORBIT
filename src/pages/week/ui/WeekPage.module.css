@@ -1,0 +1,758 @@
+.page {
+  min-width: 0;
+}
+
+.header {
+  min-height: 138px;
+}
+
+.headerActions {
+  justify-content: flex-end;
+  max-width: 560px;
+}
+
+.periodNav {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.iconLink,
+.reviewLink,
+.planLink,
+.dayLink {
+  display: inline-grid;
+  min-height: 44px;
+  place-items: center;
+  border-radius: var(--radius-control);
+  font-size: var(--text-small);
+  font-weight: var(--weight-announce);
+  text-decoration: none;
+}
+
+.iconLink {
+  width: 44px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 19px;
+}
+
+.iconLink:hover,
+.reviewLink:hover,
+.dayLink:hover {
+  border-color: color-mix(in oklch, var(--fg) 42%, var(--border));
+  background: var(--surface-raised);
+  color: var(--fg);
+}
+
+.reviewLink {
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  color: var(--fg);
+}
+
+.planLink {
+  padding: 0 18px;
+  border: 1px solid color-mix(in oklch, var(--fg) 22%, transparent);
+  background: var(--primary);
+  color: var(--primary-contrast);
+  box-shadow: var(--elevation-action);
+}
+
+.runtimeState {
+  min-height: 360px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(330px, 0.75fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.primaryColumn,
+.sideColumn {
+  display: grid;
+  min-width: 0;
+}
+
+.primaryColumn {
+  gap: 0;
+}
+
+.sideColumn {
+  gap: 18px;
+}
+
+.progress {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  background: var(--surface);
+  box-shadow: var(--elevation-card);
+}
+
+.progress :global(.orbit-metric) {
+  min-height: 430px;
+  border-radius: 0;
+}
+
+.summary {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(180px, 0.65fr);
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-top: 0;
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
+  background: var(--surface);
+}
+
+.taskSummary,
+.habitSummary {
+  display: grid;
+  align-content: center;
+  min-height: 136px;
+  padding: 18px 22px;
+}
+
+.habitSummary {
+  gap: 7px;
+  border-left: 1px solid var(--border);
+}
+
+.habitSummary > span,
+.habitSummary small {
+  color: var(--muted);
+  font-size: var(--text-caption);
+}
+
+.habitSummary strong {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: var(--weight-announce);
+  text-transform: uppercase;
+}
+
+.summaryHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--muted);
+  font-size: var(--text-caption);
+}
+
+.summaryHeading strong {
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 16px;
+}
+
+.summaryTrack {
+  height: 6px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: var(--radius-round);
+  background: var(--surface-raised);
+}
+
+.summaryTrack > span {
+  display: block;
+  width: var(--week-task-rate);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--fg);
+}
+
+.summaryBreakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: var(--text-caption);
+}
+
+.summaryBreakdown strong {
+  color: var(--fg);
+  font-family: var(--font-mono);
+}
+
+.summaryError {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px 22px;
+  border-top: 1px solid var(--border);
+  color: var(--danger);
+  font-size: var(--text-caption);
+}
+
+.dailyResults,
+.habits,
+.goals,
+.planner {
+  min-width: 0;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 21px 22px 15px;
+}
+
+.cardHeader h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-announce);
+  line-height: 1.2;
+}
+
+.cardHeader p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: var(--text-caption);
+  line-height: 1.45;
+}
+
+.cardMeta {
+  padding-top: 2px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.dailyResults {
+  min-height: 342px;
+}
+
+.dayBars {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 7px;
+  height: 244px;
+  margin: 0;
+  padding: 14px 20px 22px;
+  list-style: none;
+}
+
+.dayBars > li {
+  min-width: 0;
+}
+
+.dayBar {
+  --day-color: var(--muted);
+  display: grid;
+  grid-template-rows: 22px minmax(0, 1fr) 18px;
+  gap: 8px;
+  height: 100%;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.dayBar.scoreGood {
+  --day-color: var(--success);
+}
+
+.dayBar.scoreWarning {
+  --day-color: var(--warn);
+}
+
+.dayBar.scoreLow {
+  --day-color: var(--danger);
+}
+
+.scoreUnavailable {
+  --day-color: var(--muted);
+}
+
+.dayScore,
+.dayName {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dayScore {
+  align-self: end;
+  color: var(--day-color);
+  font-weight: var(--weight-announce);
+}
+
+.dayName {
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.dayTrack {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+  align-items: flex-end;
+  border-radius: 9px;
+  background: var(--surface-raised);
+}
+
+.dayFill {
+  width: 100%;
+  height: var(--week-score);
+  min-height: 0;
+  border-radius: 8px 8px 0 0;
+  background: var(--day-color);
+}
+
+.currentDay .dayTrack {
+  outline: 1px solid var(--fg);
+  outline-offset: 3px;
+}
+
+.currentDay .dayName {
+  color: var(--fg);
+  font-weight: var(--weight-announce);
+}
+
+.habitList {
+  display: grid;
+  padding: 0 22px 16px;
+}
+
+.habitLine {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 54px;
+  border-top: 1px solid var(--border);
+}
+
+.habitLine:first-child {
+  border-top: 0;
+}
+
+.habitLine > strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: var(--weight-emphasize);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.habitDots {
+  display: flex;
+  gap: 6px;
+}
+
+.habitDot {
+  position: relative;
+  display: inline-grid;
+  width: 13px;
+  height: 13px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+}
+
+.habitDot[data-outcome='completed'] {
+  border-color: var(--success);
+  background: var(--success);
+}
+
+.habitDot[data-outcome='not-completed'] {
+  border-color: color-mix(in oklch, var(--danger) 70%, var(--border));
+}
+
+.habitDot[data-outcome='not-completed']::after {
+  color: var(--danger);
+  content: '×';
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.habitDot[data-outcome='pending'] {
+  border-style: dashed;
+}
+
+.habitDot[data-outcome='not-planned'] {
+  opacity: 0.42;
+}
+
+.cardFooter {
+  min-height: 49px;
+  padding: 15px 22px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.goals {
+  grid-column: 1 / -1;
+}
+
+.contextButton {
+  min-height: 40px;
+  padding-inline: 11px;
+  border-color: transparent;
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 4px;
+}
+
+.goalList {
+  display: grid;
+  margin: 0;
+  padding: 0 22px 18px;
+  list-style: none;
+}
+
+.goal {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  border-top: 1px solid var(--border);
+}
+
+.goal:first-child {
+  border-top: 0;
+}
+
+.goalIndex {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.goalStatement {
+  font-size: 14px;
+  font-weight: var(--weight-emphasize);
+}
+
+.actionMenu {
+  position: relative;
+}
+
+.actionMenu > summary {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  list-style: none;
+}
+
+.actionMenu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.actionMenu[open] > summary,
+.actionMenu > summary:hover {
+  border-color: var(--border);
+  background: var(--surface-raised);
+  color: var(--fg);
+}
+
+.actionMenuPopover {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 5px);
+  right: 0;
+  display: grid;
+  width: max-content;
+  max-width: min(310px, calc(100vw - 48px));
+  gap: 3px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+  box-shadow: var(--elevation-overlay);
+}
+
+.actionMenuPopover button {
+  width: 100%;
+  min-height: 40px;
+  justify-content: start;
+  border-color: transparent;
+  text-align: left;
+}
+
+.compactEmpty {
+  padding: 18px 22px 25px;
+}
+
+.compactEmpty strong {
+  font-family: var(--font-display);
+  font-size: 15px;
+}
+
+.compactEmpty p {
+  max-width: 52ch;
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: var(--text-caption);
+}
+
+.inlineError {
+  margin: 0;
+  padding: 12px 22px;
+  border-top: 1px solid var(--border);
+  color: var(--danger);
+  font-size: var(--text-caption);
+}
+
+.review {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.42fr) minmax(0, 1fr);
+  gap: var(--space-6);
+  padding: 18px 22px;
+  border-top: 1px solid var(--border);
+}
+
+.review strong {
+  font-family: var(--font-display);
+}
+
+.review p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: var(--text-caption);
+}
+
+.review blockquote {
+  margin: 0;
+  border-left: 1px solid var(--border);
+  padding-left: var(--space-5);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.planner {
+  margin-top: 18px;
+  scroll-margin-top: var(--space-6);
+}
+
+.plannerDays {
+  display: grid;
+  padding: 0 22px 22px;
+}
+
+.plannerDay {
+  border-top: 1px solid var(--border);
+}
+
+.plannerDay:first-child {
+  border-top: 0;
+}
+
+.plannerDay > summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 66px;
+  padding: 8px 4px;
+  cursor: pointer;
+  list-style-position: outside;
+}
+
+.plannerDay > summary > span:first-of-type {
+  display: grid;
+  gap: 3px;
+}
+
+.plannerDay > summary strong {
+  font-size: 13px;
+  font-weight: var(--weight-emphasize);
+}
+
+.plannerDay > summary small,
+.dayFacts {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.dayFacts {
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.plannerDayBody {
+  margin: 0 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-field);
+  padding: 0 18px 14px;
+  background: color-mix(in oklch, var(--bg) 42%, var(--surface));
+}
+
+.taskList {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dayEmpty {
+  margin: 0;
+  padding: 18px 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.dayActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.dayLink {
+  padding: 0 11px;
+  border: 1px solid transparent;
+  color: var(--muted);
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 4px;
+}
+
+@media (max-width: 1120px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .goals {
+    grid-column: auto;
+  }
+
+  .progress :global(.orbit-metric) {
+    min-height: 390px;
+  }
+}
+
+@media (max-width: 720px) {
+  .header {
+    min-height: 0;
+  }
+
+  .headerActions {
+    justify-content: flex-start;
+    max-width: none;
+  }
+
+  .headerActions > :global(.orbit-period-status) {
+    order: -1;
+  }
+
+  .planLink,
+  .reviewLink {
+    flex: 1 1 auto;
+  }
+
+  .progress :global(.orbit-metric) {
+    min-height: 330px;
+  }
+
+  .summary {
+    grid-template-columns: 1fr;
+  }
+
+  .taskSummary,
+  .habitSummary {
+    min-height: 118px;
+    padding: 16px 18px;
+  }
+
+  .habitSummary {
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+
+  .cardHeader {
+    padding-inline: 18px;
+  }
+
+  .cardHeader p {
+    max-width: 32ch;
+  }
+
+  .dayBars {
+    gap: 5px;
+    padding-inline: 16px;
+  }
+
+  .habitList,
+  .goalList,
+  .plannerDays {
+    padding-inline: 18px;
+  }
+
+  .habitLine {
+    gap: 8px;
+  }
+
+  .habitLine > strong {
+    font-size: 12px;
+  }
+
+  .habitDots {
+    gap: 4px;
+  }
+
+  .habitDot {
+    width: 11px;
+    height: 11px;
+  }
+
+  .review {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .review blockquote {
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .plannerDay > summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+  }
+
+  .dayFacts {
+    white-space: normal;
+  }
+
+  .plannerDayBody {
+    padding-inline: 12px;
+  }
+
+  .dayActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dayActions > * {
+    width: 100%;
+  }
+}

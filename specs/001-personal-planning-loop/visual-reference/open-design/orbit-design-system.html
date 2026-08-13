@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#121318">
+  <title>ORBIT — Lightweight Design System</title>
+  <link rel="stylesheet" href="orbit-tokens.css">
+  <link rel="stylesheet" href="life-os.css">
+  <style>
+    :root { --ds-highlight: var(--accent); }
+    html { scroll-behavior: smooth; }
+    .ds-shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100vh; }
+    .ds-nav { position: sticky; top: 0; display: flex; flex-direction: column; height: 100vh; padding: 28px 22px; border-right: 1px solid var(--border); background: oklch(0.145 0.008 255 / .97); }
+    .ds-nav-list { display: grid; gap: 2px; margin-top: 52px; }
+    .ds-nav-list a { min-height: 38px; padding: 9px 12px; border-radius: var(--radius-control); color: var(--muted); font-size: 12px; letter-spacing: .01em; }
+    .ds-nav-list a:hover { color: var(--fg); background: var(--surface); }
+    .ds-version { margin-top: auto; color: var(--muted); font-family: var(--font-mono); font-size: 10px; letter-spacing: .05em; }
+    .ds-main { min-width: 0; width: min(1260px, 100%); padding: 42px clamp(24px, 4vw, 64px) 90px; }
+    .ds-hero { display: grid; grid-template-columns: 1.25fr .75fr; align-items: end; gap: 56px; min-height: 390px; padding-bottom: 56px; border-bottom: 1px solid var(--border); }
+    .ds-hero h1 { max-width: 820px; margin: 0; font-family: var(--font-display); font-size: clamp(52px, 7vw, 96px); font-weight: var(--weight-announce); letter-spacing: -.03em; line-height: .92; }
+    .ds-hero-copy { max-width: 44ch; margin: 0; color: var(--muted); font-size: 16px; line-height: 1.6; }
+    .ds-section { padding: 72px 0; border-bottom: 1px solid var(--border); }
+    .ds-section-head { display: grid; grid-template-columns: minmax(200px, .6fr) minmax(0, 1fr); gap: 32px; margin-bottom: 34px; }
+    .ds-kicker { margin: 0; color: var(--muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+    .ds-section h2 { margin: 0; font-family: var(--font-display); font-size: clamp(30px, 4vw, 48px); font-weight: var(--weight-announce); letter-spacing: -.02em; line-height: 1; }
+    .ds-lead { max-width: 62ch; margin: 14px 0 0; color: var(--muted); font-size: 15px; line-height: 1.6; }
+    .ds-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+    .span-12 { grid-column: span 12; } .span-8 { grid-column: span 8; } .span-7 { grid-column: span 7; } .span-6 { grid-column: span 6; } .span-5 { grid-column: span 5; } .span-4 { grid-column: span 4; }
+    .ds-panel { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--elevation-card); }
+    .ds-panel-pad { padding: 24px; }
+    .ds-panel-title { margin: 0 0 8px; font-family: var(--font-display); font-size: 18px; font-weight: var(--weight-announce); letter-spacing: -.01em; }
+    .ds-panel-copy { max-width: 58ch; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .language-rules { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--border); }
+    .language-rule { min-height: 180px; padding: 24px; background: var(--surface); }
+    .language-rule b { display: block; margin-bottom: 28px; font-family: var(--font-mono); font-size: 11px; font-weight: 510; }
+    .language-rule p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .swatch-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+    .swatch { overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+    .swatch-preview { height: 92px; background: var(--swatch); }
+    .swatch-info { padding: 13px; }
+    .swatch-info b { display: block; font-size: 12px; font-weight: 550; }
+    .swatch-info code { display: block; margin-top: 4px; color: var(--muted); font-family: var(--font-mono); font-size: 9px; }
+    .usage-callout { display: flex; align-items: flex-start; gap: 16px; padding: 20px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+    .usage-callout::before { flex: 0 0 auto; width: 10px; height: 10px; margin-top: 5px; border-radius: 50%; background: var(--ds-highlight); content: ""; }
+    .usage-callout p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .type-stack { display: grid; gap: 1px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--border); }
+    .type-row { display: grid; grid-template-columns: 160px minmax(0, 1fr) 130px; align-items: baseline; gap: 20px; min-height: 88px; padding: 20px 24px; background: var(--surface); }
+    .type-role, .type-spec { color: var(--muted); font-family: var(--font-mono); font-size: 10px; letter-spacing: .03em; }
+    .type-example { overflow-wrap: anywhere; }
+    .type-example.display { font-family: var(--font-display); font-size: clamp(40px, 6vw, 68px); font-weight: 590; letter-spacing: -.025em; line-height: 1; }
+    .type-example.h1 { font-family: var(--font-display); font-size: clamp(32px, 4vw, 48px); font-weight: 590; letter-spacing: -.02em; line-height: 1.05; }
+    .type-example.h2 { font-family: var(--font-display); font-size: 28px; font-weight: 590; letter-spacing: -.01em; }
+    .type-example.body { max-width: 64ch; font-size: 16px; line-height: 1.55; }
+    .type-example.caption { color: var(--muted); font-size: 11px; letter-spacing: .02em; }
+    .type-example.numeric { font-family: var(--font-mono); font-size: 32px; letter-spacing: -.02em; }
+    .spacing-list { display: grid; gap: 12px; padding: 24px; }
+    .spacing-item { display: grid; grid-template-columns: 64px 1fr 56px; align-items: center; gap: 16px; }
+    .spacing-item code, .spacing-item span { color: var(--muted); font-family: var(--font-mono); font-size: 10px; }
+    .spacing-bar { height: 8px; width: min(var(--space), 100%); border-radius: 99px; background: var(--fg); }
+    .shape-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 24px; }
+    .shape-sample { display: grid; min-height: 110px; padding: 14px; place-items: end start; border: 1px solid var(--border); background: var(--surface-raised); }
+    .shape-sample span { color: var(--muted); font-family: var(--font-mono); font-size: 9px; }
+    .shape-sample.check { border-radius: var(--radius-check); } .shape-sample.control { border-radius: var(--radius-control); } .shape-sample.field { border-radius: var(--radius-field); } .shape-sample.card-shape { border-radius: var(--radius-card); }
+    .surface-demo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 24px; }
+    .surface-level { min-height: 150px; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-field); }
+    .surface-level.bg { background: var(--bg); } .surface-level.base { background: var(--surface); } .surface-level.raised { background: var(--surface-raised); }
+    .surface-level b { font-size: 13px; } .surface-level p { margin: 7px 0 0; color: var(--muted); font-size: 11px; }
+    .component-stack { display: grid; gap: 26px; padding: 24px; }
+    .component-group { display: grid; gap: 14px; }
+    .component-label { color: var(--muted); font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+    .component-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .ds-button { display: inline-grid; min-height: 46px; padding: 0 18px; place-items: center; border: 1px solid transparent; border-radius: var(--radius-control); cursor: pointer; font-size: 13px; font-weight: 600; letter-spacing: .02em; transition: transform var(--motion-fast) var(--ease-standard), background var(--motion-fast) var(--ease-standard); }
+    .ds-button:active { transform: translateY(2px); }
+    .ds-button.primary { background: var(--primary); color: var(--primary-contrast); box-shadow: var(--elevation-action); }
+    .ds-button.secondary { border-color: var(--border); background: var(--secondary); color: var(--secondary-contrast); }
+    .ds-button.quiet { border-color: var(--border); background: transparent; color: var(--muted); }
+    .ds-button.destructive { border-color: color-mix(in oklch, var(--danger) 40%, var(--border)); background: transparent; color: var(--danger); }
+    .field { display: grid; gap: 7px; min-width: min(280px, 100%); }
+    .field label { color: var(--muted); font-size: 12px; }
+    .field input, .field select { width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg); color: var(--fg); font-size: 14px; }
+    .field small { color: var(--muted); font-size: 10px; }
+    .ds-check { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; font-size: 13px; }
+    .ds-check input { position: absolute; opacity: 0; }
+    .ds-check-mark { display: grid; width: 22px; height: 22px; place-items: center; border: 1px solid var(--border); border-radius: var(--radius-check); background: transparent; }
+    .ds-check input:checked + .ds-check-mark { border-color: var(--success); background: var(--success); color: var(--bg); }
+    .ds-check input:checked + .ds-check-mark::after { font-family: var(--font-mono); font-size: 11px; content: "✓"; }
+    .ds-toggle { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; font-size: 13px; }
+    .ds-toggle input { position: absolute; opacity: 0; }
+    .toggle-track { position: relative; width: 44px; height: 24px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-raised); transition: background var(--motion-fast) var(--ease-standard); }
+    .toggle-track::after { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); content: ""; transition: transform var(--motion-fast) var(--ease-standard), background var(--motion-fast) var(--ease-standard); }
+    .ds-toggle input:checked + .toggle-track { background: var(--accent-soft); }
+    .ds-toggle input:checked + .toggle-track::after { background: var(--fg); transform: translateX(20px); }
+    .card-examples { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .card-example { min-height: 210px; padding: 22px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--elevation-card); }
+    .card-example .label { color: var(--muted); font-size: 11px; }
+    .card-example .value { margin-top: 18px; font-family: var(--font-mono); font-size: 38px; letter-spacing: -.03em; }
+    .card-example h3 { margin: 20px 0 8px; font-family: var(--font-display); font-size: 22px; font-weight: 590; letter-spacing: -.01em; }
+    .card-example p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .analytics-demo { display: grid; grid-template-columns: 1fr .72fr; gap: 16px; }
+    .chart-card { padding: 24px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); }
+    .chart-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+    .chart-head h3 { margin: 0; font-family: var(--font-display); font-size: 18px; font-weight: 590; }
+    .chart-head span { color: var(--muted); font-family: var(--font-mono); font-size: 10px; }
+    .mini-chart { display: grid; grid-template-columns: repeat(7, 1fr); gap: 9px; height: 190px; }
+    .mini-day { --tone: var(--muted); display: grid; grid-template-rows: 18px 1fr 18px; gap: 6px; min-width: 0; color: var(--tone); font-family: var(--font-mono); font-size: 9px; text-align: center; }
+    .mini-day.success { --tone: var(--success); } .mini-day.warning { --tone: var(--warn); } .mini-day.low { --tone: var(--danger); }
+    .mini-track { position: relative; overflow: hidden; border-radius: 8px; background: var(--surface-raised); }
+    .mini-track i { position: absolute; right: 0; bottom: 0; left: 0; height: var(--score); border-radius: 7px 7px 0 0; background: var(--tone); opacity: .8; }
+    .metric-stack { display: grid; gap: 1px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--border); }
+    .metric-item { padding: 20px; background: var(--surface); }
+    .metric-item span { color: var(--muted); font-size: 11px; }
+    .metric-item b { display: block; margin-top: 6px; font-family: var(--font-mono); font-size: 24px; font-weight: 510; }
+    .icon-rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .icon-rule { min-height: 170px; padding: 22px; border: 1px solid var(--border); border-radius: var(--radius-field); background: var(--surface); }
+    .line-icon { position: relative; display: block; width: 24px; height: 24px; margin-bottom: 36px; border: 1.7px solid currentColor; border-radius: 50%; color: var(--fg); }
+    .line-icon.plus::before, .line-icon.plus::after { position: absolute; top: 50%; left: 50%; width: 10px; height: 1.7px; background: currentColor; content: ""; transform: translate(-50%, -50%); }
+    .line-icon.plus::after { transform: translate(-50%, -50%) rotate(90deg); }
+    .line-icon.check::before { position: absolute; left: 6px; top: 7px; width: 9px; height: 5px; border-bottom: 1.7px solid currentColor; border-left: 1.7px solid currentColor; content: ""; transform: rotate(-45deg); }
+    .line-icon.arrow::before { position: absolute; left: 6px; top: 10px; width: 10px; height: 1.7px; background: currentColor; content: ""; }
+    .line-icon.arrow::after { position: absolute; right: 6px; top: 7px; width: 6px; height: 6px; border-top: 1.7px solid currentColor; border-right: 1.7px solid currentColor; content: ""; transform: rotate(45deg); }
+    .icon-rule b { display: block; font-size: 13px; } .icon-rule p { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .motion-layout { display: grid; grid-template-columns: 1fr .72fr; gap: 16px; }
+    .ds-motion-card { min-height: 330px; }
+    .ds-motion-card .orbit-core { width: 148px; }
+    .motion-rules { display: grid; gap: 1px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--border); }
+    .motion-rule { padding: 20px; background: var(--surface); }
+    .motion-rule b { display: block; font-size: 13px; } .motion-rule p { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .dos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .do-card { padding: 24px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); }
+    .do-card h3 { margin: 0 0 18px; font-family: var(--font-display); font-size: 20px; font-weight: 590; }
+    .do-card ul { display: grid; gap: 10px; margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .ds-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-top: 34px; color: var(--muted); font-size: 11px; }
+    .ds-footer a { text-decoration: underline; text-underline-offset: 4px; }
+    @media (max-width: 980px) {
+      .ds-shell { grid-template-columns: 88px minmax(0, 1fr); }
+      .ds-nav { align-items: center; padding-inline: 12px; }
+      .ds-nav .brand span:last-child, .ds-nav-list span, .ds-version span { display: none; }
+      .ds-nav-list a { display: grid; width: 48px; place-items: center; padding: 0; font-family: var(--font-mono); }
+      .ds-hero, .ds-section-head { grid-template-columns: 1fr; }
+      .language-rules, .swatch-grid { grid-template-columns: repeat(2, 1fr); }
+      .span-8, .span-7, .span-6, .span-5, .span-4 { grid-column: span 12; }
+      .card-examples { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 680px) {
+      html { scroll-behavior: auto; }
+      .ds-shell { display: block; }
+      .ds-nav { position: static; width: 100%; height: auto; align-items: flex-start; border-right: 0; border-bottom: 1px solid var(--border); }
+      .ds-nav-list, .ds-version { display: none; }
+      .ds-main { padding: 26px 16px 64px; }
+      .ds-hero { min-height: 340px; gap: 28px; }
+      .ds-section { padding: 52px 0; }
+      .language-rules, .swatch-grid, .shape-grid, .surface-demo, .card-examples, .analytics-demo, .icon-rules, .motion-layout, .dos-grid { grid-template-columns: 1fr; }
+      .type-row { grid-template-columns: 1fr; gap: 8px; }
+      .type-spec { display: none; }
+      .spacing-item { grid-template-columns: 58px 1fr 42px; }
+      .ds-footer { align-items: flex-start; flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+</head>
+<body data-page="design-system">
+  <div class="ds-shell">
+    <aside class="ds-nav" data-od-id="design-system-navigation">
+      <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"></span><span>Orbit DS</span></a>
+      <nav class="ds-nav-list" aria-label="Разделы дизайн-системы">
+        <a href="#language"><b>01</b> <span>Язык</span></a><a href="#foundations"><b>02</b> <span>Основы</span></a><a href="#components"><b>03</b> <span>Компоненты</span></a><a href="#analytics"><b>04</b> <span>Аналитика</span></a><a href="#motion"><b>05</b> <span>Motion</span></a><a href="#rules"><b>06</b> <span>Правила</span></a>
+      </nav>
+      <div class="ds-version">v0.1 <span>· LIGHTWEIGHT</span></div>
+    </aside>
+
+    <main class="ds-main" data-od-id="orbit-design-system">
+      <header class="ds-hero" data-od-id="design-system-heading">
+        <div><p class="eyebrow">ORBIT / Foundation v0.1</p><h1>Спокойная система для ясных решений.</h1></div>
+        <p class="ds-hero-copy">Lightweight design system фиксирует уже найденный язык продукта: графитовые поверхности, индустриальную типографику, точные данные и один живой motion-акцент.</p>
+      </header>
+
+      <section class="ds-section" id="language" data-od-id="visual-language-section">
+        <div class="ds-section-head"><p class="ds-kicker">01 / Visual language</p><div><h2>Тихая технологичность без стерильности</h2><p class="ds-lead">ORBIT выглядит как личный инструмент, а не корпоративная панель контроля. Интерфейс поддерживает ритм человека: данные конкретны, оценки не агрессивны, атмосфера остаётся собранной.</p></div></div>
+        <div class="language-rules">
+          <article class="language-rule"><b>ГРАФИТ</b><p>70–90% экрана занимают тёмные нейтральные поверхности. Разница уровней строится тоном и границей.</p></article>
+          <article class="language-rule"><b>ТИПОГРАФИКА</b><p>Широкие индустриальные заголовки задают характер. Основной текст остаётся нейтральным и спокойным.</p></article>
+          <article class="language-rule"><b>ДАННЫЕ</b><p>Числа всегда имеют единицы, период и объяснение. Формула результата доступна рядом с показателем.</p></article>
+          <article class="language-rule"><b>ОДИН ЖЕСТ</b><p>На экране допускается один выразительный приём: орбитальное поле вокруг главного показателя.</p></article>
+        </div>
+      </section>
+
+      <section class="ds-section" id="foundations" data-od-id="foundations-section">
+        <div class="ds-section-head"><p class="ds-kicker">02 / Foundations</p><div><h2>Цвет, типографика и ритм</h2><p class="ds-lead">Все значения вынесены в <code>orbit-tokens.css</code>. Secondary остаётся нейтральной поверхностью — второй брендовый цвет системе не нужен.</p></div></div>
+
+        <div class="ds-grid">
+          <article class="span-12">
+            <div class="swatch-grid" data-od-id="color-palette">
+              <div class="swatch"><div class="swatch-preview" style="--swatch:var(--primary)"></div><div class="swatch-info"><b>Primary</b><code>--primary · fg</code></div></div>
+              <div class="swatch"><div class="swatch-preview" style="--swatch:var(--secondary)"></div><div class="swatch-info"><b>Secondary</b><code>--secondary</code></div></div>
+              <div class="swatch"><div class="swatch-preview" style="--swatch:var(--ds-highlight)"></div><div class="swatch-info"><b>Accent</b><code>--accent</code></div></div>
+              <div class="swatch"><div class="swatch-preview" style="--swatch:var(--bg)"></div><div class="swatch-info"><b>Background</b><code>--bg</code></div></div>
+              <div class="swatch"><div class="swatch-preview" style="--swatch:var(--surface)"></div><div class="swatch-info"><b>Surface</b><code>--surface</code></div></div>
+              <div class="swatch"><div class="swatch-preview" style="--swatch:var(--fg)"></div><div class="swatch-info"><b>Text</b><code>--fg</code></div></div>
+              <div class="swatch"><div class="swatch-preview" style="--swatch:var(--muted)"></div><div class="swatch-info"><b>Muted</b><code>--muted</code></div></div>
+              <div class="swatch"><div class="swatch-preview" style="--swatch:var(--success)"></div><div class="swatch-info"><b>Success</b><code>--success</code></div></div>
+              <div class="swatch"><div class="swatch-preview" style="--swatch:var(--warn)"></div><div class="swatch-info"><b>Warning</b><code>--warn</code></div></div>
+              <div class="swatch"><div class="swatch-preview" style="--swatch:var(--danger)"></div><div class="swatch-info"><b>Danger</b><code>--danger</code></div></div>
+            </div>
+          </article>
+          <div class="span-12 usage-callout"><p><strong>Правило акцента.</strong> Электрический синий используется максимум дважды в одном экране: активный контекст и главный motion-акцент либо действие. Статусы используют только семантические цвета; ссылки при необходимости остаются белыми с подчёркиванием.</p></div>
+
+          <article class="span-12 type-stack" data-od-id="typography-system">
+            <div class="type-row"><span class="type-role">Display</span><div class="type-example display">18—24 мая</div><span class="type-spec">68 / 1.0 / −2.5%</span></div>
+            <div class="type-row"><span class="type-role">H1</span><div class="type-example h1">Результат сегодняшнего дня</div><span class="type-spec">48 / 1.05 / −2%</span></div>
+            <div class="type-row"><span class="type-role">H2</span><div class="type-example h2">Привычки за неделю</div><span class="type-spec">28 / 1.15 / −1%</span></div>
+            <div class="type-row"><span class="type-role">Body</span><div class="type-example body">Основной текст объясняет решение и ограничивается длиной около 65 знаков в строке.</div><span class="type-spec">16 / 1.55 / 400</span></div>
+            <div class="type-row"><span class="type-role">Caption</span><div class="type-example caption">ЗАДАЧИ 50% · ПРИВЫЧКИ 30% · СОСТОЯНИЕ 20%</div><span class="type-spec">11 / 1.5 / +2%</span></div>
+            <div class="type-row"><span class="type-role">Numeric</span><div class="type-example numeric">56% · 7:34 · 18/25</div><span class="type-spec">Mono / tabular</span></div>
+          </article>
+
+          <article class="span-6 ds-panel" data-od-id="spacing-scale"><div class="ds-panel-pad"><h3 class="ds-panel-title">Spacing · шаг 4 px</h3><p class="ds-panel-copy">4/8 px — микроритм, 12/16 px — контролы, 20/24 px — карточки, 32/48/64 px — группы и секции.</p></div><div class="spacing-list"><div class="spacing-item"><code>space-1</code><i class="spacing-bar" style="--space:4px"></i><span>4</span></div><div class="spacing-item"><code>space-2</code><i class="spacing-bar" style="--space:8px"></i><span>8</span></div><div class="spacing-item"><code>space-4</code><i class="spacing-bar" style="--space:16px"></i><span>16</span></div><div class="spacing-item"><code>space-6</code><i class="spacing-bar" style="--space:24px"></i><span>24</span></div><div class="spacing-item"><code>space-8</code><i class="spacing-bar" style="--space:32px"></i><span>32</span></div><div class="spacing-item"><code>space-12</code><i class="spacing-bar" style="--space:48px"></i><span>48</span></div></div></article>
+
+          <article class="span-6 ds-panel" data-od-id="radius-system"><div class="ds-panel-pad"><h3 class="ds-panel-title">Radius</h3><p class="ds-panel-copy">Радиус следует масштабу элемента. Круг применяется только для статусов, аватаров и орбитальных показателей.</p></div><div class="shape-grid"><div class="shape-sample check"><span>7 · check</span></div><div class="shape-sample control"><span>12 · control</span></div><div class="shape-sample field"><span>16 · field</span></div><div class="shape-sample card-shape"><span>24 · card</span></div></div></article>
+
+          <article class="span-12 ds-panel" data-od-id="surface-system"><div class="ds-panel-pad"><h3 class="ds-panel-title">Elevation / surfaces</h3><p class="ds-panel-copy">Глубина создаётся тремя тональными уровнями. Тень нужна только primary-кнопке, диалогу и отделению motion-ядра; обычная карточка держится на границе.</p></div><div class="surface-demo"><div class="surface-level bg"><b>Canvas</b><p>Фон приложения · --bg</p></div><div class="surface-level base"><b>Card</b><p>Основная поверхность · --surface</p></div><div class="surface-level raised"><b>Nested</b><p>Вложенный контрол · --surface-raised</p></div></div></article>
+        </div>
+      </section>
+
+      <section class="ds-section" id="components" data-od-id="components-section">
+        <div class="ds-section-head"><p class="ds-kicker">03 / Components</p><div><h2>Минимальный набор состояний</h2><p class="ds-lead">Каждый контрол имеет ясную иерархию, touch target не меньше 44 px и видимый keyboard-focus. Primary остаётся светлым; accent не превращается в цвет всех кнопок.</p></div></div>
+        <div class="ds-grid">
+          <article class="span-6 ds-panel"><div class="component-stack"><div class="component-group"><span class="component-label">Buttons</span><div class="component-row"><button class="ds-button primary" type="button">Сохранить план</button><button class="ds-button secondary" type="button">Добавить задачу</button><button class="ds-button quiet" type="button">Отмена</button><button class="ds-button destructive" type="button">Удалить</button></div></div></div></article>
+          <article class="span-6 ds-panel"><div class="component-stack"><div class="component-group"><span class="component-label">Inputs</span><div class="component-row"><div class="field"><label for="task-name">Название задачи</label><input id="task-name" value="Подготовить сценарий интервью"><small>Подсказка живёт под полем, ошибка — там же.</small></div><div class="field"><label for="task-area">Сфера</label><select id="task-area"><option>Главный проект</option><option>Здоровье</option><option>Личное</option></select></div></div></div></div></article>
+          <article class="span-12 ds-panel"><div class="component-stack"><div class="component-group"><span class="component-label">Checkboxes / toggles</span><div class="component-row"><label class="ds-check"><input type="checkbox" checked><span class="ds-check-mark"></span><span>Задача завершена</span></label><label class="ds-check"><input type="checkbox"><span class="ds-check-mark"></span><span>Добавить в привычки</span></label><label class="ds-toggle"><input type="checkbox" checked><span class="toggle-track"></span><span>Учитывать состояние</span></label><label class="ds-toggle"><input type="checkbox"><span class="toggle-track"></span><span>Тихие уведомления</span></label></div></div></div></article>
+          <article class="span-12" data-od-id="card-system"><div class="card-examples"><div class="card-example"><span class="label">Metric card</span><div class="value">56%</div><p>Одна цифра, период и подпись. Формула доступна рядом.</p></div><div class="card-example"><span class="label">Insight card</span><h3>Сон поддерживает темп</h3><p>Вывод должен объяснять наблюдение, а не звучать как оценка человека.</p></div><div class="card-example"><span class="label">Action card</span><h3>Следующий шаг</h3><p>Одна конкретная задача, время и ссылка в соответствующий экран.</p></div></div></article>
+        </div>
+      </section>
+
+      <section class="ds-section" id="analytics" data-od-id="analytics-section">
+        <div class="ds-section-head"><p class="ds-kicker">04 / Analytics</p><div><h2>Данные читаются до декора</h2><p class="ds-lead">Dashboard строится от общего результата к причинам и действиям. Не использовать одинаковые KPI-карточки без приоритета: главный показатель крупный, вторичные метрики компактны, подробности раскрываются ниже.</p></div></div>
+        <div class="analytics-demo">
+          <article class="chart-card" data-od-id="chart-example"><div class="chart-head"><h3>Результат каждого дня</h3><span>0—100</span></div><div class="mini-chart"><div class="mini-day low"><b>48</b><div class="mini-track"><i style="--score:48%"></i></div><span>Пн</span></div><div class="mini-day warning"><b>69</b><div class="mini-track"><i style="--score:69%"></i></div><span>Вт</span></div><div class="mini-day warning"><b>56</b><div class="mini-track"><i style="--score:56%"></i></div><span>Ср</span></div><div class="mini-day warning"><b>64</b><div class="mini-track"><i style="--score:64%"></i></div><span>Чт</span></div><div class="mini-day success"><b>76</b><div class="mini-track"><i style="--score:76%"></i></div><span>Пт</span></div><div class="mini-day warning"><b>58</b><div class="mini-track"><i style="--score:58%"></i></div><span>Сб</span></div><div class="mini-day low"><b>36</b><div class="mini-track"><i style="--score:36%"></i></div><span>Вс</span></div></div></article>
+          <div class="metric-stack"><div class="metric-item"><span>Завершено</span><b>18 дел</b></div><div class="metric-item"><span>Осталось</span><b>7 дел</b></div><div class="metric-item"><span>Состояние</span><b>4 / 5</b></div></div>
+        </div>
+        <div class="usage-callout" style="margin-top:16px"><p><strong>Правила графиков.</strong> Показывать единицы и период; кодировать значение заливкой, а не контуром; success ≥70, warning 50–69, danger &lt;50; не смешивать семантический статус с brand accent; объяснять состав агрегированного результата.</p></div>
+      </section>
+
+      <section class="ds-section" data-od-id="iconography-section">
+        <div class="ds-section-head"><p class="ds-kicker">Iconography</p><div><h2>Тонкая моно-линия</h2><p class="ds-lead">Иконки служат действию или состоянию, а не украшают каждый заголовок. Размеры 16/20/24 px, stroke 1.6–1.8 px, <code>currentColor</code>, без emoji и разноцветных наборов.</p></div></div>
+        <div class="icon-rules"><article class="icon-rule"><i class="line-icon plus"></i><b>Действие</b><p>Добавление, создание, разворачивание. Подпись обязательна в незнакомом контексте.</p></article><article class="icon-rule"><i class="line-icon check"></i><b>Статус</b><p>Завершение и подтверждение. Семантический цвет появляется только после действия.</p></article><article class="icon-rule"><i class="line-icon arrow"></i><b>Навигация</b><p>Переход между уровнями. Не дублировать стрелкой каждый текстовый линк.</p></article></div>
+      </section>
+
+      <section class="ds-section" id="motion" data-od-id="motion-section">
+        <div class="ds-section-head"><p class="ds-kicker">05 / Motion</p><div><h2>Один живой акцент на экран</h2><p class="ds-lead">Декоративное поле связывается только с главным агрегированным показателем. Оно создаёт атмосферу и реакцию, но не кодирует данные, которые нельзя прочитать без анимации.</p></div></div>
+        <div class="motion-layout">
+          <article class="card motion-card ds-motion-card" data-od-id="motion-accent-example"><canvas class="orbit-canvas" aria-hidden="true"></canvas><div class="motion-label">Главный показатель · motion-accent</div><div class="orbit-core"><div class="orbit-value">68%</div><div class="orbit-caption">Результат недели</div></div><div class="motion-state"><span class="signal"></span><span>Движение: <b>медленное</b></span></div></article>
+          <div class="motion-rules"><article class="motion-rule"><b>Feedback · 120–180 ms</b><p>Нажатие, checkbox, toggle. Смещение не больше 2 px.</p></article><article class="motion-rule"><b>Transition · 200–280 ms</b><p>Фильтр, раскрытие панели, смена состояния.</p></article><article class="motion-rule"><b>Ambient · 16–24 s</b><p>Орбитальное поле: медленный цикл, низкая контрастность, реакция на курсор до 3% амплитуды.</p></article><article class="motion-rule"><b>Reduced motion</b><p>Оставить статичную композицию первого кадра. Никакая информация не должна исчезать.</p></article></div>
+        </div>
+      </section>
+
+      <section class="ds-section" id="rules" data-od-id="usage-rules-section">
+        <div class="ds-section-head"><p class="ds-kicker">06 / Usage</p><div><h2>Как сохранять характер системы</h2><p class="ds-lead">Масштабирование строится добавлением понятных продуктовых модулей — календаря, проектов, месячного обзора — без новых палитр и декоративных метафор.</p></div></div>
+        <div class="dos-grid"><article class="do-card"><h3>Делать</h3><ul><li>Начинать экран с периода, результата или следующего действия.</li><li>Показывать причину агрегированного показателя.</li><li>Использовать воздух между группами, а не внутри каждой строки.</li><li>Держать одну главную цифру и один motion-акцент.</li><li>Перестраивать мобильный layout, а не сжимать desktop.</li></ul></article><article class="do-card"><h3>Не делать</h3><ul><li>Не превращать интерфейс в сетку одинаковых KPI-карточек.</li><li>Не использовать accent как универсальный цвет ссылок и кнопок.</li><li>Не наказывать пользователя цветом за низкий ресурс.</li><li>Не добавлять тени каждой поверхности.</li><li>Не запускать несколько фоновых анимаций одновременно.</li></ul></article></div>
+      </section>
+
+      <footer class="ds-footer"><span>ORBIT Design System · v0.1 · 2026</span><span><a href="weekly-dashboard.html">Недельный экран</a> · <a href="daily-detail.html">Экран дня</a> · <a href="orbit-tokens.css">Токены</a></span></footer>
+    </main>
+  </div>
+  <script src="life-os.js"></script>
+</body>
+</html>

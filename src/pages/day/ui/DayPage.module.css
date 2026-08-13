@@ -1,0 +1,306 @@
+.page {
+  min-width: 0;
+}
+
+.header {
+  align-items: flex-start;
+}
+
+.headerActions {
+  display: grid;
+  grid-template-columns: 46px minmax(92px, auto) 46px auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dayNavLink,
+.dateLink {
+  display: inline-grid;
+  min-width: 46px;
+  min-height: 46px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  text-decoration: none;
+  transition:
+    background-color var(--motion-standard) var(--ease-standard),
+    color var(--motion-standard) var(--ease-standard);
+}
+
+.dayNavLink svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.dayNavLink:hover:not([aria-disabled='true']),
+.dateLink:hover {
+  background: var(--surface-raised);
+  color: var(--fg);
+}
+
+.dayNavLink[aria-disabled='true'] {
+  opacity: 0.45;
+}
+
+.dateLink {
+  padding: 0 17px;
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  white-space: nowrap;
+}
+
+.newTask {
+  white-space: nowrap;
+}
+
+.runtimeState {
+  display: grid;
+  min-height: 260px;
+  align-content: center;
+  justify-items: start;
+  color: var(--muted);
+}
+
+.runtimeState p {
+  margin: 0 0 var(--space-4);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.28fr) minmax(320px, 0.72fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.mainColumn,
+.sideColumn {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 18px;
+}
+
+.card {
+  min-width: 0;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 22px 22px 17px;
+}
+
+.dividedHeader {
+  border-bottom: 1px solid var(--border);
+}
+
+.cardEyebrow {
+  margin: 0 0 5px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--weight-emphasize);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cardTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-announce);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.cardNote,
+.closeNote {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.cardMeta,
+.cardFooter {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+}
+
+.loadFacts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 20px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.loadFacts > div {
+  display: grid;
+  align-content: center;
+  min-height: 78px;
+  padding: 14px;
+  border-right: 1px solid var(--border);
+}
+
+.loadFacts > div:last-child {
+  border-right: 0;
+}
+
+.loadFacts strong {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: var(--weight-announce);
+}
+
+.loadFacts span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.loadNote {
+  margin: 15px 22px 20px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.tasks,
+.habits {
+  display: grid;
+  margin: 0;
+  padding: 6px 20px 20px;
+  list-style: none;
+}
+
+.habits {
+  padding-top: 3px;
+}
+
+.cardFooter {
+  min-height: 48px;
+  padding: 15px 22px;
+  border-top: 1px solid var(--border);
+}
+
+.cardAction {
+  min-height: 40px;
+  padding-inline: 10px;
+  border-color: transparent;
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 4px;
+}
+
+.cardError {
+  margin: 0;
+  padding: 13px 22px;
+  border-top: 1px solid color-mix(in oklch, var(--danger) 34%, var(--border));
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.closeDay {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-5);
+  padding: 22px;
+}
+
+.closeDay .cardError {
+  grid-column: 1 / -1;
+  padding-inline: 0;
+}
+
+.scoreRegion {
+  min-width: 0;
+}
+
+.scoreRegion > :global(.orbit-score-breakdown) {
+  height: 100%;
+}
+
+.scoreRegion :global(.orbit-metric) {
+  min-height: 300px;
+}
+
+.scoreRegion :global(.orbit-metric__core) {
+  width: 142px;
+}
+
+.scoreRegion :global(.orbit-metric__value) {
+  font-size: 46px;
+}
+
+@media (max-width: 1050px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .headerActions {
+    width: 100%;
+    grid-template-columns: 46px minmax(0, 1fr) 46px;
+  }
+
+  .newTask {
+    width: 100%;
+    grid-column: 1 / -1;
+  }
+
+  .cardHeader {
+    padding: 19px 18px 15px;
+  }
+
+  .loadFacts {
+    grid-template-columns: 1fr;
+    margin-inline: 16px;
+  }
+
+  .loadFacts > div {
+    min-height: 64px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .loadFacts > div:last-child {
+    border-bottom: 0;
+  }
+
+  .loadNote {
+    margin-inline: 18px;
+  }
+
+  .tasks,
+  .habits {
+    padding-inline: 16px;
+  }
+
+  .cardMeta {
+    white-space: normal;
+    text-align: right;
+  }
+
+  .closeDay {
+    grid-template-columns: 1fr;
+    padding: 20px 18px;
+  }
+
+  .closeDay button {
+    width: 100%;
+  }
+}

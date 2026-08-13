@@ -65,17 +65,23 @@ History mode/anchor/selected-day state, and disclosure state remain local. The
 day-closure draft uses a reducer because it must hold exactly one explicit
 disposition for every unfinished task. Backlog has no sort or reorder draft.
 
-History state is `{ mode: Day | Week | Month, anchorDate, selectedDate? }`.
+History state is `{ mode: Day | Week | Month, anchorDate, selectedDate }`.
 First entry uses `currentLocalDate` and Month mode for the current calendar
 month. Previous/next steps by one local day, one fixed Monday–Sunday week, or
-one calendar month according to mode. Repository queries derive and validate
-only that mode's indexed period: one date, seven dates, or one calendar month.
-Month also returns its calendar and selected-day details; applicable Dynamics is
-a presentation concern gated on the fresh design reconciliation. No arbitrary
-window, search/type filter, unbounded scan, editing, workout history, or second
-cache is introduced. Backlog reads return active undated tasks by immutable
-creation sequence, oldest first, with a stable ID tie-break and no filter,
-manual sort, or reorder surface.
+one calendar month according to mode. Switching mode preserves `selectedDate`,
+sets `anchorDate` to it, and changes only the viewing scale: Day shows that date,
+Week its containing Monday–Sunday week, and Month its containing month. Month
+navigation clamps a selected day number that does not exist in the destination
+month to that month's last valid date; that clamped value becomes the actual
+selection and no preferred day is retained. Repository queries derive and
+validate only bounded indexed periods. Month also returns its calendar and
+selected-day details. Day has no Dynamics; Week derives the last eight weeks and
+Month derives the last six months, using only task completion rate, habit
+completion rate, and the shared 70/30 score. No arbitrary window, search/type
+filter, unbounded scan, editing, workout history, state analytics, correlations,
+generated insights, invented metrics, or second cache is introduced. Backlog
+reads return active undated tasks by immutable creation sequence, oldest first,
+with a stable ID tie-break and no filter, manual sort, or reorder surface.
 
 **Rationale**:
 
@@ -98,7 +104,13 @@ manual sort, or reorder surface.
 
 **Decision**: Implement lifecycle, recurrence, score calculation, planned load, closure validation, closure preparation, week completion, and historical aggregation as pure TypeScript modules with no React, router, DOM, or IndexedDB imports.
 
-Use one shared scoring/calculation policy for the Daily Score and Weekly Progress. It accepts integer contributing counts, applies the 70/30 formula, normalizes an absent category, returns unavailable when both categories are absent, and rounds the final raw percentage once to the nearest whole number with exact-half ties upward. The policy therefore maps `74.4` to `74%`, `74.5` to `75%`, and `74.6` to `75%`. UI components only render its result.
+Use one shared scoring/calculation policy for the Daily Score, Weekly Progress,
+and each permitted History Dynamics score point. It accepts integer contributing
+counts, applies the 70/30 formula, normalizes an absent category, returns
+unavailable when both categories are absent, and rounds the final raw percentage
+once to the nearest whole number with exact-half ties upward. The policy therefore
+maps `74.4` to `74%`, `74.5` to `75%`, and `74.6` to `75%`. UI components only
+render its result.
 
 Represent calendar dates as validated `YYYY-MM-DD` strings and timestamps as UTC ISO strings. Provide a small tested local-date utility and an injected clock. Use `Intl.DateTimeFormat('ru-RU')` only for presentation. Do not add a date library for weekday/start/end recurrence.
 
@@ -327,45 +339,46 @@ Before a local date ends, day closure is blocked until every applicable pending 
 
 ## 15. Design authority and serialized readiness gate
 
-**Decision**: The approved Open Design prototypes and `DESIGN.md` are visual and
-interaction references. `spec.md` is authoritative for product behavior. The
-fresh Open Design reconciliation is serialized because it may change governing
-artifacts and must not run alongside dependent UI work. It records source
-availability/version or the exact failure, never claims a pass during an outage,
-and requires approval for significant deviations. Affected visual, component,
-browser-journey, and other UI work remains blocked until success; toolchain,
-pure-domain, contract, and non-visual adapter work may continue.
+**Decision**: The constitution governs project/process obligations; `spec.md`
+governs behavior and data semantics; `contracts/ui-routes.md` governs its
+explicit UI/prototype overrides; `DESIGN.md` is the canonical visual-system
+contract; and Open Design prototypes are references only where they do not
+conflict with those artifacts. The fresh Open Design reconciliation is
+serialized because it may change governing artifacts and must not run alongside
+dependent UI work. It records source availability/version or the exact failure,
+never claims a pass during an outage, and requires approval for significant
+deviations.
 
-The 2026-08-10 read-only attempt failed with `Transport closed` and is recorded
-in `design-reconciliation.md`. Mode-switch anchor behavior, Month navigation
-when a day number is absent in the destination month, and exact Dynamics
-presentation remain within that blocked reconciliation and must not be invented.
+The 2026-08-11 fresh read-only pull succeeded and the product owner explicitly
+approved the six recorded resolutions in `design-reconciliation.md`. The
+reconciliation gate is complete, so its dependent visual, component, browser
+journey, and other UI work may proceed under those exact resolutions.
 
 **Rationale**: This keeps visual fidelity verifiable without letting an older or
 unavailable prototype silently reverse approved behavior.
 
 **Alternatives considered**: Treating stale artifacts as current, passing the
-gate on outage, running it concurrently with dependent UI work, or blocking all
-non-visual work were rejected by the approved gate decision.
+gate on outage, running it concurrently with dependent UI work, allowing a
+prototype to override a governing artifact, or blocking all non-visual work were
+rejected by the approved gate decision.
 
 ## 16. Fixed week identity and dated ordering
 
 **Decision**: Derive a week key as the Monday containing any local date. The
 seven-day period is always Monday through Sunday, and ensuring its storage record
 is idempotent. Users never name/create arbitrary ranges or create overlaps.
-Weekly goals retain explicit array order. Dated tasks use simple integer order;
-the initial insertion position of a newly materialized recurring occurrence is
-an observable interaction detail left to the successful design reconciliation,
-not silently chosen here. Backlog ignores dated order and uses immutable creation
-sequence oldest first.
+Weekly goals retain explicit array order. Dated tasks use simple integer order.
+A newly materialized recurring occurrence is appended to the end of its date's
+ordered task list; all existing positions remain unchanged and no recurrence
+source, time, priority, or other implicit sorting is introduced. Backlog ignores
+dated order and uses immutable creation sequence oldest first.
 
 **Rationale**: A canonical key makes duplicate/overlap checks unnecessary and
 keeps the ordering model no more general than current requirements.
 
 **Alternatives considered**: User-created week ranges, fractional/general-purpose
-positions, and backlog reorder/sort were rejected. Generated-occurrence append,
-prepend, or grouped placement remains gated because the specification does not
-select one.
+positions, backlog reorder/sort, recurring-task prepend, and recurring-source
+grouping were rejected.
 
 ## 17. Day-closure calendar eligibility
 
@@ -390,8 +403,11 @@ and freezes the result/counts at completion; it never averages daily percentages
 Goals and state are excluded.
 
 History uses Day, Week, and Month projections as defined in section 3, defaults
-to current Month/current-date anchor, is read-only, includes the specified facts,
-and omits workout history. No arbitrary 366-day public window remains.
+to current Month/current-date anchor, preserves and clamps selection exactly as
+specified, is read-only, includes the specified facts, and omits workout history.
+Its only Dynamics are the last eight weeks in Week mode and last six months in
+Month mode, using task rate, habit rate, and the shared score. No arbitrary
+366-day public window remains.
 
 **Rationale**: Raw counts preserve the specified denominator semantics, while
 mode-derived indexed ranges implement the exact user navigation without a

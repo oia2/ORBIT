@@ -1,0 +1,12 @@
+node_modules/
+node_modules.incomplete/
+.agents/
+.specify/
+specs/
+DESIGN.md
+dist/
+build/
+coverage/
+playwright-report/
+test-results/
+package-lock.json

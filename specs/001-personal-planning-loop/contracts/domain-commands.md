@@ -69,9 +69,12 @@ HistoryQuery =
 - History is read-only and includes dated tasks, recurrence, habits and their
   outcome events, state, daily score, weekly progress, load, and reflection.
   It exposes no workout history or editing.
-- Month returns calendar cells and selected-day facts. It introduces no new
-  Dynamics calculation; the approved design gate determines how existing facts
-  are presented in that section.
+- Month returns calendar cells and selected-day facts. Page orchestration may
+  issue only the additional bounded period queries needed for approved Dynamics:
+  the last eight weeks in Week mode and the last six months in Month mode. Day
+  has no Dynamics. Each point contains only task completion rate, habit completion
+  rate, and the shared 70/30 score; it introduces no arbitrary range query,
+  workout/state analytics, correlations, generated insights, or other metric.
 
 ## 3. Planning commands
 
@@ -136,9 +139,9 @@ Rules:
   occurrence; change/exclude every one whose day remains open; leave every
   closed-day membership/frozen score unchanged; tombstone the occurrence; append
   the deletion event; bump every affected open day/week.
-- Dated task reorder uses simple integer order. Initial placement of a newly
-  materialized recurring task remains blocked on the approved design decision;
-  this contract does not choose append, prepend, or grouped insertion.
+- Dated task reorder uses simple integer order. A newly materialized recurring
+  task receives the next final position on its date, leaving all existing
+  positions unchanged and introducing no implicit source/time/priority sort.
 
 ### Recurring tasks and habits
 
@@ -201,7 +204,8 @@ The shared scoring/calculation policy aggregates integer counts, applies weights
 once, then rounds the final non-negative value with `floor(raw + 0.5)`. The Daily
 Score uses current/frozen daily counts; Weekly Progress sums the seven frozen
 count pairs and never averages daily percentages. Goals and daily state are
-excluded.
+excluded. Each permitted History Dynamics point applies this same count-based
+policy for its bounded period and never averages displayed percentages.
 
 `calculatePlannedLoad` sums positive durations of non-deleted tasks currently
 placed on the open day. Closure captures it before dispositions. No configurable
