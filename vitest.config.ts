@@ -10,7 +10,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: { alias: { '@': alias } },
   test: {
-    exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
+    exclude: ['e2e/**', 'node_modules/**', 'dist/**', 'dist-server/**'],
     projects: [
       {
         extends: true,
@@ -29,6 +29,14 @@ export default defineConfig({
           environment: 'jsdom',
           include: ['src/**/*.test.tsx'],
           setupFiles: [setupFile],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'server',
+          environment: 'node',
+          include: ['server/**/*.test.ts'],
         },
       },
     ],

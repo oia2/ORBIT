@@ -24,8 +24,22 @@ change at all.
 
 Behavior equivalence is proven by retargeting feature 001's nine existing repository
 behavioral suites (~2,600 lines, `us1`–`us7`, `failures`, `foundation`, `seeded-scale`) at
-the PostgreSQL implementation without modifying their assertions. That is SC-001's exact
-requirement.
+the PostgreSQL implementation. Two categories of assertion are treated differently, and the
+distinction is what makes the evidence meaningful:
+
+- **Domain and product-behavior assertions must remain unchanged** — scoring, recurrence,
+  closure, membership, history, revisions, immutability. Editing one of these to reach green
+  would conceal exactly the drift SC-001 exists to detect.
+- **Assertions testing superseded IndexedDB storage mechanics may be replaced** with
+  PostgreSQL/server equivalents — quota exhaustion, blocked version upgrades, terminated
+  connections. These describe a mechanism this feature deliberately removes, and FR-014
+  replaces the error codes they assert on. This affects the `failures` suite most, and parts
+  of `foundation`.
+- **Every storage-specific replacement is recorded in `traceability.md`**, so the two
+  categories stay auditable and the first can never be quietly reclassified as the second.
+
+SC-001's wording is "no test altered to accommodate different **product behavior**", which is
+precisely this rule.
 
 ## Technical Context
 
@@ -260,10 +274,11 @@ proven, so the repository is never in a state where neither implementation works
 
 | Risk | Mitigation |
 | ---- | ---------- |
-| Silent behavior drift while reimplementing 2,598 lines of orchestration | Retargeted 001 suites are the acceptance gate for step 3; assertions must not be edited (SC-001) |
+| Silent behavior drift while reimplementing 2,598 lines of orchestration | Retargeted 001 suites are the acceptance gate for step 3; domain and product-behavior assertions must not be edited (SC-001) |
 | `pg` returning `Date` objects for `date`/`timestamptz`, reintroducing timezone bugs | Explicit type parsers configured on the pool; called out in `data-model.md` and covered by tests asserting exact string forms |
 | Transaction scope too narrow, leaving partial state on failure | One transaction per boundary operation (research Decision 7); `failures` suite covers rollback (SC-005) |
-| The 001 suites turn out to depend on IndexedDB specifics rather than interface behavior | Discovered early — retargeting begins at step 3. Any such coupling is a test defect to fix, and must be reported rather than worked around by weakening an assertion |
+| The 001 suites turn out to depend on IndexedDB specifics rather than interface behavior | Discovered early — retargeting begins at step 3. Classify each case: an assertion testing *superseded storage mechanics* is replaced with a PostgreSQL equivalent and recorded in `traceability.md`; an assertion testing *domain behavior* that merely reaches the domain through IndexedDB is a coupling defect to fix in the test. Neither is ever resolved by weakening a domain assertion |
+| Misclassifying a domain assertion as a storage assertion, to get past a real regression | The two categories are defined in the Summary above and in research.md Decision 11; every replacement is recorded in `traceability.md` with its justification, so the classification is reviewable rather than implicit |
 | E2E fixture rewrite is larger than estimated | Isolated to `orbit.fixture.ts`; journeys themselves are untouched because the UI does not change |
 
 ## Complexity Tracking

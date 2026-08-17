@@ -62,16 +62,16 @@ This document's `[US1]`–`[US4]` labels refer to **002's** user stories. Where 
 
 **Purpose**: Add the backend toolchain without touching existing behavior.
 
-- [ ] T001 Add runtime dependencies `fastify`, `@fastify/static`, `kysely`, `pg` and dev dependencies `tsx`, `@types/pg` to `package.json`
-- [ ] T002 Create the `server/` directory tree per plan.md: `server/{db/migrations,planning,api}/`
-- [ ] T003 [P] Create `tsconfig.server.json` extending the root config, with `@/*` → `src/*` paths, `module: nodenext`, and `server/**/*` included
-- [ ] T004 [P] Create `vite.server.config.ts` for the SSR build: entry `server/main.ts`, output `dist-server/`, `ssr` target Node 22, reusing the `@` alias from `vite.config.ts`
-- [ ] T005 [P] Create `server/config.ts` reading and validating `DATABASE_URL`, `PORT`, and `NODE_ENV`, failing fast with a clear message when `DATABASE_URL` is absent
-- [ ] T006 [P] Create `.env.example` documenting `DATABASE_URL`, `PORT`, `NODE_ENV` per quickstart.md
-- [ ] T007 Create `docker-compose.yml` with the `db` service only (postgres:17-alpine, named volume `orbit-db-data`, healthcheck, port 5432); the `app` service is added later in T086
-- [ ] T008 Add npm scripts to `package.json`: `dev:server`, `build:server`, `test:server`, `test:server:tz`, `db:migrate`
-- [ ] T009 Add a third Vitest project named `server` to `vitest.config.ts`: `environment: 'node'`, `include: ['server/**/*.test.ts']`, no jsdom setup file
-- [ ] T010 [P] Add ESLint boundary rules in `eslint.config.js`: forbid `src/**` from importing `server/**`, and forbid `src/shared/lib/**` and `src/entities/planning/model/**` from importing Node built-ins, `pg`, `kysely`, or DOM-only globals
+- [X] T001 Add runtime dependencies `fastify`, `@fastify/static`, `kysely`, `pg` and dev dependencies `tsx`, `@types/pg` to `package.json`
+- [X] T002 Create the `server/` directory tree per plan.md: `server/{db/migrations,planning,api}/`
+- [X] T003 [P] Create `tsconfig.server.json` extending the root config, with `@/*` → `src/*` paths, `module: nodenext`, and `server/**/*` included
+- [X] T004 [P] Create `vite.server.config.ts` for the SSR build: entry `server/main.ts`, output `dist-server/`, `ssr` target Node 22, reusing the `@` alias from `vite.config.ts`
+- [X] T005 [P] Create `server/config.ts` reading and validating `DATABASE_URL`, `PORT`, and `NODE_ENV`, failing fast with a clear message when `DATABASE_URL` is absent
+- [X] T006 [P] Create `.env.example` documenting `DATABASE_URL`, `PORT`, `NODE_ENV` per quickstart.md
+- [X] T007 Create `docker-compose.yml` with the `db` service only (postgres:17-alpine, named volume `orbit-db-data`, healthcheck, port 5432); the `app` service is added later in T086
+- [X] T008 Add npm scripts to `package.json`: `dev:server`, `build:server`, `test:server`, `test:server:tz`, `db:migrate`
+- [X] T009 Add a third Vitest project named `server` to `vitest.config.ts`: `environment: 'node'`, `include: ['server/**/*.test.ts']`, no jsdom setup file
+- [X] T010 [P] Add ESLint boundary rules in `eslint.config.js`: forbid `src/**` from importing `server/**`, and forbid `src/shared/lib/**` and `src/entities/planning/model/**` from importing Node built-ins, `pg`, `kysely`, or DOM-only globals
 
 **Checkpoint**: `npm run typecheck` and `npm run lint` pass; existing app and tests are untouched.
 
@@ -83,16 +83,16 @@ This document's `[US1]`–`[US4]` labels refer to **002's** user stories. Where 
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T011 Create `server/db/schema.ts` declaring the Kysely `Database` interface for all eight tables per [data-model.md](./data-model.md)
-- [ ] T012 Create `server/db/client.ts` building the `pg` Pool and Kysely instance. **Configure `pg` type parsers so `date` (OID 1082) and `timestamptz` (OID 1184) are returned as strings, never JS `Date`** — see the critical mapping constraint in data-model.md
-- [ ] T013 [P] Write `server/db/client.test.ts` asserting that a round-tripped `LocalDate` and `Instant` come back as byte-identical branded strings, including a `timestamptz` with non-zero milliseconds
-- [ ] T014 Create `server/db/migrations/index.ts` exporting a static `Record<string, Migration>` map and a `runMigrations(db)` helper using Kysely's `Migrator` (research Decision 10 — static map, not `FileMigrationProvider`, so the bundled server works)
-- [ ] T015 Create `server/db/migrations/001-initial-schema.ts` implementing every table, column, `CHECK`, foreign key, index, and sequence in data-model.md, including `UNIQUE (occurrence_id, plan_date)` on `task_plan_entries` and `UNIQUE (definition_id, date)` on `habit_occurrences`
-- [ ] T016 Write `server/db/migrations/migrations.test.ts` verifying migrations apply to an empty database, are idempotent on re-run, and that each declared constraint actually rejects a violating row
-- [ ] T017 Create `server/test-support/database.ts`: per-Vitest-worker database (`orbit_test_<worker>`), created and migrated once, with a `truncateAll()` helper resetting all tables and sequences between test cases
-- [ ] T018 Create `server/planning/mappers.ts` converting each table row to and from its domain type, preserving `undefined` vs `null` exactly (a `?` domain field is `undefined`, never `null`)
-- [ ] T019 [P] Write `server/planning/mappers.test.ts` covering round-trip fidelity for all five `TaskOccurrence` variants, both `Day` variants, both `Week` variants, and every optional field
-- [ ] T020 **Add** `ServerUnavailable` and `UnexpectedServerFailure` to the error union in `src/entities/planning/model/planning-repository.ts`, keeping the exported type name `DomainOrStorageError`, all eleven domain codes, **and — temporarily — the existing `StorageUnavailable`, `QuotaExceeded`, `UpgradeBlocked`, and `UnexpectedStorageFailure` codes**. The IndexedDB adapter still ships and still returns them; removing them now would break typecheck for every task until cutover. They are deleted in T071
+- [X] T011 Create `server/db/schema.ts` declaring the Kysely `Database` interface for all eight tables per [data-model.md](./data-model.md)
+- [X] T012 Create `server/db/client.ts` building the `pg` Pool and Kysely instance. **Configure `pg` type parsers so `date` (OID 1082) and `timestamptz` (OID 1184) are returned as strings, never JS `Date`** — see the critical mapping constraint in data-model.md
+- [X] T013 [P] Write `server/db/client.test.ts` asserting that a round-tripped `LocalDate` and `Instant` come back as byte-identical branded strings, including a `timestamptz` with non-zero milliseconds
+- [X] T014 Create `server/db/migrations/index.ts` exporting a static `Record<string, Migration>` map and a `runMigrations(db)` helper using Kysely's `Migrator` (research Decision 10 — static map, not `FileMigrationProvider`, so the bundled server works)
+- [X] T015 Create `server/db/migrations/001-initial-schema.ts` implementing every table, column, `CHECK`, foreign key, index, and sequence in data-model.md, including `UNIQUE (occurrence_id, plan_date)` on `task_plan_entries` and `UNIQUE (definition_id, date)` on `habit_occurrences`
+- [X] T016 Write `server/db/migrations/migrations.test.ts` verifying migrations apply to an empty database, are idempotent on re-run, and that each declared constraint actually rejects a violating row
+- [X] T017 Create `server/test-support/database.ts`: per-Vitest-worker database (`orbit_test_<worker>`), created and migrated once, with a `truncateAll()` helper resetting all tables and sequences between test cases
+- [X] T018 Create `server/planning/mappers.ts` converting each table row to and from its domain type, preserving `undefined` vs `null` exactly (a `?` domain field is `undefined`, never `null`)
+- [X] T019 [P] Write `server/planning/mappers.test.ts` covering round-trip fidelity for all five `TaskOccurrence` variants, both `Day` variants, both `Week` variants, and every optional field
+- [X] T020 **Add** `ServerUnavailable` and `UnexpectedServerFailure` to the error union in `src/entities/planning/model/planning-repository.ts`, keeping the exported type name `DomainOrStorageError`, all eleven domain codes, **and — temporarily — the existing `StorageUnavailable`, `QuotaExceeded`, `UpgradeBlocked`, and `UnexpectedStorageFailure` codes**. The IndexedDB adapter still ships and still returns them; removing them now would break typecheck for every task until cutover. They are deleted in T071
 
 **Checkpoint**: `docker compose up -d db && npm run test:server` green. `npm run verify` **fully passes** — the union carries both old and new codes, so nothing is broken.
 

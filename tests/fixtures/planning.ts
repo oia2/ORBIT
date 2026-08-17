@@ -396,6 +396,14 @@ const DEFAULT_REPOSITORY_FAILURES = {
     expectedRevision: revision(0),
     actualRevision: revision(1),
   },
+  ServerUnavailable: {
+    code: 'ServerUnavailable',
+    message: 'The ORBIT server is unavailable',
+  },
+  UnexpectedServerFailure: {
+    code: 'UnexpectedServerFailure',
+    message: 'Unexpected server failure',
+  },
   StorageUnavailable: {
     code: 'StorageUnavailable',
     message: 'IndexedDB is unavailable',

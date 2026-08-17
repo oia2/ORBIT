@@ -154,7 +154,58 @@ constraint-critical table in the schema.**
 | `planned_snapshot` | `jsonb` | `NOT NULL` | `plannedSnapshot` |
 | `entered_at` | `timestamptz` | `NOT NULL` | `enteredAt` |
 | `finalized_at` | `timestamptz` | `NULL` | `finalizedAt` |
-| … remaining outcome/disposition fields | per `TaskPlanEntry` | | |
+| `outcome` | `text` | `NOT NULL`, `CHECK` (see below) | `outcome` |
+| `destination_kind` | `text` | `NULL`, `CHECK IN ('day','backlog')` | `destination.kind` |
+| `destination_date` | `date` | `NULL` | `destination.date` |
+
+#### Outcome and destination
+
+`TaskPlanEntry` is a seven-variant discriminated union (`src/entities/planning/model/task.ts`).
+The `outcome` column is its discriminant:
+
+```sql
+CHECK (outcome IN ('planned','completed','moved','backlogged','canceled','kept-unfinished','deleted'))
+```
+
+Only two variants carry a `destination`, and they carry different placement types:
+
+| Outcome | Domain variant | `destination` |
+| ------- | -------------- | ------------- |
+| `planned` | `PlannedTaskPlanEntry` | none |
+| `completed` | `CompletedTaskPlanEntry` | none |
+| `moved` | `MovedTaskPlanEntry` | `DayTaskPlacement` — carries a date |
+| `backlogged` | `BackloggedTaskPlanEntry` | `BacklogTaskPlacement` — no payload |
+| `canceled` | `CanceledTaskPlanEntry` | none |
+| `kept-unfinished` | `KeptUnfinishedTaskPlanEntry` | none |
+| `deleted` | `DeletedTaskPlanEntry` | none |
+
+`destination_kind` stores the placement discriminant that already exists in the domain, so
+`moved` and `backlogged` are distinguishable in storage without inferring either from the
+outcome. `BacklogTaskPlacement` has no fields beyond its `kind`, which is why `backlogged`
+leaves `destination_date` null rather than gaining a column the domain does not have.
+
+Two `CHECK` constraints make a row that contradicts its own outcome unrepresentable:
+
+```sql
+-- Only moved and backlogged may carry a destination, and each carries its own kind.
+CHECK (
+  (outcome = 'moved'      AND destination_kind = 'day'     AND destination_date IS NOT NULL) OR
+  (outcome = 'backlogged' AND destination_kind = 'backlog' AND destination_date IS NULL)     OR
+  (outcome NOT IN ('moved','backlogged') AND destination_kind IS NULL AND destination_date IS NULL)
+)
+
+-- 001 FR-040: a closure move must target a date other than the one being closed.
+CHECK (destination_date IS NULL OR destination_date <> plan_date)
+```
+
+The second constraint puts 001 FR-040's "a selected move date MUST differ from the date being
+closed" into the schema. It is also enforced in domain code, which owns the richer rule (the
+destination must additionally be a valid *open* day — a condition depending on other rows and
+on the request clock, so it cannot live in a `CHECK`).
+
+**No constraint ties `finalized_at` to `outcome`.** A membership finalizes at day closure
+(001 FR-035), so a `completed` entry on a still-open day is legitimately completed and not yet
+finalized. Requiring `finalized_at` for every non-`planned` outcome would contradict that.
 
 - **`UNIQUE (occurrence_id, plan_date)`** — this single constraint enforces 001 FR-027 and
   FR-048: at most one membership per logical occurrence per local date, so an A → B → A move
