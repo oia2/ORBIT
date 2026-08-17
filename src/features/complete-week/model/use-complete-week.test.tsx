@@ -47,7 +47,7 @@ describe('useCompleteWeek', () => {
   it.each([
     ['WeekNotClosable', /семь дней/i, 0],
     ['RevisionConflict', /не удалось завершить/i, 1],
-    ['StorageUnavailable', /не удалось завершить/i, 0],
+    ['ServerUnavailable', /не удалось завершить/i, 0],
   ])('maps %s and does not claim completion', async (code, message, reloads) => {
     const context = setup({ ok: false, error: { code } });
     let result = true;

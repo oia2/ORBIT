@@ -40,8 +40,8 @@ export function useBacklogPage(currentDate?: LocalDate) {
       setState({
         status: 'error',
         message:
-          result.error.code === 'QuotaExceeded'
-            ? 'Хранилище переполнено. Изменения не сохранены.'
+          result.error.code === 'ServerUnavailable'
+            ? 'Сервер ORBIT недоступен. Данные не загружены.'
             : 'Не удалось загрузить бэклог.',
       });
       return;

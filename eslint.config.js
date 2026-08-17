@@ -298,9 +298,16 @@ export default tseslint.config(
     extends: [tseslint.configs.disableTypeChecked],
   },
   {
+    /*
+     * E2E fixtures seed and reset PostgreSQL directly from Node, reusing the
+     * server's own schema and mappers. The alternative — test-only seeding
+     * routes — would add a production surface that exists only for tests, which
+     * the API contract explicitly excludes.
+     */
     files: ['e2e/**/*.{ts,tsx}', 'playwright.config.ts'],
     rules: {
       'react-hooks/rules-of-hooks': 'off',
+      'no-restricted-imports': ['error', { patterns: [] }],
     },
   },
 );

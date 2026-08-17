@@ -117,7 +117,7 @@ export function HistoryPage({ clock }: HistoryPageProps) {
         <section className={styles.systemState} role="status">
           <span className={styles.stateMark} aria-hidden="true" />
           <h2>Загружаем историю</h2>
-          <p>Собираем факты выбранного периода на этом устройстве…</p>
+          <p>Собираем факты выбранного периода…</p>
         </section>
       ) : null}
       {history.state.status === 'error' ? (

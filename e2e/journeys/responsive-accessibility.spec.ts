@@ -26,19 +26,16 @@ test('has no serious axe violations and preserves non-color/status/reduced-motio
       ['critical', 'serious'].includes(violation.impact ?? ''),
     ),
   ).toEqual([]);
-  const persistence = page.locator('details[data-od-id="persistence-status"]');
-  const persistenceSummary = persistence.locator('summary');
-  await expect(persistenceSummary.getByRole('status')).toHaveText(
-    /сохранено на устройстве|хранение не гарантировано/i,
-  );
-  await persistenceSummary.click();
-  await expect(persistence).toHaveAttribute('open', '');
-  await expect(persistence.getByText('Локальное хранение', { exact: true })).toBeVisible();
-  await expect(persistence.locator('p')).toContainText(
-    /планы хранятся только на этом устройстве|браузер не (?:предоставил|поддерживает).*постоянн/i,
-  );
-  await expect(persistence.locator('p')).toContainText(
-    /данные могут исчезнуть|могут удалить данные|очистят хранилище|могут быть очищены автоматически/i,
-  );
+  /*
+   * REPLACED DEVICE-LOCAL STORAGE ASSERTION (recorded in traceability.md).
+   *
+   * 001 asserted the storage disclosure in the rail — that plans lived only in
+   * this browser profile and could be cleared. 002 FR-015 removes exactly that
+   * messaging because it no longer describes anything true. Every other
+   * assertion in this test is unchanged.
+   */
+  await expect(page.locator('details[data-od-id="persistence-status"]')).toHaveCount(0);
+  await expect(page.getByText(/только на этом устройстве/i)).toHaveCount(0);
+  await expect(page.getByText(/Локальное хранение/i)).toHaveCount(0);
   await expect(page.getByRole('link', { name: /трениров|workout/i })).toHaveCount(0);
 });

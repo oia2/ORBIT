@@ -14,7 +14,6 @@ import { FormField } from '@/shared/ui/form-field';
 import { Icon } from '@/shared/ui/icon';
 import { OrbitMetric } from '@/shared/ui/orbit-metric';
 
-import { PersistenceStatusContext } from '../providers/PersistenceStatusContext';
 import { AppShell } from './AppShell';
 
 const globalStyles = readFileSync('src/app/styles/global.css', 'utf8');
@@ -70,38 +69,20 @@ describe('AppShell', () => {
     expect(shellStyles).toMatch(/grid-template-columns:\s*220px minmax\(0, 1fr\)/);
   });
 
-  it('renders the exact ready status with a non-color marker and discoverable disclosure', async () => {
-    const user = userEvent.setup();
+  it('no longer advertises device-local storage in the rail', () => {
     render(
-      <PersistenceStatusContext.Provider value="granted">
-        <MemoryRouter>
-          <AppShell currentDate={localDate('2026-05-20')} />
-        </MemoryRouter>
-      </PersistenceStatusContext.Provider>,
+      <MemoryRouter>
+        <AppShell currentDate={localDate('2026-05-20')} />
+      </MemoryRouter>,
     );
 
-    const persistence = document.querySelector('[data-od-id="persistence-status"]');
-    const summary = persistence?.querySelector('summary');
-    const marker = summary?.querySelector('[aria-hidden="true"]');
-
-    expect(persistence).not.toBeNull();
-    expect(persistence?.closest('[data-od-id="app-rail"]')).not.toBeNull();
-    expect(screen.getByRole('status')).toHaveTextContent(/^Сохранено на устройстве$/);
-    expect(marker).toHaveTextContent('✓');
-    expect(summary).toHaveAccessibleName(
-      'Сохранено на устройстве. Показать условия локального хранения',
-    );
-    expect(persistence).not.toHaveAttribute('open');
-
-    if (!(summary instanceof HTMLElement)) {
-      throw new Error('Persistence summary was not rendered');
-    }
-    await user.click(summary);
-
-    expect(persistence).toHaveAttribute('open');
-    expect(screen.getByRole('note')).toHaveTextContent(/только на этом устройстве/i);
-    expect(screen.getByRole('note')).toHaveTextContent(/между обычными сеансами/i);
-    expect(screen.getByRole('note')).toHaveTextContent(/не синхронизируются/i);
+    // 002 FR-015: plans are no longer tied to one browser profile, so the
+    // disclosure explaining that they were is gone. It is the only
+    // user-facing wording this feature removes.
+    expect(document.querySelector('[data-od-id="persistence-status"]')).toBeNull();
+    expect(screen.queryByText(/только на этом устройстве/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Сохранено на устройстве/i)).not.toBeInTheDocument();
+    expect(document.querySelector('[data-od-id="app-rail"]')).not.toBeNull();
   });
 });
 

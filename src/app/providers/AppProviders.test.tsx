@@ -72,12 +72,12 @@ describe('AppProviders startup states', () => {
       </AppProviders>,
     );
 
-    expect(screen.getByRole('status')).toHaveTextContent(/подготавливаем локальные данные/i);
+    expect(screen.getByRole('status')).toHaveTextContent(/загружаем данные/i);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText('Репозиторий готов')).not.toBeInTheDocument();
   });
 
-  it('provides the ready repository and explains the exact device/profile boundary', () => {
+  it('provides the ready repository without any device-local storage claim', () => {
     const repository = fakeRepository();
     const harness = runtimeHarness({ status: 'initializing', attempt: 1 });
     render(
@@ -91,106 +91,24 @@ describe('AppProviders startup states', () => {
     );
 
     act(() => {
-      harness.publish({
-        status: 'ready',
-        attempt: 1,
-        repository,
-        persistentStorage: 'granted',
-      });
+      harness.publish({ status: 'ready', attempt: 1, repository });
     });
 
     expect(screen.getByText('Репозиторий готов')).toBeInTheDocument();
-    const locality = document.querySelector('[data-od-id="persistence-status"]');
-    expect(locality).not.toBeNull();
-    expect(locality?.closest('[data-od-id="app-rail"]')).not.toBeNull();
-    expect(locality).toHaveTextContent(/только на этом устройстве/i);
-    expect(locality).toHaveTextContent(/текущем профиле браузера/i);
-    expect(locality).toHaveTextContent(/не синхронизируются/i);
-    expect(locality).toHaveTextContent(/между обычными сеансами/i);
-    expect(locality).toHaveTextContent(/пока доступно хранилище сайта/i);
-    expect(locality).toHaveTextContent(/явного удаления данных сайта/i);
-    expect(locality).toHaveTextContent(/приватном режиме/i);
-    expect(locality).toHaveTextContent(/удаления или сброса профиля/i);
-    expect(locality).toHaveTextContent(/браузер или операционная система очистят хранилище/i);
+    // 002 FR-015: the disclosure that plans lived only in this browser profile
+    // is gone, because it no longer describes anything true.
+    expect(document.querySelector('[data-od-id="persistence-status"]')).toBeNull();
+    expect(screen.queryByText(/только на этом устройстве/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/хранилище сайта/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it.each([
-    ['denied', /браузер не предоставил постоянное хранилище/i],
-    ['unsupported', /браузер не поддерживает запрос постоянного хранилища/i],
-  ] as const)('keeps %s persistence state nonfatal and announces a status', (state, message) => {
-    const repository = fakeRepository();
-    const harness = runtimeHarness({
-      status: 'ready',
-      attempt: 1,
-      repository,
-      persistentStorage: state,
-    });
-
-    render(
-      <AppProviders runtime={harness.runtime}>
-        <MemoryRouter>
-          <AppShell currentDate={localDate('2026-05-20')}>
-            <RepositoryProbe expected={repository} />
-          </AppShell>
-        </MemoryRouter>
-      </AppProviders>,
-    );
-
-    expect(screen.getByText('Репозиторий готов')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveAccessibleName('Сохранено на устройстве');
-    expect(screen.getByText(message)).toBeInTheDocument();
-    expect(screen.getByText(message)).toHaveTextContent(/только на этом устройстве/i);
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  });
-
-  it('announces a blocked upgrade as an alert and retries after the other tab closes', () => {
-    const harness = runtimeHarness({
-      status: 'blocked',
-      attempt: 1,
-      currentVersion: 1,
-      requestedVersion: 2,
-      requiresReload: false,
-    });
-    render(<AppProviders runtime={harness.runtime} />);
-
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      /закройте или перезагрузите другую вкладку/i,
-    );
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /повторить/i }));
-
-    expect(harness.retry).toHaveBeenCalledOnce();
-    expect(screen.getByRole('status')).toHaveTextContent(/подготавливаем локальные данные/i);
-  });
-
-  it('requires a page reload after version change instead of retrying the stale runtime', () => {
-    const reloadPage = vi.fn<() => void>();
-    const harness = runtimeHarness({
-      status: 'blocked',
-      attempt: 2,
-      currentVersion: 1,
-      requestedVersion: 2,
-      requiresReload: true,
-    });
-    render(<AppProviders runtime={harness.runtime} reloadPage={reloadPage} />);
-
-    expect(screen.getByRole('alert')).toHaveTextContent(/перезагрузите эту страницу/i);
-    expect(screen.queryByRole('button', { name: /повторить/i })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /перезагрузить страницу/i }));
-
-    expect(reloadPage).toHaveBeenCalledOnce();
-    expect(harness.retry).not.toHaveBeenCalled();
-  });
-
-  it('reports storage failure as an alert without exposing IndexedDB, then retries to ready', () => {
+  it('reports an unreachable server as an alert, then retries to ready', () => {
     const repository = fakeRepository();
     const harness = runtimeHarness({
       status: 'failure',
       attempt: 1,
-      reason: 'storage-unavailable',
-      message: 'IndexedDB is disabled',
+      message: 'Failed to fetch',
     });
     render(
       <AppProviders runtime={harness.runtime}>
@@ -198,39 +116,32 @@ describe('AppProviders startup states', () => {
       </AppProviders>,
     );
 
-    expect(screen.getByRole('alert')).toHaveTextContent(/не удалось открыть локальное хранилище/i);
-    expect(screen.queryByText(/IndexedDB/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(/не удалось связаться с сервером/i);
+    // The raw transport message stays out of the interface; the alert says what
+    // happened and offers the one action that can help.
+    expect(screen.queryByText(/Failed to fetch/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Репозиторий готов')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /повторить/i }));
-    expect(screen.getByRole('status')).toHaveTextContent(/подготавливаем локальные данные/i);
+    expect(harness.retry).toHaveBeenCalledOnce();
+    expect(screen.getByRole('status')).toHaveTextContent(/загружаем данные/i);
+
     act(() => {
-      harness.publish({
-        status: 'ready',
-        attempt: 2,
-        repository,
-        persistentStorage: 'denied',
-      });
+      harness.publish({ status: 'ready', attempt: 2, repository });
     });
 
     expect(screen.getByText('Репозиторий готов')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('maps a terminated connection to a factual retryable alert', () => {
-    const harness = runtimeHarness({
-      status: 'failure',
-      attempt: 1,
-      reason: 'terminated',
-      message: 'The IndexedDB connection was terminated',
-    });
+  it('offers no reload-required state, which no longer exists without IndexedDB', () => {
+    const harness = runtimeHarness({ status: 'failure', attempt: 1, message: 'offline' });
     render(<AppProviders runtime={harness.runtime} />);
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      /соединение с локальным хранилищем прервано/i,
-    );
-    expect(screen.queryByText(/IndexedDB/i)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /повторить/i }));
-    expect(harness.retry).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole('button', { name: /перезагрузить страницу/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/другую вкладку/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /повторить/i })).toBeInTheDocument();
   });
 });

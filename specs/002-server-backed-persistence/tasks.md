@@ -195,30 +195,30 @@ IndexedDB database exists.
 
 ### Cutover
 
-- [ ] T063 [US2] Simplify `src/app/runtime/create-app-runtime.ts`: remove `openDatabase`, the `blocked` state, `versionchange`, `terminated`, and `requestPersistentStorage`; bootstrap becomes a single `GET /api/health` probe yielding `initializing | ready | failure`, with `retry()` re-probing
-- [ ] T064 [US2] Delete `src/app/providers/PersistenceStatusContext.ts` and remove its wiring and the device-local storage messaging from `src/app/providers/AppProviders.tsx` (FR-015)
-- [ ] T065 [US2] Rewire `src/main.tsx` to construct `createHttpPlanningRepository` with the existing `createSystemClock()`, removing all IndexedDB imports
-- [ ] T066 [US2] Update `src/entities/planning/index.ts` to export the HTTP repository factory and drop `createIndexedDbPlanningRepository` and `openOrbitPlanningDatabase`
-- [ ] T067 [P] [US2] Update `src/app/runtime/create-app-runtime.test.ts` for the simplified lifecycle, deleting cases for removed states
-- [ ] T068 [US2] Verify `src/app/runtime/habit-boundary.ts` needs no logic change — it already calls `repository.prepareOpenPeriod` and correctly keeps rollover detection client-side under FR-009. Adjust only its failure typing if required
+- [X] T063 [US2] Simplify `src/app/runtime/create-app-runtime.ts`: remove `openDatabase`, the `blocked` state, `versionchange`, `terminated`, and `requestPersistentStorage`; bootstrap becomes a single `GET /api/health` probe yielding `initializing | ready | failure`, with `retry()` re-probing
+- [X] T064 [US2] Delete `src/app/providers/PersistenceStatusContext.ts` and remove its wiring and the device-local storage messaging from `src/app/providers/AppProviders.tsx` (FR-015)
+- [X] T065 [US2] Rewire `src/main.tsx` to construct `createHttpPlanningRepository` with the existing `createSystemClock()`, removing all IndexedDB imports
+- [X] T066 [US2] Update `src/entities/planning/index.ts` to export the HTTP repository factory and drop `createIndexedDbPlanningRepository` and `openOrbitPlanningDatabase`
+- [X] T067 [P] [US2] Update `src/app/runtime/create-app-runtime.test.ts` for the simplified lifecycle, deleting cases for removed states
+- [X] T068 [US2] Verify `src/app/runtime/habit-boundary.ts` needs no logic change — it already calls `repository.prepareOpenPeriod` and correctly keeps rollover detection client-side under FR-009. Adjust only its failure typing if required
 
 ### IndexedDB removal
 
 > Deliberately after cutover, so the repository is never in a state where neither
 > implementation works (plan.md implementation sequence, step 7).
 
-- [ ] T069 [US2] Delete `src/entities/planning/api/indexeddb/` in full: repository, `database.ts`, `schema.ts`, `mappers.ts`, `migrations.ts`, and all nine `.test.ts` suites now living on the server
-- [ ] T070 [US2] Update `src/pages/backlog/model/use-backlog-page.ts` and every other consumer of `StorageUnavailable`, `QuotaExceeded`, `UpgradeBlocked`, and `UnexpectedStorageFailure` to handle `ServerUnavailable` and `UnexpectedServerFailure` instead. **Must complete before T071**, or removing the codes breaks typecheck (FR-014)
-- [ ] T071 [US2] Now that no consumer references them, remove `StorageUnavailable`, `QuotaExceeded`, `UpgradeBlocked`, and `UnexpectedStorageFailure` from the error union in `src/entities/planning/model/planning-repository.ts`, completing the staged change begun in T020. Run `npm run typecheck` to confirm zero references remain
-- [ ] T072 [US2] Remove `idb` and `fake-indexeddb` from `package.json` and drop any `fake-indexeddb` setup from `tests/setup/vitest.setup.ts`
-- [ ] T073 [US2] Search `src/` for remaining IndexedDB references — identifiers, comments, and user-facing copy — and remove them (FR-002, FR-015)
+- [X] T069 [US2] Delete `src/entities/planning/api/indexeddb/` in full: repository, `database.ts`, `schema.ts`, `mappers.ts`, `migrations.ts`, and all nine `.test.ts` suites now living on the server
+- [X] T070 [US2] Update `src/pages/backlog/model/use-backlog-page.ts` and every other consumer of `StorageUnavailable`, `QuotaExceeded`, `UpgradeBlocked`, and `UnexpectedStorageFailure` to handle `ServerUnavailable` and `UnexpectedServerFailure` instead. **Must complete before T071**, or removing the codes breaks typecheck (FR-014)
+- [X] T071 [US2] Now that no consumer references them, remove `StorageUnavailable`, `QuotaExceeded`, `UpgradeBlocked`, and `UnexpectedStorageFailure` from the error union in `src/entities/planning/model/planning-repository.ts`, completing the staged change begun in T020. Run `npm run typecheck` to confirm zero references remain
+- [X] T072 [US2] Remove `idb` and `fake-indexeddb` from `package.json` and drop any `fake-indexeddb` setup from `tests/setup/vitest.setup.ts`
+- [X] T073 [US2] Search `src/` for remaining IndexedDB references — identifiers, comments, and user-facing copy — and remove them (FR-002, FR-015)
 
 ### E2E
 
-- [ ] T074 [US2] Rewrite `e2e/fixtures/orbit.fixture.ts` to reset and seed through PostgreSQL directly from Node using `pg`, replacing all in-browser `indexedDB` manipulation. No test-only routes may be added to the server
-- [ ] T075 [US2] Update `playwright.config.ts` so `webServer` builds and runs the real server against a dedicated E2E database instead of `vite preview`
-- [ ] T076 [US2] Replace `e2e/journeys/device-local-persistence.spec.ts` with `e2e/journeys/server-persistence.spec.ts` covering SC-002 and SC-003: data visible from a second browser context, and surviving a full site-data clear
-- [ ] T077 [US2] Run the seven existing journey specs in `e2e/journeys/` (`01-week-planning` through `07-history`) plus `responsive-accessibility.spec.ts` unchanged and confirm they pass; any required change is a behavior regression to investigate, not to accommodate
+- [X] T074 [US2] Rewrite `e2e/fixtures/orbit.fixture.ts` to reset and seed through PostgreSQL directly from Node using `pg`, replacing all in-browser `indexedDB` manipulation. No test-only routes may be added to the server
+- [X] T075 [US2] Update `playwright.config.ts` so `webServer` builds and runs the real server against a dedicated E2E database instead of `vite preview`
+- [X] T076 [US2] Replace `e2e/journeys/device-local-persistence.spec.ts` with `e2e/journeys/server-persistence.spec.ts` covering SC-002 and SC-003: data visible from a second browser context, and surviving a full site-data clear
+- [X] T077 [US2] Run the seven existing journey specs in `e2e/journeys/` (`01-week-planning` through `07-history`) plus `responsive-accessibility.spec.ts` unchanged and confirm they pass; any required change is a behavior regression to investigate, not to accommodate
 
 **Checkpoint**: The application runs entirely on the server. IndexedDB is gone, the error union carries only server codes, and `npm run verify` passes. US1 and US2 are both satisfied.
 
@@ -250,7 +250,7 @@ failure and nothing appears saved. Restart; the app recovers and prior data is i
 data, `docker compose down`, `up` again, and the data is still there.
 
 - [ ] T084 [US4] Add static file serving to `server/app.ts` via `@fastify/static` when `NODE_ENV=production`, serving `dist/` with an SPA fallback to `index.html` for non-`/api` routes, so one origin serves both (FR-016)
-- [ ] T085 [US4] Add the `/api` dev proxy to `vite.config.ts` targeting `http://localhost:3000`, so the client uses relative `/api` paths identically in development and production
+- [X] T085 [US4] Add the `/api` dev proxy to `vite.config.ts` targeting `http://localhost:3000`, so the client uses relative `/api` paths identically in development and production
 - [ ] T086 [US4] Create a multi-stage `Dockerfile`: build stage runs `npm ci`, `npm run build`, and `npm run build:server`; runtime stage is `node:22-alpine` with production dependencies, `dist/`, and `dist-server/`
 - [ ] T087 [US4] Add the `app` service to `docker-compose.yml`: builds from the Dockerfile, `depends_on` `db` with a health condition, publishes the app port, and receives `DATABASE_URL` and `NODE_ENV=production`
 - [ ] T088 [US4] Verify a first run against an empty volume produces a working, empty ORBIT rather than an error, with migrations applied automatically (FR-004, SC-009)

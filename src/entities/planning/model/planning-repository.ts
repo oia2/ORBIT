@@ -74,34 +74,19 @@ export type DomainOrStorageError =
       readonly expectedRevision: Revision;
       readonly actualRevision: Revision;
     }
+  /*
+   * The two failures that are not the domain's answer: the server could not be
+   * reached, or it could not handle the request. `QuotaExceeded` and
+   * `UpgradeBlocked` are gone with IndexedDB — neither has a server analogue
+   * (002 FR-014). The exported type name is retained to avoid churn in the 28
+   * pages and features that consume it.
+   */
   | {
       readonly code: 'ServerUnavailable';
       readonly message: string;
     }
   | {
       readonly code: 'UnexpectedServerFailure';
-      readonly message: string;
-    }
-  /*
-   * The four codes below belong to the IndexedDB adapter, which still ships
-   * while the server implementation is proven. They are removed once every
-   * consumer handles the two server codes above (002 FR-014, tasks T070/T071).
-   */
-  | {
-      readonly code: 'StorageUnavailable';
-      readonly message: string;
-    }
-  | {
-      readonly code: 'QuotaExceeded';
-      readonly message: string;
-    }
-  | {
-      readonly code: 'UpgradeBlocked';
-      readonly currentVersion: number;
-      readonly requestedVersion: number;
-    }
-  | {
-      readonly code: 'UnexpectedStorageFailure';
       readonly message: string;
     };
 

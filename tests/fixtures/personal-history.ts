@@ -8,8 +8,6 @@ import type {
   TaskSeries,
 } from '@/entities/planning/model/task';
 import type { Week } from '@/entities/planning/model/week';
-import { toStoredTaskOccurrence } from '@/entities/planning/api/indexeddb/mappers';
-import type { StoredTaskOccurrence } from '@/entities/planning/api/indexeddb/schema';
 import {
   creationSequence,
   dayPosition,
@@ -56,7 +54,7 @@ export interface PersonalHistoryStores {
   readonly weeks: readonly Week[];
   readonly days: readonly Day[];
   readonly taskSeries: readonly TaskSeries[];
-  readonly taskOccurrences: readonly StoredTaskOccurrence[];
+  readonly taskOccurrences: readonly TaskOccurrence[];
   readonly taskPlanEntries: readonly TaskPlanEntry[];
   readonly taskEvents: readonly TaskEvent[];
   readonly habitDefinitions: readonly HabitDefinition[];
@@ -144,7 +142,7 @@ function habitDefinitions(): readonly HabitDefinition[] {
 export function buildPersonalHistoryFixture(): PersonalHistoryFixture {
   const weeks: Week[] = [];
   const days: Day[] = [];
-  const occurrences: StoredTaskOccurrence[] = [];
+  const occurrences: TaskOccurrence[] = [];
   const planEntries: TaskPlanEntry[] = [];
   const events: TaskEvent[] = [];
   const habits: HabitOccurrence[] = [];
@@ -252,7 +250,7 @@ export function buildPersonalHistoryFixture(): PersonalHistoryFixture {
               revision: revision(0),
             };
         nextCreation += 1;
-        occurrences.push(toStoredTaskOccurrence(occurrence));
+        occurrences.push(occurrence);
         planEntries.push({
           id: planEntryId,
           occurrenceId,

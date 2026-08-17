@@ -52,7 +52,7 @@ describe('useRecordDailyState', () => {
   it.each([
     ['PeriodImmutable', /закрытый день/i, 0],
     ['RevisionConflict', /не удалось сохранить/i, 1],
-    ['StorageUnavailable', /не удалось сохранить/i, 0],
+    ['ServerUnavailable', /не удалось сохранить/i, 0],
   ])('maps %s without a false success', async (code, message, reloads) => {
     const context = setup(failure(code));
     await act(() =>

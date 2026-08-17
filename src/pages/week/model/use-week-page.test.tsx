@@ -64,7 +64,7 @@ describe('useWeekPage', () => {
   it('reports a failed day join instead of a partial week', async () => {
     const failure = {
       ok: false as const,
-      error: { code: 'StorageUnavailable' as const, message: 'offline' },
+      error: { code: 'ServerUnavailable' as const, message: 'offline' },
     };
     const repository = {
       ensureCalendarWeek: vi.fn().mockResolvedValue({ ...command, value: weekStart }),

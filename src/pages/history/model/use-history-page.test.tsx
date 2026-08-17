@@ -158,7 +158,7 @@ describe('useHistoryPage', () => {
     });
     context.prepareOpenPeriod.mockResolvedValueOnce({
       ok: false,
-      error: { code: 'StorageUnavailable' },
+      error: { code: 'ServerUnavailable' },
     });
     await act(async () => {
       await first.result.current.reload();
@@ -168,7 +168,7 @@ describe('useHistoryPage', () => {
     });
     context.getHistoryView.mockResolvedValueOnce({
       ok: false,
-      error: { code: 'UnexpectedStorageFailure' },
+      error: { code: 'UnexpectedServerFailure' },
     } as never);
     await act(async () => {
       await first.result.current.reload();
