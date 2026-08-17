@@ -29,7 +29,7 @@ import type {
 } from '@/entities/planning/model/task';
 import type { Week } from '@/entities/planning/model/week';
 
-import { useTestDatabase, type TestDatabase } from '../test-support/database';
+import { openSharedTestDatabase, type TestDatabase } from '../test-support/database';
 import {
   fromDayRow,
   fromHabitDefinitionRow,
@@ -479,7 +479,7 @@ describe('planning row mappers', () => {
   let database: TestDatabase;
 
   beforeAll(async () => {
-    database = await useTestDatabase();
+    database = await openSharedTestDatabase();
   });
 
   beforeEach(async () => {

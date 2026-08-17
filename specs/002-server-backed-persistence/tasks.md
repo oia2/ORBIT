@@ -125,18 +125,18 @@ is verifiable with zero client changes.
 > The second category is legitimate precisely because the mechanism it describes is gone.
 > The risk is misclassification, so T032 records every replacement.
 
-- [ ] T021 [US1] Create `server/planning/test-support/repository-harness.ts` exposing `createRepositoryUnderTest({ clock })` that builds a `PostgresPlanningRepository` on the per-worker test database, mirroring the construction seam the 001 suites used for IndexedDB
-- [ ] T022 [P] [US1] Move and retarget 001's `foundation` suite to `server/planning/repository.foundation.test.ts`, keeping its domain assertions verbatim and replacing only its database-lifecycle assertions
-- [ ] T023 [P] [US1] Move and retarget 001's `us1` suite (week planning) to `server/planning/repository.week-planning.test.ts` — construction seam only; assertions verbatim
-- [ ] T024 [P] [US1] Move and retarget 001's `us2` suite (task execution) to `server/planning/repository.task-execution.test.ts` — construction seam only; assertions verbatim
-- [ ] T025 [P] [US1] Move and retarget 001's `us3` suite (recurrence) to `server/planning/repository.recurrence.test.ts` — construction seam only; assertions verbatim
-- [ ] T026 [P] [US1] Move and retarget 001's `us4` suite (day closure) to `server/planning/repository.day-closure.test.ts` — construction seam only; assertions verbatim
-- [ ] T027 [P] [US1] Move and retarget 001's `us5` suite (habits, state, score, load) to `server/planning/repository.daily-signals.test.ts` — construction seam only; assertions verbatim
-- [ ] T028 [P] [US1] Move and retarget 001's `us6` suite (weekly review) to `server/planning/repository.weekly-review.test.ts` — construction seam only; assertions verbatim
-- [ ] T029 [P] [US1] Move and retarget 001's `us7` suite (history) to `server/planning/repository.history.test.ts` — construction seam only; assertions verbatim
-- [ ] T030 [P] [US1] Move and retarget 001's `seeded-scale` suite to `server/planning/repository.seeded-scale.test.ts` — construction seam only; assertions verbatim
-- [ ] T031 [US1] Retarget 001's `failures` suite to `server/planning/repository.failures.test.ts`. **This suite is the main exception to verbatim preservation**: its IndexedDB failure injection (quota exceeded, upgrade blocked, connection terminated) has no PostgreSQL analogue and is replaced with connection loss, statement failure mid-transaction, and constraint violation. Any assertion in it about *domain* error codes — `PeriodImmutable`, `RevisionConflict`, `ValidationFailure` and the rest — must still carry over unchanged
-- [ ] T032 [US1] Create `specs/002-server-backed-persistence/traceability.md` recording, per suite, which assertions carried over verbatim and which storage-mechanism assertions were replaced and why. **Do not claim the `failures` suite is verbatim** — it is not, and the record must say so plainly, or SC-001's evidence is overstated
+- [X] T021 [US1] Create `server/planning/test-support/repository-harness.ts` exposing `createRepositoryUnderTest({ clock })` that builds a `PostgresPlanningRepository` on the per-worker test database, mirroring the construction seam the 001 suites used for IndexedDB
+- [X] T022 [P] [US1] Move and retarget 001's `foundation` suite to `server/planning/repository.foundation.test.ts`, keeping its domain assertions verbatim and replacing only its database-lifecycle assertions
+- [X] T023 [P] [US1] Move and retarget 001's `us1` suite (week planning) to `server/planning/repository.week-planning.test.ts` — construction seam only; assertions verbatim
+- [X] T024 [P] [US1] Move and retarget 001's `us2` suite (task execution) to `server/planning/repository.task-execution.test.ts` — construction seam only; assertions verbatim
+- [X] T025 [P] [US1] Move and retarget 001's `us3` suite (recurrence) to `server/planning/repository.recurrence.test.ts` — construction seam only; assertions verbatim
+- [X] T026 [P] [US1] Move and retarget 001's `us4` suite (day closure) to `server/planning/repository.day-closure.test.ts` — construction seam only; assertions verbatim
+- [X] T027 [P] [US1] Move and retarget 001's `us5` suite (habits, state, score, load) to `server/planning/repository.daily-signals.test.ts` — construction seam only; assertions verbatim
+- [X] T028 [P] [US1] Move and retarget 001's `us6` suite (weekly review) to `server/planning/repository.weekly-review.test.ts` — construction seam only; assertions verbatim
+- [X] T029 [P] [US1] Move and retarget 001's `us7` suite (history) to `server/planning/repository.history.test.ts` — construction seam only; assertions verbatim
+- [X] T030 [P] [US1] Move and retarget 001's `seeded-scale` suite to `server/planning/repository.seeded-scale.test.ts` — construction seam only; assertions verbatim
+- [X] T031 [US1] Retarget 001's `failures` suite to `server/planning/repository.failures.test.ts`. **This suite is the main exception to verbatim preservation**: its IndexedDB failure injection (quota exceeded, upgrade blocked, connection terminated) has no PostgreSQL analogue and is replaced with connection loss, statement failure mid-transaction, and constraint violation. Any assertion in it about *domain* error codes — `PeriodImmutable`, `RevisionConflict`, `ValidationFailure` and the rest — must still carry over unchanged
+- [X] T032 [US1] Create `specs/002-server-backed-persistence/traceability.md` recording, per suite, which assertions carried over verbatim and which storage-mechanism assertions were replaced and why. **Do not claim the `failures` suite is verbatim** — it is not, and the record must say so plainly, or SC-001's evidence is overstated
 
 ### Repository implementation
 
@@ -144,21 +144,21 @@ is verifiable with zero client changes.
 > already organized (`day.ts`, `task.ts`, `habit.ts`, `week.ts`). This keeps each file
 > reviewable and lets the modules below be built in parallel.
 
-- [ ] T033 [US1] Create `server/planning/transaction.ts` with two wrappers: a **command** transaction at the default `READ COMMITTED` including the `expectedRevision` guard that turns a zero-row `UPDATE … WHERE revision = $expected` into the existing `RevisionConflict` error (FR-007, FR-008); and a **read** transaction at `REPEATABLE READ` so every query in a multi-query projection sees one consistent snapshot (research Decision 7)
-- [ ] T034 [P] [US1] Write `server/planning/transaction.test.ts` proving the read wrapper actually pins a snapshot: a command committing between two statements of a read transaction must not be visible to the second statement
-- [ ] T035 [US1] Create `server/planning/postgres-planning-repository.ts` as the facade implementing `PlanningRepository`, delegating to the concern modules below and injecting the supplied `ApplicationClock` unchanged
-- [ ] T036 [P] [US1] Implement week and goal commands in `server/planning/weeks.ts`: `ensureCalendarWeek`, `addWeeklyGoal`, `editWeeklyGoal`, `reorderWeeklyGoals`, `deleteWeeklyGoal` — gates 001's `us1` suite
-- [ ] T037 [P] [US1] Implement task lifecycle commands in `server/planning/tasks.ts`: `createTask`, `editTaskOccurrence`, `setTaskCompletion`, `moveTaskToDate`, `moveTaskToBacklog`, `deleteTaskOccurrence`, `reorderDatedTasks` — gates 001's `us2` suite
-- [ ] T038 [US1] Implement task plan membership handling in `server/planning/plan-entries.ts`, relying on `UNIQUE (occurrence_id, plan_date)` for reuse-on-return so an A → B → A move never inflates a denominator (FR-027, FR-048)
-- [ ] T039 [P] [US1] Implement recurrence commands in `server/planning/series.ts`: `createTaskSeries`, `updateTaskSeriesRule`, `stopTaskSeries`, plus rule-version append semantics — gates 001's `us3` suite
-- [ ] T040 [P] [US1] Implement habit commands in `server/planning/habits.ts`: `createHabitDefinition`, `updateHabitRule`, `stopHabitDefinition`, `editHabitOccurrence`, `recordHabitOutcome`, `correctBoundaryMissToCompleted`, `clearHabitOutcome`, `deleteHabitOccurrence` — gates 001's `us5` suite
-- [ ] T041 [US1] Implement `prepareOpenPeriod` occurrence materialization in `server/planning/materialization.ts`, including the automatic habit boundary miss, driven entirely by the injected clock's `currentLocalDate()`
-- [ ] T042 [P] [US1] Implement `saveDailyState` in `server/planning/daily-state.ts`
-- [ ] T043 [US1] Implement `closeDay` in `server/planning/closure.ts`: disposition completeness, eligibility, pending-habit rejection, and the planned-load snapshot, all in one command transaction — gates 001's `us4` suite
-- [ ] T044 [US1] Implement `completeWeek` in `server/planning/week-completion.ts` — gates 001's `us6` suite
-- [ ] T045 [P] [US1] Implement read projections in `server/planning/queries.ts`: `getWeekView`, `getDayView`, `getBacklogView`, `getTaskHistory`, each running inside the `REPEATABLE READ` read wrapper from T033
-- [ ] T046 [US1] Implement `getHistoryView` in `server/planning/history-queries.ts` for day, week, and month modes including Dynamics windows, also inside the read wrapper — gates 001's `us7` suite
-- [ ] T047 [US1] Verify every command returns correct `affectedDates` and `affectedWeeks`, since the client's cache invalidation depends on them
+- [X] T033 [US1] Create `server/planning/transaction.ts` with two wrappers: a **command** transaction at the default `READ COMMITTED` including the `expectedRevision` guard that turns a zero-row `UPDATE … WHERE revision = $expected` into the existing `RevisionConflict` error (FR-007, FR-008); and a **read** transaction at `REPEATABLE READ` so every query in a multi-query projection sees one consistent snapshot (research Decision 7)
+- [X] T034 [P] [US1] Write `server/planning/transaction.test.ts` proving the read wrapper actually pins a snapshot: a command committing between two statements of a read transaction must not be visible to the second statement
+- [X] T035 [US1] Create `server/planning/postgres-planning-repository.ts` as the facade implementing `PlanningRepository`, delegating to the concern modules below and injecting the supplied `ApplicationClock` unchanged
+- [X] T036 [P] [US1] Implement week and goal commands in `server/planning/weeks.ts`: `ensureCalendarWeek`, `addWeeklyGoal`, `editWeeklyGoal`, `reorderWeeklyGoals`, `deleteWeeklyGoal` — gates 001's `us1` suite
+- [X] T037 [P] [US1] Implement task lifecycle commands in `server/planning/tasks.ts`: `createTask`, `editTaskOccurrence`, `setTaskCompletion`, `moveTaskToDate`, `moveTaskToBacklog`, `deleteTaskOccurrence`, `reorderDatedTasks` — gates 001's `us2` suite
+- [X] T038 [US1] Implement task plan membership handling in `server/planning/plan-entries.ts`, relying on `UNIQUE (occurrence_id, plan_date)` for reuse-on-return so an A → B → A move never inflates a denominator (FR-027, FR-048)
+- [X] T039 [P] [US1] Implement recurrence commands in `server/planning/series.ts`: `createTaskSeries`, `updateTaskSeriesRule`, `stopTaskSeries`, plus rule-version append semantics — gates 001's `us3` suite
+- [X] T040 [P] [US1] Implement habit commands in `server/planning/habits.ts`: `createHabitDefinition`, `updateHabitRule`, `stopHabitDefinition`, `editHabitOccurrence`, `recordHabitOutcome`, `correctBoundaryMissToCompleted`, `clearHabitOutcome`, `deleteHabitOccurrence` — gates 001's `us5` suite
+- [X] T041 [US1] Implement `prepareOpenPeriod` occurrence materialization in `server/planning/materialization.ts`, including the automatic habit boundary miss, driven entirely by the injected clock's `currentLocalDate()`
+- [X] T042 [P] [US1] Implement `saveDailyState` in `server/planning/daily-state.ts`
+- [X] T043 [US1] Implement `closeDay` in `server/planning/closure.ts`: disposition completeness, eligibility, pending-habit rejection, and the planned-load snapshot, all in one command transaction — gates 001's `us4` suite
+- [X] T044 [US1] Implement `completeWeek` in `server/planning/week-completion.ts` — gates 001's `us6` suite
+- [X] T045 [P] [US1] Implement read projections in `server/planning/queries.ts`: `getWeekView`, `getDayView`, `getBacklogView`, `getTaskHistory`, each running inside the `REPEATABLE READ` read wrapper from T033
+- [X] T046 [US1] Implement `getHistoryView` in `server/planning/history-queries.ts` for day, week, and month modes including Dynamics windows, also inside the read wrapper — gates 001's `us7` suite
+- [X] T047 [US1] Verify every command returns correct `affectedDates` and `affectedWeeks`, since the client's cache invalidation depends on them
 
 **Checkpoint**: `npm run test:server` fully green and `npm run verify` still passes. **Behavior preservation is now proven.** No client code has changed, and the application still runs on IndexedDB.
 

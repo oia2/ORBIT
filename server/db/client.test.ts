@@ -5,7 +5,7 @@ import { revision } from '@/shared/lib/ids';
 import { instant } from '@/shared/lib/local-date/clock';
 import { localDate } from '@/shared/lib/local-date/local-date';
 
-import { useTestDatabase, type TestDatabase } from '../test-support/database';
+import { openSharedTestDatabase, type TestDatabase } from '../test-support/database';
 import { parsePostgresBigInt, parsePostgresDate, parsePostgresTimestamp } from './client';
 
 const MONDAY = localDate('2026-08-10');
@@ -45,7 +45,7 @@ describe('planning database type parsers', () => {
   let database: TestDatabase;
 
   beforeAll(async () => {
-    database = await useTestDatabase();
+    database = await openSharedTestDatabase();
   });
 
   beforeEach(async () => {

@@ -100,6 +100,8 @@ function createTypeParsers(): pg.CustomTypesConfig {
 export interface CreatePlanningDatabaseOptions {
   readonly connectionString: string;
   readonly maxConnections?: number;
+  /** Test-only hook used to assert that reads stay bounded. */
+  readonly onQuery?: (sql: string, parameters: readonly unknown[]) => void;
 }
 
 export interface PlanningDatabaseHandle {
@@ -120,8 +122,16 @@ export function createPlanningDatabase(
     options: '-c TimeZone=UTC',
   });
 
+  const { onQuery } = options;
   const db = new Kysely<Database>({
     dialect: new PostgresDialect({ pool }),
+    ...(onQuery === undefined
+      ? {}
+      : {
+          log: (event) => {
+            onQuery(event.query.sql, event.query.parameters);
+          },
+        }),
   });
 
   return {

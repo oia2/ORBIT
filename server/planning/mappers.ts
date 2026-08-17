@@ -5,6 +5,8 @@ import { assertNever } from '@/shared/lib/result';
 import type { Day } from '@/entities/planning/model/day';
 import type { HabitDefinition, HabitOccurrence } from '@/entities/planning/model/habit';
 import type {
+  CompletedDatedTaskOccurrence,
+  IncompleteDatedTaskOccurrence,
   TaskEvent,
   TaskOccurrence,
   TaskPlanEntry,
@@ -65,6 +67,20 @@ function nullable<Value>(value: Value | undefined): Exclude<Value, undefined> | 
 
 function json(value: unknown): string {
   return JSON.stringify(value);
+}
+
+/**
+ * Drops the key column from a row's values so the remainder can be used as an
+ * `UPDATE ... SET` payload without restating the identity being matched on.
+ */
+export function withoutKey<TValues extends object, TKey extends keyof TValues>(
+  values: TValues,
+  key: TKey,
+): Omit<TValues, TKey> {
+  return Object.fromEntries(Object.entries(values).filter(([name]) => name !== key)) as Omit<
+    TValues,
+    TKey
+  >;
 }
 
 function nullableJson(value: unknown): string | null {
@@ -207,9 +223,15 @@ export function toTaskOccurrenceValues(occurrence: TaskOccurrence): TaskOccurren
 
   switch (occurrence.state) {
     case 'active': {
-      // `'completion' in occurrence` is the reliable narrowing here: it is the
-      // only property the dated variants have and the backlog variant lacks.
-      if (!('completion' in occurrence)) {
+      /*
+       * `placement` is the discriminant, not the presence of a `completion`
+       * key. Callers build the next state by spreading the previous one, so a
+       * task moved from a date to the backlog still carries a stale
+       * `completion` and `dayPosition`; keying off those would write it back as
+       * a dated task. Feature 001's mapper rebuilt each variant from scratch
+       * for the same reason.
+       */
+      if (occurrence.placement.kind === 'backlog') {
         return {
           ...base,
           state: 'active',
@@ -221,15 +243,16 @@ export function toTaskOccurrenceValues(occurrence: TaskOccurrence): TaskOccurren
         };
       }
 
+      const dated = occurrence as IncompleteDatedTaskOccurrence | CompletedDatedTaskOccurrence;
       return {
         ...base,
         state: 'active',
         placement_kind: 'day',
-        placement_date: occurrence.placement.date,
-        planned_duration_minutes: occurrence.plannedDurationMinutes,
-        day_position: nullable(occurrence.dayPosition),
-        ...(occurrence.completion === 'completed'
-          ? { completion: 'completed' as const, actual_completed_at: occurrence.actualCompletedAt }
+        placement_date: dated.placement.date,
+        planned_duration_minutes: dated.plannedDurationMinutes,
+        day_position: nullable(dated.dayPosition),
+        ...(dated.completion === 'completed'
+          ? { completion: 'completed' as const, actual_completed_at: dated.actualCompletedAt }
           : { completion: 'incomplete' as const, actual_completed_at: null }),
       };
     }

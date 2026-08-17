@@ -7,7 +7,7 @@ import { localDate } from '@/shared/lib/local-date/local-date';
 
 import {
   createScratchDatabase,
-  useTestDatabase,
+  openSharedTestDatabase,
   type ScratchDatabase,
   type TestDatabase,
 } from '../../test-support/database';
@@ -75,7 +75,7 @@ describe('schema constraints', () => {
   let database: TestDatabase;
 
   beforeAll(async () => {
-    database = await useTestDatabase();
+    database = await openSharedTestDatabase();
   });
 
   beforeEach(async () => {

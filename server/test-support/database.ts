@@ -47,10 +47,27 @@ async function recreateWorkerDatabase(databaseName: string): Promise<void> {
   }
 }
 
+export interface ExecutedQuery {
+  readonly sql: string;
+  readonly parameters: readonly unknown[];
+}
+
 export interface TestDatabase {
   readonly db: PlanningDatabase;
   readonly connectionString: string;
   truncateAll(): Promise<void>;
+  /**
+   * Records every statement Kysely executes until the returned handle is
+   * stopped. The retargeted 001 suites use it to prove that a read stays
+   * bounded to the range it was asked for — the PostgreSQL equivalent of the
+   * IndexedDB index-scan assertions those suites originally made.
+   */
+  recordQueries(): QueryRecording;
+}
+
+export interface QueryRecording {
+  readonly queries: readonly ExecutedQuery[];
+  stop(): readonly ExecutedQuery[];
 }
 
 let sharedDatabase: Promise<TestDatabase> | undefined;
@@ -60,7 +77,16 @@ async function openTestDatabase(): Promise<TestDatabase> {
   await recreateWorkerDatabase(databaseName);
 
   const connectionString = connectionStringFor(databaseName);
-  const handle = createPlanningDatabase({ connectionString, maxConnections: 8 });
+  const recorders = new Set<ExecutedQuery[]>();
+  const handle = createPlanningDatabase({
+    connectionString,
+    maxConnections: 8,
+    onQuery: (sql, parameters) => {
+      for (const recorder of recorders) {
+        recorder.push({ sql, parameters });
+      }
+    },
+  });
   await runMigrations(handle.db);
 
   const truncateStatement = `TRUNCATE TABLE ${DATABASE_TABLE_NAMES.map(
@@ -73,11 +99,22 @@ async function openTestDatabase(): Promise<TestDatabase> {
     async truncateAll(): Promise<void> {
       await handle.pool.query(truncateStatement);
     },
+    recordQueries(): QueryRecording {
+      const queries: ExecutedQuery[] = [];
+      recorders.add(queries);
+      return {
+        queries,
+        stop(): readonly ExecutedQuery[] {
+          recorders.delete(queries);
+          return queries;
+        },
+      };
+    },
   };
 }
 
 /** One migrated database per Vitest worker, created on first use. */
-export function useTestDatabase(): Promise<TestDatabase> {
+export function openSharedTestDatabase(): Promise<TestDatabase> {
   sharedDatabase ??= openTestDatabase();
   return sharedDatabase;
 }
