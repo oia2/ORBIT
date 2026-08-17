@@ -149,6 +149,8 @@ export interface DeleteWeeklyGoalInput {
 export interface CreateTaskInput {
   readonly title: string;
   readonly notes?: string;
+  readonly startTime?: string;
+  readonly endTime?: string;
   readonly placement: DayTaskPlacement | BacklogTaskPlacement;
   readonly durationMinutes?: DurationMinutes;
   readonly dayPosition?: DayPosition;
@@ -158,6 +160,9 @@ export interface EditTaskOccurrenceInput {
   readonly occurrenceId: TaskOccurrenceId;
   readonly title?: string;
   readonly notes?: string;
+  /** `undefined` leaves the field unchanged; `null` explicitly clears it. */
+  readonly startTime?: string | null;
+  readonly endTime?: string | null;
   readonly durationMinutes?: DurationMinutes;
   readonly expectedRevision: Revision;
 }
@@ -242,6 +247,11 @@ export interface CorrectBoundaryMissInput {
   readonly expectedRevision: Revision;
 }
 
+export interface ClearHabitOutcomeInput {
+  readonly occurrenceId: HabitOccurrenceId;
+  readonly expectedRevision: Revision;
+}
+
 export interface DeleteHabitOccurrenceInput {
   readonly occurrenceId: HabitOccurrenceId;
   readonly expectedRevision: Revision;
@@ -318,6 +328,7 @@ export interface PlanningRepository {
   editHabitOccurrence(input: EditHabitOccurrenceInput): Promise<CommandResult>;
   recordHabitOutcome(input: RecordHabitOutcomeInput): Promise<CommandResult>;
   correctBoundaryMissToCompleted(input: CorrectBoundaryMissInput): Promise<CommandResult>;
+  clearHabitOutcome(input: ClearHabitOutcomeInput): Promise<CommandResult>;
   deleteHabitOccurrence(input: DeleteHabitOccurrenceInput): Promise<CommandResult>;
 
   saveDailyState(input: SaveDailyStateInput): Promise<CommandResult>;

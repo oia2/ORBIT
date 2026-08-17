@@ -27,6 +27,8 @@ export function useHabitOutcome(onCommitted: () => void | Promise<void>) {
   ) => finish(await repository.recordHabitOutcome({ occurrenceId, outcome, expectedRevision }));
   const correct = async (occurrenceId: HabitOccurrenceId, expectedRevision: Revision) =>
     finish(await repository.correctBoundaryMissToCompleted({ occurrenceId, expectedRevision }));
+  const clear = async (occurrenceId: HabitOccurrenceId, expectedRevision: Revision) =>
+    finish(await repository.clearHabitOutcome({ occurrenceId, expectedRevision }));
   const remove = async (occurrenceId: HabitOccurrenceId, expectedRevision: Revision) =>
     finish(await repository.deleteHabitOccurrence({ occurrenceId, expectedRevision }));
   const edit = async (occurrenceId: HabitOccurrenceId, title: string, expectedRevision: Revision) =>
@@ -38,6 +40,7 @@ export function useHabitOutcome(onCommitted: () => void | Promise<void>) {
     },
     record,
     correct,
+    clear,
     remove,
     edit,
   };

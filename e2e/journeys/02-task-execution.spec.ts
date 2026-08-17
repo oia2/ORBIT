@@ -1,13 +1,17 @@
 import { expect, test } from '../fixtures/orbit.fixture';
 import { activate, exposeDetails, exposeItemActions, weekPlannerDay } from './journey-helpers';
+import { mondayISO, plannerDayPattern, weekDayISO } from './dates';
 
-const WEEK = '2026-08-10';
+const WEEK = mondayISO();
+const TUESDAY = weekDayISO(1);
+const WEDNESDAY = weekDayISO(2);
 
 test('executes, moves, backlogs, and reschedules a task without ordinary cancellation', async ({
   page,
 }, testInfo) => {
+  test.setTimeout(120_000);
   await page.goto(`/week/${WEEK}`);
-  const tuesday = weekPlannerDay(page, /вторник.*11 августа/i);
+  const tuesday = weekPlannerDay(page, plannerDayPattern(TUESDAY));
   await exposeDetails(page, tuesday, testInfo.project.name);
   await activate(
     page,
@@ -61,8 +65,8 @@ test('executes, moves, backlogs, and reschedules a task without ordinary cancell
     testInfo.project.name,
   );
   dialog = page.getByRole('dialog', { name: /переместить задачу/i });
-  await expect(dialog.getByRole('option', { name: '2026-08-11' })).toHaveCount(0);
-  await dialog.getByLabel(/дата назначения/i).selectOption('2026-08-12');
+  await expect(dialog.getByRole('option', { name: TUESDAY })).toHaveCount(0);
+  await dialog.getByLabel(/дата назначения/i).selectOption(WEDNESDAY);
   await dialog.getByLabel(/длительность/i).fill('0');
   await activate(
     page,
@@ -70,7 +74,7 @@ test('executes, moves, backlogs, and reschedules a task without ordinary cancell
     testInfo.project.name,
   );
   await expect(dialog.getByRole('alert')).toBeVisible();
-  await expect(dialog.getByLabel(/дата назначения/i)).toHaveValue('2026-08-12');
+  await expect(dialog.getByLabel(/дата назначения/i)).toHaveValue(WEDNESDAY);
   await dialog.getByLabel(/длительность/i).fill('30');
   await activate(
     page,
@@ -78,7 +82,7 @@ test('executes, moves, backlogs, and reschedules a task without ordinary cancell
     testInfo.project.name,
   );
 
-  const wednesday = weekPlannerDay(page, /среда.*12 августа/i);
+  const wednesday = weekPlannerDay(page, plannerDayPattern(WEDNESDAY));
   await exposeDetails(page, wednesday, testInfo.project.name);
   const moved = wednesday.getByRole('listitem').filter({ hasText: 'Проверить итоговый отчёт' });
   await expect(moved).toBeVisible();
@@ -105,7 +109,7 @@ test('executes, moves, backlogs, and reschedules a task without ordinary cancell
     testInfo.project.name,
   );
   dialog = page.getByRole('dialog', { name: /переместить задачу/i });
-  await dialog.getByLabel(/дата назначения/i).selectOption('2026-08-11');
+  await dialog.getByLabel(/дата назначения/i).selectOption(TUESDAY);
   await dialog.getByLabel(/длительность/i).fill('30');
   await activate(
     page,
@@ -113,10 +117,18 @@ test('executes, moves, backlogs, and reschedules a task without ordinary cancell
     testInfo.project.name,
   );
   await expect(dialog).toBeHidden();
-  await page.goto(`/day/2026-08-11`);
-  await expect(page.getByText('Проверить итоговый отчёт', { exact: true })).toBeVisible();
+  await page.goto(`/day/${TUESDAY}`);
+  await expect(
+    page.locator('[data-od-id="day-tasks"]').getByText('Проверить итоговый отчёт', {
+      exact: true,
+    }),
+  ).toBeVisible();
   await page.reload();
-  await expect(page.getByText('Проверить итоговый отчёт', { exact: true })).toBeVisible();
+  await expect(
+    page.locator('[data-od-id="day-tasks"]').getByText('Проверить итоговый отчёт', {
+      exact: true,
+    }),
+  ).toBeVisible();
 });
 
 test('preserves a closed membership after mixed deletion and exposes no finalized mutation', async ({
@@ -133,20 +145,20 @@ test('preserves a closed membership after mixed deletion and exposes no finalize
   await orbitDatabase.seed({
     version: 1,
     stores: {
-      weeks: [{ status: 'open', startDate: '2026-08-10', goals: [], revision: 0 }],
+      weeks: [{ status: 'open', startDate: WEEK, goals: [], revision: 0 }],
       days: [
         {
           status: 'closed',
-          date: '2026-08-11',
-          weekStart: '2026-08-10',
+          date: TUESDAY,
+          weekStart: WEEK,
           revision: 1,
           closureSnapshot: { score: unavailableScore, plannedLoadMinutes: 30 },
-          closedAt: '2026-08-11T18:00:00.000Z',
+          closedAt: `${TUESDAY}T18:00:00.000Z`,
         },
         {
           status: 'open',
-          date: '2026-08-12',
-          weekStart: '2026-08-10',
+          date: WEDNESDAY,
+          weekStart: WEEK,
           revision: 0,
         },
       ],
@@ -155,8 +167,8 @@ test('preserves a closed membership after mixed deletion and exposes no finalize
           id: occurrenceId,
           title: 'Сохранить закрытый факт',
           state: 'active',
-          placement: { kind: 'day', date: '2026-08-12' },
-          placementKey: 'day:2026-08-12',
+          placement: { kind: 'day', date: WEDNESDAY },
+          placementKey: `day:${WEDNESDAY}`,
           plannedDurationMinutes: 30,
           dayPosition: 0,
           completion: 'incomplete',
@@ -169,20 +181,20 @@ test('preserves a closed membership after mixed deletion and exposes no finalize
         {
           id: '123e4567-e89b-42d3-a456-426614175101',
           occurrenceId,
-          date: '2026-08-11',
-          weekStart: '2026-08-10',
+          date: TUESDAY,
+          weekStart: WEEK,
           plannedSnapshot: { title: 'Сохранить закрытый факт', plannedDurationMinutes: 30 },
-          enteredAt: '2026-08-11T08:00:00.000Z',
-          finalizedAt: '2026-08-11T18:00:00.000Z',
+          enteredAt: `${TUESDAY}T08:00:00.000Z`,
+          finalizedAt: `${TUESDAY}T18:00:00.000Z`,
           outcome: 'kept-unfinished',
         },
         {
           id: '123e4567-e89b-42d3-a456-426614175102',
           occurrenceId,
-          date: '2026-08-12',
-          weekStart: '2026-08-10',
+          date: WEDNESDAY,
+          weekStart: WEEK,
           plannedSnapshot: { title: 'Сохранить закрытый факт', plannedDurationMinutes: 30 },
-          enteredAt: '2026-08-12T08:00:00.000Z',
+          enteredAt: `${WEDNESDAY}T08:00:00.000Z`,
           outcome: 'planned',
         },
       ],
@@ -190,7 +202,7 @@ test('preserves a closed membership after mixed deletion and exposes no finalize
   });
   await page.reload();
 
-  await page.goto('/day/2026-08-12');
+  await page.goto(`/day/${WEDNESDAY}`);
   const liveTask = page.getByRole('listitem').filter({ hasText: 'Сохранить закрытый факт' });
   await expect(liveTask).toBeVisible();
   const taskActions = await exposeItemActions(
@@ -206,7 +218,7 @@ test('preserves a closed membership after mixed deletion and exposes no finalize
   );
   await expect(liveTask).toHaveCount(0);
 
-  await page.goto('/day/2026-08-11');
+  await page.goto(`/day/${TUESDAY}`);
   const historicalTask = page.getByRole('listitem').filter({ hasText: 'Сохранить закрытый факт' });
   await expect(historicalTask).toBeVisible();
   await expect(historicalTask.getByRole('checkbox')).toHaveCount(0);

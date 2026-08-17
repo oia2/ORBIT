@@ -107,6 +107,7 @@ version so only the final configuration becomes effective.
 |---|---|
 | `id` | Series identity |
 | `template` | Current title, notes, and positive planned duration |
+| `template.startTime`, `template.endTime` | Optional `"HH:MM"` clock times, independent of planned duration; when both are present the end must be strictly later (FR-015a) |
 | `ruleVersions` | Effective recurrence-rule history |
 | `revision` | Concurrency guard |
 
@@ -125,6 +126,7 @@ Represents a one-off task or one logical instance of a recurring task.
 | `nominalDate` | Recurrence date; absent for direct-backlog one-offs |
 | `ruleRevision` | Optional generating rule version |
 | `title`, `notes`, `plannedDurationMinutes` | Current occurrence values |
+| `startTime`, `endTime` | Optional `"HH:MM"` clock times, independent of `plannedDurationMinutes`; each is separately optional and, when both are present, the end must be strictly later (FR-015a). Copied from the series template onto generated occurrences |
 | `isException` | True after occurrence-only editing |
 | `placement` | `{ kind: 'day', date }`, `{ kind: 'backlog' }`, or `{ kind: 'none' }` |
 | `state` | `active`, `finalized`, or `deleted` |
@@ -156,7 +158,7 @@ One scoring membership for one logical occurrence on one committed local date.
 | `id` | Entry identity |
 | `occurrenceId` | Logical task occurrence |
 | `date`, `weekStart` | Immutable membership date and owning Monday |
-| `plannedSnapshot` | Title, notes, and duration last current on this membership while open |
+| `plannedSnapshot` | Title, notes, duration, and optional `startTime`/`endTime` last current on this membership while open |
 | `outcome` | `planned`, `completed`, `moved`, `backlogged`, `canceled`, `kept-unfinished`, or `deleted` |
 | `destination` | Date or backlog for a movement outcome |
 | `enteredAt` | First committed dated-placement instant |

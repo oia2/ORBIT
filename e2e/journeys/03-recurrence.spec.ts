@@ -2,22 +2,38 @@ import type { Locator } from '@playwright/test';
 
 import { expect, test } from '../fixtures/orbit.fixture';
 import { activate, exposeDetails, exposeItemActions, weekPlannerDay } from './journey-helpers';
+import {
+  dayMonthYearLabel,
+  labelPattern,
+  mondayISO,
+  plannerDayPattern,
+  shiftedISO,
+  todayISO,
+  weekDayISO,
+  weekdayLabel,
+} from './dates';
 
-const WEEK = '2026-08-10';
+// Recurrence changes take effect on D+1, so the exercised days must always be in
+// the future: the journey plans in next week rather than a pinned calendar week.
+const WEEK = mondayISO(1);
+const THURSDAY = weekDayISO(3, 1);
+const FRIDAY = weekDayISO(4, 1);
+const EFFECTIVE_FROM = shiftedISO(1);
 
 async function fillRule(
   dialog: Locator,
   input: {
     title: string;
     duration?: string;
-    start: string;
+    /** Habit dialogs no longer collect dates; ORBIT assigns the effective start itself. */
+    start?: string;
     end?: string;
     weekdays: readonly RegExp[];
   },
 ) {
   await dialog.getByLabel(/название задачи|название привычки/i).fill(input.title);
   if (input.duration !== undefined) await dialog.getByLabel(/длительность/i).fill(input.duration);
-  await dialog.getByLabel(/дата начала/i).fill(input.start);
+  if (input.start !== undefined) await dialog.getByLabel(/дата начала/i).fill(input.start);
   if (input.end !== undefined) await dialog.getByLabel(/дата окончания/i).fill(input.end);
   for (const weekday of input.weekdays) await dialog.getByLabel(weekday).check();
 }
@@ -27,7 +43,7 @@ test('creates, changes and stops recurrence while preserving explicit facts and 
 }, testInfo) => {
   test.setTimeout(120_000);
   await page.goto(`/week/${WEEK}`);
-  const thursday = weekPlannerDay(page, /четверг.*13 августа/i);
+  const thursday = weekPlannerDay(page, plannerDayPattern(THURSDAY));
   await exposeDetails(page, thursday, testInfo.project.name);
   await activate(
     page,
@@ -50,8 +66,8 @@ test('creates, changes and stops recurrence while preserving explicit facts and 
     title: 'Повторяемая задача',
     duration: '0',
     start: WEEK,
-    end: '2026-08-14',
-    weekdays: [/четверг/i, /пятница/i],
+    end: FRIDAY,
+    weekdays: [labelPattern(weekdayLabel(THURSDAY)), labelPattern(weekdayLabel(FRIDAY))],
   });
   await activate(page, dialog.getByRole('button', { name: /сохранить/i }), testInfo.project.name);
   await expect(dialog.getByRole('alert')).toContainText(/больше нуля/i);
@@ -65,7 +81,7 @@ test('creates, changes and stops recurrence while preserving explicit facts and 
     /Существующая задача.*15 мин/,
     /Повторяемая задача.*25 мин/,
   ]);
-  const friday = weekPlannerDay(page, /пятница.*14 августа/i);
+  const friday = weekPlannerDay(page, plannerDayPattern(FRIDAY));
   await exposeDetails(page, friday, testInfo.project.name);
   const future = friday.getByRole('listitem').filter({ hasText: 'Повторяемая задача' });
   let taskActions = await exposeItemActions(
@@ -97,8 +113,8 @@ test('creates, changes and stops recurrence while preserving explicit facts and 
     testInfo.project.name,
   );
   dialog = page.getByRole('dialog', { name: /изменить повтор задачи/i });
-  await expect(dialog.getByText(/14 августа 2026/i)).toBeVisible();
-  await dialog.getByLabel(/пятница/i).uncheck();
+  await expect(dialog.getByText(labelPattern(dayMonthYearLabel(EFFECTIVE_FROM)))).toBeVisible();
+  await dialog.getByLabel(labelPattern(weekdayLabel(FRIDAY))).uncheck();
   await activate(page, dialog.getByRole('button', { name: /сохранить/i }), testInfo.project.name);
   await expect(dialog).toBeHidden();
   await exposeDetails(page, friday, testInfo.project.name);
@@ -114,7 +130,7 @@ test('creates, changes and stops recurrence while preserving explicit facts and 
     title: 'Остановить задачу',
     duration: '10',
     start: WEEK,
-    weekdays: [/четверг/i],
+    weekdays: [labelPattern(weekdayLabel(THURSDAY))],
   });
   await activate(page, dialog.getByRole('button', { name: /сохранить/i }), testInfo.project.name);
   await expect(dialog).toBeHidden();
@@ -138,7 +154,7 @@ test('creates, changes and stops recurrence while preserving explicit facts and 
     testInfo.project.name,
   );
 
-  await page.goto('/day/2026-08-12');
+  await page.goto(`/day/${todayISO()}`);
   await activate(
     page,
     page.getByRole('button', { name: 'Добавить привычку' }),
@@ -147,30 +163,25 @@ test('creates, changes and stops recurrence while preserving explicit facts and 
   dialog = page.getByRole('dialog', { name: /новая привычка/i });
   await fillRule(dialog, {
     title: 'Прогулка',
-    start: '2026-08-12',
-    end: '2026-08-12',
-    weekdays: [/среда/i],
+    weekdays: [labelPattern(weekdayLabel(todayISO()))],
   });
   await activate(page, dialog.getByRole('button', { name: /сохранить/i }), testInfo.project.name);
   await expect(dialog).toBeHidden();
   const habit = page.getByRole('listitem').filter({ hasText: 'Прогулка' });
-  await expect(habit).toContainText(/не выполнено/i);
-  let habitActions = await exposeItemActions(
-    page,
-    habit,
-    /другие действия с привычкой.*Прогулка/i,
-    testInfo.project.name,
-  );
+  // A habit's effective start is today, so a freshly created one is always
+  // pending; the automatic date-boundary miss and its correction are covered by
+  // the domain and adapter suites instead.
+  await expect(habit).toContainText(/ожидает отметки/i);
   await activate(
     page,
-    habitActions.getByRole('button', { name: /исправить.*выполнено/i }),
+    habit.getByRole('button', { name: /отметить .*выполненной/i }),
     testInfo.project.name,
   );
   await expect(habit).toContainText(/выполнено/i);
-  habitActions = await exposeItemActions(
+  let habitActions = await exposeItemActions(
     page,
     habit,
-    /другие действия с привычкой.*Прогулка/i,
+    /действия с привычкой.*Прогулка/i,
     testInfo.project.name,
   );
   await activate(
@@ -179,8 +190,8 @@ test('creates, changes and stops recurrence while preserving explicit facts and 
     testInfo.project.name,
   );
   dialog = page.getByRole('dialog', { name: /изменить повтор привычки/i });
-  await expect(dialog.getByText(/14 августа 2026/i)).toBeVisible();
-  await dialog.getByLabel(/четверг/i).check();
+  await expect(dialog.getByText(labelPattern(dayMonthYearLabel(EFFECTIVE_FROM)))).toBeVisible();
+  await dialog.getByLabel(labelPattern(weekdayLabel(THURSDAY))).check();
   await activate(page, dialog.getByRole('button', { name: /сохранить/i }), testInfo.project.name);
   await expect(dialog).toBeHidden();
 
@@ -190,28 +201,24 @@ test('creates, changes and stops recurrence while preserving explicit facts and 
     testInfo.project.name,
   );
   dialog = page.getByRole('dialog', { name: /новая привычка/i });
-  await fillRule(dialog, { title: 'Вода', start: '2026-08-12', weekdays: [/среда/i] });
+  await fillRule(dialog, { title: 'Вода', weekdays: [labelPattern(weekdayLabel(todayISO()))] });
   await activate(page, dialog.getByRole('button', { name: /сохранить/i }), testInfo.project.name);
   await expect(dialog).toBeHidden();
   const water = page.getByRole('listitem').filter({ hasText: 'Вода' });
   habitActions = await exposeItemActions(
     page,
     water,
-    /другие действия с привычкой.*Вода/i,
+    /действия с привычкой.*Вода/i,
     testInfo.project.name,
   );
+  // Habits no longer expose a stop-recurrence action; deleting the occurrence is
+  // the remaining explicit removal path.
   await activate(
     page,
-    habitActions.getByRole('button', { name: /изменить повтор/i }),
+    habitActions.getByRole('button', { name: /^удалить$/i }),
     testInfo.project.name,
   );
-  dialog = page.getByRole('dialog', { name: /изменить повтор привычки/i });
-  await activate(
-    page,
-    dialog.getByRole('button', { name: /остановить повтор/i }),
-    testInfo.project.name,
-  );
-  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('listitem').filter({ hasText: 'Вода' })).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole('listitem').filter({ hasText: 'Прогулка' })).toContainText(
     /выполнено/i,

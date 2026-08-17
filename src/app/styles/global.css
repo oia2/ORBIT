@@ -214,6 +214,10 @@ p {
   background: transparent;
   color: var(--muted);
   box-shadow: none;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
 }
 
 .orbit-icon-button:hover:not(:disabled),
@@ -273,7 +277,7 @@ p {
   border: 0;
   background: transparent;
   color: var(--fg);
-  font-size: 12px;
+  font-size: 13px;
   text-decoration: underline;
   text-decoration-color: var(--border);
   text-underline-offset: 4px;
@@ -286,7 +290,7 @@ p {
 
 .orbit-field__label {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: var(--weight-emphasize);
   letter-spacing: 0.01em;
 }
@@ -343,7 +347,7 @@ p {
 .orbit-choice-group legend {
   margin-bottom: var(--space-2);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: var(--weight-emphasize);
 }
 
@@ -368,7 +372,7 @@ p {
   background: transparent;
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .orbit-choice[aria-pressed='true'] {
@@ -388,7 +392,59 @@ p {
 .orbit-check-list legend {
   grid-column: 1 / -1;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
+}
+
+.orbit-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -6px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.orbit-preset-row legend {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--weight-emphasize);
+}
+
+.orbit-preset {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-round);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+.orbit-preset:hover {
+  border-color: color-mix(in oklch, var(--fg) 42%, var(--border));
+  color: var(--fg);
+}
+
+.orbit-preset[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+
+.orbit-check-list__select-all {
+  grid-column: 1 / -1;
+  padding-bottom: 8px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--border);
+  font-weight: var(--weight-emphasize);
 }
 
 .orbit-check-list label {
@@ -396,7 +452,7 @@ p {
   align-items: center;
   gap: 10px;
   min-height: 44px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .orbit-check-list input {
@@ -414,9 +470,11 @@ p {
   padding: var(--space-4);
   background: color-mix(in oklch, var(--bg) 78%, transparent);
   backdrop-filter: blur(8px);
+  animation: orbit-dialog-backdrop-in var(--motion-standard) var(--ease-standard);
 }
 
 .orbit-dialog {
+  position: static;
   width: min(100%, 520px);
   max-height: min(88vh, 780px);
   margin: 0;
@@ -427,11 +485,56 @@ p {
   background: var(--surface);
   color: var(--fg);
   box-shadow: var(--elevation-overlay);
+  animation: orbit-dialog-in var(--motion-standard) var(--ease-standard);
+}
+
+@keyframes orbit-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+@keyframes orbit-dialog-backdrop-in {
+  from {
+    opacity: 0;
+  }
 }
 
 .orbit-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
   padding: 24px 24px 18px;
   border-bottom: 1px solid var(--border);
+}
+
+.orbit-dialog__heading {
+  min-width: 0;
+}
+
+.orbit-dialog__close {
+  display: grid;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--muted);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
+}
+
+.orbit-dialog__close:hover {
+  border-color: var(--border);
+  background: var(--surface-raised);
+  color: var(--fg);
 }
 
 .orbit-dialog__title {
@@ -446,7 +549,7 @@ p {
 .orbit-dialog__description {
   margin: 6px 0 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .orbit-dialog__body {
@@ -510,7 +613,13 @@ p {
   display: grid;
   gap: 7px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
+}
+
+.orbit-closure-item__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .orbit-closure-item :is(input, select) {
@@ -536,7 +645,9 @@ p {
 }
 
 .orbit-metric {
-  --metric-tone: var(--muted);
+  /* Neutral keeps the reference's primary accent treatment, so an aggregate
+     without threshold semantics (Weekly Progress) still reads as lit. */
+  --metric-tone: var(--accent);
   position: relative;
   display: grid;
   min-height: 430px;
@@ -544,9 +655,7 @@ p {
   overflow: hidden;
   place-items: center;
   border-radius: inherit;
-  background:
-    radial-gradient(circle at 50% 50%, var(--accent-soft), transparent 32%),
-    color-mix(in oklch, var(--bg) 58%, var(--surface));
+  background: color-mix(in oklch, var(--bg) 58%, var(--surface));
   color: var(--fg);
   isolation: isolate;
 }
@@ -567,35 +676,69 @@ p {
   --metric-tone: var(--danger);
 }
 
-.orbit-metric__field,
-.orbit-metric__field::before,
-.orbit-metric__field::after {
+.orbit-metric__canvas {
   position: absolute;
-  border: 1px solid color-mix(in oklch, var(--accent) 28%, transparent);
-  border-radius: 50%;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Vignette that fades the drifting field toward the panel edges. */
+.orbit-metric::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 50%,
+    transparent 0 31%,
+    color-mix(in oklch, var(--bg) 82%, transparent) 78%
+  );
   content: '';
 }
 
-.orbit-metric__field {
-  width: min(72%, 410px);
-  aspect-ratio: 1;
-  transform: rotate(-12deg) scaleY(0.72);
+.orbit-metric__context {
+  position: absolute;
+  z-index: 2;
+  top: 22px;
+  left: 24px;
+  max-width: calc(100% - 48px);
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.03em;
 }
 
-.orbit-metric__field::before {
-  inset: 16%;
-  border-color: color-mix(in oklch, var(--accent) 18%, transparent);
+.orbit-metric__state {
+  position: absolute;
+  z-index: 3;
+  right: 24px;
+  bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: calc(100% - 48px);
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 
-.orbit-metric__field::after {
-  inset: 33%;
-  border-color: color-mix(in oklch, var(--accent) 38%, transparent);
-  box-shadow: 0 -86px 16px -5px var(--accent);
+.orbit-metric__state strong {
+  color: var(--fg);
+  font-weight: var(--weight-emphasize);
+}
+
+.orbit-metric__signal {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 1px;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
 }
 
 .orbit-metric__core {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   display: grid;
   width: min(42%, 204px);
   aspect-ratio: 1;
@@ -630,21 +773,9 @@ p {
 .orbit-metric__label {
   margin-top: var(--space-3);
   color: var(--metric-tone);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.orbit-metric__description {
-  position: absolute;
-  z-index: 2;
-  right: 24px;
-  bottom: 22px;
-  max-width: min(44ch, calc(100% - 48px));
-  margin: 0;
-  color: var(--muted);
-  font-size: 11px;
-  text-align: right;
 }
 
 .orbit-score-breakdown {
@@ -656,39 +787,67 @@ p {
   box-shadow: var(--elevation-card);
 }
 
-.orbit-score-breakdown__facts {
+.orbit-score-breakdown__parts {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1px;
-  margin: 0;
+  gap: 14px;
+  padding: 18px 22px 20px;
   border-top: 1px solid var(--border);
-  background: var(--border);
 }
 
-.orbit-score-breakdown__fact {
-  display: grid;
-  gap: 5px;
-  padding: var(--space-4) 22px;
-  background: var(--surface);
+.orbit-score-breakdown__part-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 7px;
 }
 
-.orbit-score-breakdown__fact dt {
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.orbit-score-breakdown__fact dd {
-  margin: 0;
-  font-family: var(--font-mono);
+.orbit-score-breakdown__part-line span {
   font-size: 13px;
+  font-weight: var(--weight-emphasize);
+}
+
+.orbit-score-breakdown__part-line strong {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: var(--weight-emphasize);
+}
+
+.orbit-score-breakdown__part-line strong small {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: var(--weight-read);
+}
+
+.orbit-score-breakdown__part-track {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-raised);
+}
+
+.orbit-score-breakdown__part-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--fg);
+  transition: width var(--motion-standard) var(--ease-standard);
 }
 
 .orbit-score-breakdown__formula {
-  margin: 0;
   padding: 13px 22px;
   border-top: 1px solid var(--border);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--text-caption);
+}
+
+.orbit-score-breakdown__formula summary {
+  cursor: pointer;
+}
+
+.orbit-score-breakdown__formula p {
+  margin: 8px 0 0;
 }
 
 .orbit-period-status {
@@ -700,7 +859,7 @@ p {
   border: 1px solid var(--border);
   border-radius: var(--radius-round);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .orbit-period-status::before {
@@ -724,7 +883,7 @@ p {
 }
 
 .orbit-task-row {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 62px minmax(0, 1fr) auto;
   gap: var(--space-3);
   min-height: 80px;
   padding: 10px 0;
@@ -739,10 +898,34 @@ p {
   min-width: 0;
 }
 
+.orbit-task-row__time {
+  display: grid;
+  align-self: start;
+  gap: 2px;
+  padding-top: 2px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: var(--weight-emphasize);
+  font-variant-numeric: tabular-nums;
+}
+
+.orbit-task-row__time-end {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: var(--weight-read);
+}
+
+.orbit-task-row__time[data-empty='true'] {
+  color: color-mix(in oklch, var(--muted) 45%, transparent);
+  font-weight: var(--weight-read);
+}
+
 .orbit-task-row__title {
   display: block;
+  min-width: 0;
   color: var(--fg);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: var(--weight-emphasize);
   line-height: 1.4;
 }
@@ -750,17 +933,49 @@ p {
 .orbit-task-row__meta {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 5px 10px;
   margin-top: 5px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
+}
+
+.orbit-task-row__outcome {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--weight-emphasize);
+}
+
+.orbit-task-row__outcome::before {
+  width: 7px;
+  height: 7px;
+  border: 1px solid currentcolor;
+  border-radius: 50%;
+  content: '';
+}
+
+.orbit-task-row__outcome[data-outcome='completed'] {
+  color: var(--success);
+}
+
+.orbit-task-row__outcome[data-outcome='completed']::before {
+  background: currentcolor;
+}
+
+.orbit-task-row__outcome[data-outcome='canceled'],
+.orbit-task-row__outcome[data-outcome='deleted'] {
+  color: var(--danger);
 }
 
 .orbit-task-row__changed {
   display: block;
   margin-top: 4px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--text-caption);
 }
 
 .orbit-task-row__actions,
@@ -783,7 +998,13 @@ p {
 
 .orbit-completion-control input {
   position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   opacity: 0;
+  cursor: pointer;
 }
 
 .orbit-completion-control__mark {
@@ -791,12 +1012,22 @@ p {
   width: 24px;
   height: 24px;
   place-items: center;
+  /* Decorative only: never intercept clicks aimed at the real checkbox. */
+  pointer-events: none;
   border: 1px solid var(--border);
   border-radius: var(--radius-check);
   background: transparent;
   color: var(--bg);
   font-family: var(--font-mono);
   font-size: 12px;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+}
+
+.orbit-completion-control input:checked + .orbit-completion-control__mark {
+  transform: scale(1.06);
 }
 
 .orbit-completion-control input:focus-visible + .orbit-completion-control__mark {
@@ -818,49 +1049,64 @@ p {
   text-decoration: line-through;
 }
 
-.orbit-action-menu {
-  position: relative;
-}
-
-.orbit-action-menu summary {
+.orbit-action-menu__trigger {
   display: grid;
   width: 44px;
   height: 44px;
   place-items: center;
   border: 1px solid transparent;
   border-radius: var(--radius-control);
+  background: transparent;
   color: var(--muted);
   cursor: pointer;
   font-family: var(--font-mono);
-  list-style: none;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
 }
 
-.orbit-action-menu summary::-webkit-details-marker {
-  display: none;
-}
-
-.orbit-action-menu summary:hover,
-.orbit-action-menu[open] summary {
+.orbit-action-menu__trigger:hover,
+.orbit-action-menu__trigger[aria-expanded='true'] {
   border-color: var(--border);
   background: var(--surface-raised);
   color: var(--fg);
 }
 
 .orbit-action-menu__popover {
-  position: absolute;
-  z-index: 25;
-  top: calc(100% + 6px);
-  right: 0;
+  position: fixed;
+  /* Below .orbit-dialog-backdrop (100) so an open dialog visually covers a menu
+     that stayed mounted behind it (needed so focus can return to the trigger). */
+  z-index: 90;
   display: grid;
   width: max-content;
   min-width: 210px;
-  max-width: min(260px, calc(100vw - 40px));
+  max-width: min(260px, calc(100vw - 16px));
   gap: 3px;
   padding: 6px;
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   background: var(--surface-raised);
   box-shadow: var(--elevation-overlay);
+  animation: orbit-action-menu-in var(--motion-fast) var(--ease-standard);
+}
+
+.orbit-action-menu__popover[data-open-upward='true'] {
+  animation-name: orbit-action-menu-in-upward;
+}
+
+@keyframes orbit-action-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+@keyframes orbit-action-menu-in-upward {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
 }
 
 .orbit-action-menu__popover .orbit-button {
@@ -894,9 +1140,50 @@ p {
   min-height: 56px;
 }
 
+/* Reference pattern: the row itself is the "completed" affordance, with a
+   circular marker on its trailing edge. */
+.orbit-habit-row__toggle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.orbit-habit-row__copy {
+  min-width: 0;
+}
+
+.orbit-habit-row__mark {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.orbit-habit-row__toggle:hover .orbit-habit-row__mark {
+  border-color: var(--success);
+  box-shadow: inset 0 0 0 4px color-mix(in oklch, var(--success) 30%, transparent);
+}
+
+.orbit-habit-row[data-outcome='completed'] .orbit-habit-row__mark {
+  border-color: var(--success);
+  background: var(--success);
+  box-shadow: inset 0 0 0 4px var(--surface);
+}
+
 .orbit-habit-row__title {
   display: block;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: var(--weight-emphasize);
 }
 
@@ -904,7 +1191,7 @@ p {
   display: block;
   margin-top: 2px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .orbit-habit-outcome {
@@ -918,11 +1205,29 @@ p {
   background: transparent;
   color: var(--muted);
   font-size: 11px;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+/* Decided outcomes are facts, not controls: a compact marker, not a button. */
+.orbit-habit-outcome[data-outcome] {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 50%;
 }
 
 .orbit-habit-outcome[data-outcome='completed'] {
   border-color: var(--success);
+  background: color-mix(in oklch, var(--success) 16%, transparent);
   color: var(--success);
+}
+
+.orbit-habit-outcome[data-outcome='not-completed'] {
+  border-color: color-mix(in oklch, var(--danger) 45%, var(--border));
+  color: var(--danger);
 }
 
 .orbit-habit-editor {
@@ -955,6 +1260,37 @@ p {
   font-size: 12px;
 }
 
+.orbit-state-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.orbit-state-input input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--font-mono);
+}
+
+.orbit-state-input:has(input:focus-visible) {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
+.orbit-state-input small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .orbit-state-form__label {
   color: var(--muted);
   font-size: 12px;
@@ -967,7 +1303,7 @@ p {
 .orbit-inline-status {
   margin: 0;
   color: var(--success);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .orbit-empty-state {
@@ -1082,7 +1418,11 @@ p {
   }
 
   .orbit-task-row {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .orbit-task-row__actions {
+    grid-column: 2;
   }
 
   .orbit-task-row__actions,

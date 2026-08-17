@@ -140,3 +140,31 @@ Every retained runtime dependency, layer, public export, adapter seam, and new
 presentation/test addition has a concrete current requirement. No unsupported
 architecture or scope was found, so T106 may be marked complete. This review does
 not unblock release acceptance by itself: T107–T110 retain their declared sequence.
+
+## T114 addendum — 2026-08-17 remediation re-audit
+
+The 2026-08-16/17 remediation added modules and a repository command after the
+original T106 pass. Each is justified against a current requirement below.
+
+| Addition | Layer | Justification |
+|---|---|---|
+| `src/shared/ui/action-menu/` | shared/ui | Replaces two hand-rolled `<details>` popovers (task/habit row, weekly goal) that had no click-outside handling, left menus open after an action, and were clipped by `.orbit-card { overflow: hidden }`. One controlled, portal-rendered component removes the duplication instead of adding a layer. Supports FR-058 (status without color-only) and the keyboard/touch obligations of FR-055. |
+| `src/shared/lib/duration/` | shared/lib | Extracts the existing minute-to-hour formatter that already lived in `DayPage.tsx` so Week, History, and task rows render one consistent duration per FR-036/FR-047. Pure function, no new dependency. |
+| `clearHabitOutcome` command | entities/planning port + IndexedDB adapter | Required by amended FR-020: while a day is open the user must be able to undo their own habit mark and return the occurrence to pending, with history preserving both the mark and the undo. An automatic boundary miss is deliberately excluded from this path. |
+| Optional task `startTime`/`endTime` validation in `model/task.ts` | entities/planning model | Required by FR-015a. Validation stays in the pure domain; the adapter only threads the values. No new schema version or index (see `contracts/persistence.md`). |
+| Canvas orbital field in `shared/ui/orbit-metric` | shared/ui | Reproduces the approved Open Design motion. It is presentation-only, respects `prefers-reduced-motion`, and degrades to a single deterministic frame when the 2D context is unavailable. |
+
+### Prohibited-scope re-check
+
+The T106 command set was re-run against the current tree. No backend, account,
+synchronization, global domain cache, query cache, PWA artifact, telemetry,
+configurable capacity, or workout scope was introduced. `package.json` runtime
+dependencies are unchanged (`idb`, `react`, `react-dom`, `react-router`); the
+remediation added no dependency. IndexedDB references remain confined to
+`src/entities/planning/api/indexeddb/`.
+
+### Disposition
+
+The remediation introduced no unsupported architecture. This addendum satisfies
+T114; it does not by itself re-approve the visual or content evidence, which
+remain the subject of T111.

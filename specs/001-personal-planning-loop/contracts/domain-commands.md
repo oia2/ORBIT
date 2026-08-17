@@ -111,8 +111,9 @@ weeks reject all goal commands.
 
 ### One-off and occurrence task commands
 
-- `createTask({ title, notes?, placement, durationMinutes?, dayPosition? })`
-- `editTaskOccurrence({ occurrenceId, title?, notes?, durationMinutes?, expectedRevision })`
+- `createTask({ title, notes?, startTime?, endTime?, placement, durationMinutes?, dayPosition? })`
+- `editTaskOccurrence({ occurrenceId, title?, notes?, startTime?, endTime?, durationMinutes?, expectedRevision })`
+  - `startTime`/`endTime` accept `"HH:MM"` to set, `null` to clear, and `undefined` to leave unchanged; a supplied pair MUST have a strictly later end (FR-015a)
 - `setTaskCompletion({ occurrenceId, date, completed: boolean, expectedRevision })`
 - `moveTaskToDate({ occurrenceId, destinationDate, durationMinutes, dayPosition, expectedRevision })`
 - `moveTaskToBacklog({ occurrenceId, expectedRevision })`

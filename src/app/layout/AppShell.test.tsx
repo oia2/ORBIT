@@ -134,19 +134,32 @@ describe('accessible shared visual controls', () => {
     expect(screen.getByRole('img', { name: 'История' })).toBeInTheDocument();
   });
 
-  it('keeps orbit metrics numeric and explained without inventing a score label', () => {
+  it.each([
+    [82, 'Успешно'],
+    [62, 'Частично'],
+    [31, 'В процессе'],
+  ])('labels an open %s%% score with the approved status band', (value, status) => {
     render(
-      <OrbitMetric
-        label="Дневной результат"
-        value={62}
-        tone="warning"
-        description="Задачи 2 из 3; привычки 1 из 2"
-      />,
+      <OrbitMetric label="Дневной результат" value={value} tone="warning" periodStatus="open" />,
     );
 
-    expect(screen.getByText('62%')).toBeInTheDocument();
-    expect(screen.getByText(/задачи 2 из 3/i)).toBeInTheDocument();
-    expect(screen.queryByText(/частично|плохо|хорошо/i)).not.toBeInTheDocument();
+    expect(screen.getByText(`${String(value)}%`)).toBeInTheDocument();
+    expect(screen.getByText(status)).toBeInTheDocument();
+    // Judgemental wording stays prohibited; the bands are factual thresholds.
+    expect(screen.queryByText(/плохо|отлично|молодец/i)).not.toBeInTheDocument();
+  });
+
+  it('reports period and data states ahead of the score band', () => {
+    const { rerender } = render(
+      <OrbitMetric label="Дневной результат" value={90} periodStatus="not-started" />,
+    );
+    expect(screen.getByText('Не начат')).toBeInTheDocument();
+
+    rerender(<OrbitMetric label="Дневной результат" value="unavailable" periodStatus="open" />);
+    expect(screen.getByText('Пока нет данных')).toBeInTheDocument();
+
+    rerender(<OrbitMetric label="Дневной результат" value={90} periodStatus="closed" />);
+    expect(screen.getByText('Итог сохранён')).toBeInTheDocument();
   });
 
   it('moves focus into a dialog, closes on Escape, and returns focus', async () => {

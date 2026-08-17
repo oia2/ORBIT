@@ -15,6 +15,10 @@ export interface DaySignalsProps {
   readonly onSave: (draft: DailyStateDraft) => Promise<boolean>;
   readonly saveConfirmed?: boolean;
   readonly error?: string;
+  /** A day later than the current local date has not started yet. */
+  readonly notStarted?: boolean;
+  /** Title of the next unfinished task, shown as the panel's factual state line. */
+  readonly nextTaskTitle?: string;
   readonly children?: ReactNode;
 }
 
@@ -24,19 +28,31 @@ export function DaySignals({
   onSave,
   saveConfirmed = false,
   error,
+  notStarted = false,
+  nextTaskTitle,
   children,
 }: DaySignalsProps) {
+  const stateHint =
+    nextTaskTitle === undefined
+      ? { label: 'Незавершённых задач', value: 'нет' }
+      : { label: 'Следом:', value: nextTaskTitle };
   return (
     <>
       <div className={styles.scoreRegion} data-od-id="day-score">
-        <ScoreBreakdown score={score} label="Дневной результат" semantic />
+        <ScoreBreakdown
+          score={score}
+          label="Дневной результат"
+          periodStatus={notStarted && day.status === 'open' ? 'not-started' : day.status}
+          size="compact"
+          stateHint={stateHint}
+          semantic
+        />
       </div>
       {children}
       <article className={classNames(styles.card, 'orbit-card')} data-od-id="day-state">
-        <header className={classNames(styles.cardHeader, styles.dividedHeader)}>
+        <header className={styles.cardHeader}>
           <div>
             <h2 className={styles.cardTitle}>Состояние дня</h2>
-            <p className={styles.cardNote}>Контекст, не часть результата</p>
           </div>
           <span className={styles.cardMeta}>
             {day.state === undefined ? 'не заполнено' : 'сохранено'}

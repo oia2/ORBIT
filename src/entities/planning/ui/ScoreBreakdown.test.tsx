@@ -14,7 +14,12 @@ describe('ScoreBreakdown', () => {
     [40, 'low'],
   ] as const)('uses the approved non-text semantic tone for %s', (value, tone) => {
     render(
-      <ScoreBreakdown score={buildScoreBreakdown({ value })} label="Дневной результат" semantic />,
+      <ScoreBreakdown
+        score={buildScoreBreakdown({ value })}
+        label="Дневной результат"
+        periodStatus="open"
+        semantic
+      />,
     );
     const region = screen.getByRole('region', { name: /дневной результат/i });
     expect(region).toHaveAttribute('data-score-tone', tone);
@@ -31,6 +36,7 @@ describe('ScoreBreakdown', () => {
           habit: { completed: 0, applicable: 0, rate: 'unavailable' },
         })}
         label="Прогресс недели"
+        periodStatus="open"
       />,
     );
     const region = screen.getByRole('region', { name: /прогресс недели/i });

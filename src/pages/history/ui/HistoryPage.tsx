@@ -12,6 +12,7 @@ import {
   startOfWeek,
   type LocalDate,
 } from '@/shared/lib/local-date/local-date';
+import { formatDurationMinutes } from '@/shared/lib/duration';
 import { Button } from '@/shared/ui/button';
 
 import { useHistoryPage, type HistoryMode, type HistoryPoint } from '../model/use-history-page';
@@ -307,7 +308,7 @@ function DayContext({ facts }: { readonly facts: HistoricalDayFacts }) {
         <strong>{formatLocalDate(facts.day.date, 'ru-RU', { weekday: 'long' })}</strong>
         <span>{facts.tasks.length} задач</span>
         <span>{facts.habits.length} привычек</span>
-        <span>{String(facts.plannedLoadMinutes)} мин в плане</span>
+        <span>{formatDurationMinutes(Number(facts.plannedLoadMinutes))} в плане</span>
       </div>
     </section>
   );
@@ -370,7 +371,7 @@ function SelectedFacts({
           </div>
           <div>
             <span>Плановая нагрузка</span>
-            <strong>{String(facts.plannedLoadMinutes)} мин</strong>
+            <strong>{formatDurationMinutes(Number(facts.plannedLoadMinutes))}</strong>
           </div>
           <div>
             <span>Задачи</span>

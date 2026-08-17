@@ -175,7 +175,7 @@ describe('HistoryPage rendered period compositions', () => {
     expect(container.querySelectorAll('[data-score-tone="none"]')).toHaveLength(2);
     expect(screen.getByText('Задача 7')).toBeVisible();
     expect(screen.getByText('Привычка 4')).toBeVisible();
-    expect(screen.getByText('135 мин')).toBeVisible();
+    expect(screen.getByText('2 ч 15 мин')).toBeVisible();
     expect(screen.getByText('86%')).toBeVisible();
     expect(container.querySelector('[data-od-id="history-dynamics"]')).toBeVisible();
 

@@ -130,7 +130,7 @@ describe('WeekPage', () => {
     const taskRow = recurringTask.closest('li');
     if (taskRow === null) throw new Error('Expected recurring task row');
     await user.click(within(taskRow).getByLabelText(/действия с задачей/i));
-    await user.click(within(taskRow).getByRole('button', { name: 'Изменить повтор' }));
+    await user.click(screen.getByRole('button', { name: 'Изменить повтор' }));
     expect(screen.getByRole('dialog', { name: /изменить повтор задачи/i })).toBeVisible();
   });
 

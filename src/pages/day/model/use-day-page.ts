@@ -17,7 +17,7 @@ export function useDayPage(date: LocalDate) {
   const [state, setState] = useState<DayPageState>({ status: 'loading' });
 
   const reload = useCallback(async () => {
-    setState({ status: 'loading' });
+    setState((current) => (current.status === 'ready' ? current : { status: 'loading' }));
     const ensured = await repository.ensureCalendarWeek({ date });
     if (!ensured.ok) {
       setState({ status: 'error', message: 'Не удалось подготовить день.' });

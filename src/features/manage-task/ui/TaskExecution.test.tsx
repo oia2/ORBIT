@@ -56,6 +56,7 @@ describe('TaskExecution', () => {
     expect(screen.getByText(/сначала снимите отметку/i)).toBeVisible();
     await user.click(screen.getByRole('checkbox', { name: /выполнено/i }));
     expect(onToggle).toHaveBeenCalledWith(false);
+    await user.click(screen.getByLabelText(/действия с задачей/i));
     expect(screen.getByRole('button', { name: /редактировать/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /удалить/i })).toBeEnabled();
     expect(screen.queryByRole('button', { name: /отменить задачу/i })).not.toBeInTheDocument();
@@ -104,11 +105,12 @@ describe('TaskExecution', () => {
         {...callbacks}
       />,
     );
-    await user.click(screen.getByLabelText(/действия с задачей/i));
-    const moveButton = screen.getByRole('button', { name: /переместить на дату/i });
-    await user.click(moveButton);
+    const menuTrigger = screen.getByLabelText(/действия с задачей/i);
+    await user.click(menuTrigger);
+    await user.click(screen.getByRole('button', { name: /переместить на дату/i }));
     await user.click(screen.getByRole('button', { name: /отмена/i }));
-    expect(moveButton).toHaveFocus();
+    // Opening a dialog closes the menu, so focus returns to its trigger.
+    expect(menuTrigger).toHaveFocus();
 
     rerender(
       <TaskExecution
@@ -143,8 +145,14 @@ describe('TaskExecution', () => {
     await user.clear(screen.getByLabelText(/название задачи/i));
     await user.type(screen.getByLabelText(/название задачи/i), 'Новая формулировка');
     await user.click(screen.getByRole('button', { name: /сохранить/i }));
-    expect(callbacks.onEdit).toHaveBeenCalledWith({ title: 'Новая формулировка', duration: 30 });
+    expect(callbacks.onEdit).toHaveBeenCalledWith({
+      title: 'Новая формулировка',
+      duration: 30,
+      startTime: null,
+      endTime: null,
+    });
 
+    await user.click(screen.getByLabelText(/действия с задачей/i));
     await user.click(screen.getByRole('button', { name: /переместить на дату/i }));
     await user.selectOptions(screen.getByLabelText(/дата назначения/i), '2026-05-21');
     await user.click(screen.getByRole('button', { name: /^переместить$/i }));
@@ -152,6 +160,7 @@ describe('TaskExecution', () => {
       destinationDate: '2026-05-21',
       duration: 30,
     });
+    await user.click(screen.getByLabelText(/действия с задачей/i));
     await user.click(screen.getByRole('button', { name: /в бэклог/i }));
     await user.click(screen.getByLabelText(/действия с задачей/i));
     await user.click(screen.getByRole('button', { name: /^удалить$/i }));
@@ -178,10 +187,10 @@ describe('TaskExecution', () => {
 
     expect(screen.getByRole('checkbox', { name: /выполнено/i })).toBeVisible();
     const disclosure = screen.getByLabelText(/действия с задачей/i);
-    expect(disclosure.closest('details')).not.toHaveAttribute('open');
+    expect(disclosure).toHaveAttribute('aria-expanded', 'false');
     await user.click(disclosure);
     await user.click(screen.getByRole('button', { name: /переместить вверх/i }));
     expect(onMoveUp).toHaveBeenCalledOnce();
-    expect(disclosure.closest('details')).not.toHaveAttribute('open');
+    expect(disclosure).toHaveAttribute('aria-expanded', 'false');
   });
 });

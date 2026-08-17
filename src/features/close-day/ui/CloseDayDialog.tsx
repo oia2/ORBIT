@@ -19,6 +19,11 @@ export interface CloseDayDialogProps {
   readonly availableMoveDates: readonly LocalDate[];
   readonly onClose: () => void;
   readonly onSubmit: (dispositions: ValidClosureDraft) => Promise<boolean>;
+  /** Resolves a still-pending habit so the day can be closed from here. */
+  readonly onRecordHabit: (
+    occurrence: DayView['habits'][number],
+    outcome: 'completed' | 'not-completed',
+  ) => Promise<boolean>;
 }
 
 export function CloseDayDialog({
@@ -27,11 +32,13 @@ export function CloseDayDialog({
   availableMoveDates,
   onClose,
   onSubmit,
+  onRecordHabit,
 }: CloseDayDialogProps) {
   const ids = view.unfinishedTaskIds;
   const [draft, setDraft] = useState<ClosureDraft>(() => createClosureDraft(ids));
   const [error, setError] = useState<string>();
-  const pendingHabits = view.habits.some((habit) => habit.outcome === 'pending');
+  const unresolvedHabits = view.habits.filter((habit) => habit.outcome === 'pending');
+  const pendingHabits = unresolvedHabits.length > 0;
   const submit = async () => {
     const validated = validateClosureDraft(ids, draft, availableMoveDates);
     if (!validated.ok) {
@@ -47,7 +54,34 @@ export function CloseDayDialog({
       description="Для каждой незавершённой задачи выберите отдельное действие. Ничего не выбрано заранее."
       onClose={onClose}
     >
-      {pendingHabits ? <p role="alert">Сначала отметьте все привычки.</p> : null}
+      {pendingHabits ? (
+        <>
+          <p role="alert">Отметьте привычки, чтобы закрыть день.</p>
+          {unresolvedHabits.map((habit) => (
+            <fieldset className="orbit-closure-item" key={habit.id}>
+              <legend>{habit.definitionSnapshot.title}</legend>
+              <div className="orbit-closure-item__choices">
+                <Button
+                  variant="quiet"
+                  onClick={() => {
+                    void onRecordHabit(habit, 'completed');
+                  }}
+                >
+                  Выполнено
+                </Button>
+                <Button
+                  variant="quiet"
+                  onClick={() => {
+                    void onRecordHabit(habit, 'not-completed');
+                  }}
+                >
+                  Не выполнено
+                </Button>
+              </div>
+            </fieldset>
+          ))}
+        </>
+      ) : null}
       {view.tasks
         .filter((task) => ids.includes(task.occurrence.id))
         .map((task) => {

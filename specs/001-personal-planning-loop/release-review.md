@@ -110,3 +110,49 @@ T106 was rerun against this stable implementation and passed; its evidence is
 recorded in [`architecture-review.md`](architecture-review.md). T107–T110 remain
 blocked by their declared dependency order; no manual accessibility or
 usability evidence is asserted here.
+
+## T111 addendum — 2026-08-17 remediated baseline approval
+
+**Reviewed**: 2026-08-17 · **Build**: production (`npm run build`) of the
+2026-08-16/17 remediation · **Decision**: approved by the product owner in session.
+
+### What changed visually
+
+Dialog centering (`.orbit-dialog` re-entered normal flow), the Open Design canvas
+orbital field with its vignette and in-panel context/state lines, threshold status
+bands inside the ring, task rows with a fixed leading time column and a frozen
+disposition badge on closed days, habit rows reduced to a single toggle plus an
+overflow menu, the Day State card in hours, duration presets in the task dialog,
+a header close button on every dialog, and a raised small-text tier.
+
+### Baseline replacement
+
+All 13 frozen screenshots were regenerated through the guarded, approved run:
+
+```powershell
+ORBIT_VISUAL_BASELINE_APPROVAL=remediated-review-complete npx playwright test --project=visual-chromium --update-snapshots
+```
+
+Replaced: `desktop-shared-shell`, `desktop-day-populated`, `desktop-day-empty`,
+`desktop-week-populated`, `desktop-week-empty`, `desktop-history-month-populated`,
+`desktop-history-month-empty`, `tablet-day-populated`, `tablet-week-populated`,
+`tablet-history-month-populated`, `mobile-day-populated`, `mobile-week-populated`,
+`mobile-history-month-populated`.
+
+A subsequent unguarded run of `--project=visual-chromium` passes 16/16, confirming
+the new baselines are stable rather than merely overwritten.
+
+### Determinism note
+
+The orbital field animates continuously on a canvas, so the visual project now runs
+with `contextOptions: { reducedMotion: 'reduce' }` (`playwright.config.ts`). The
+component renders a single deterministic frame under reduced motion, which is also
+the accessibility behaviour required by the reduced-motion obligations.
+
+### Scope of this approval
+
+This approves the remediated **visual** baseline only. Copy conformance is recorded
+separately in `content-review.md`; architecture in `architecture-review.md`. The
+removed T107 (real-device/assistive-technology) and T108 (timed usability) checks
+carry no evidence and were struck from `tasks.md` by product-owner decision on
+2026-08-17.

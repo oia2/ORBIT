@@ -29,6 +29,8 @@ export function useManageTask(onCommitted: () => void | Promise<void>) {
     readonly notes?: string;
     readonly duration: number;
     readonly position: number;
+    readonly startTime?: string;
+    readonly endTime?: string;
   }) => {
     if (!Number.isInteger(input.duration) || input.duration <= 0) {
       setError('Длительность должна быть целым числом больше нуля.');
@@ -37,6 +39,8 @@ export function useManageTask(onCommitted: () => void | Promise<void>) {
     const result = await repository.createTask({
       title: input.title,
       ...(input.notes === undefined ? {} : { notes: input.notes }),
+      ...(input.startTime === undefined ? {} : { startTime: input.startTime }),
+      ...(input.endTime === undefined ? {} : { endTime: input.endTime }),
       placement: { kind: 'day', date: input.date },
       durationMinutes: durationMinutes(input.duration),
       dayPosition: dayPosition(input.position),
@@ -115,6 +119,8 @@ export function useManageTask(onCommitted: () => void | Promise<void>) {
     occurrenceId: TaskOccurrenceId;
     title: string;
     duration?: number;
+    startTime?: string | null | undefined;
+    endTime?: string | null | undefined;
     revision: Parameters<PlanningRepository['editTaskOccurrence']>[0]['expectedRevision'];
   }) => {
     if (
@@ -128,6 +134,8 @@ export function useManageTask(onCommitted: () => void | Promise<void>) {
       occurrenceId: input.occurrenceId,
       title: input.title,
       ...(input.duration === undefined ? {} : { durationMinutes: durationMinutes(input.duration) }),
+      ...(input.startTime === undefined ? {} : { startTime: input.startTime }),
+      ...(input.endTime === undefined ? {} : { endTime: input.endTime }),
       expectedRevision: input.revision,
     });
     if (!result.ok) {
@@ -228,13 +236,24 @@ export function useManageTask(onCommitted: () => void | Promise<void>) {
     return true;
   };
 
-  const createSeries = async (input: { title: string; duration: number; rule: RecurrenceRule }) => {
+  const createSeries = async (input: {
+    title: string;
+    duration: number;
+    startTime?: string | undefined;
+    endTime?: string | undefined;
+    rule: RecurrenceRule;
+  }) => {
     if (!Number.isInteger(input.duration) || input.duration <= 0) {
       setError('Длительность должна быть целым числом больше нуля.');
       return false;
     }
     const result = await repository.createTaskSeries({
-      template: { title: input.title, plannedDurationMinutes: durationMinutes(input.duration) },
+      template: {
+        title: input.title,
+        plannedDurationMinutes: durationMinutes(input.duration),
+        ...(input.startTime === undefined ? {} : { startTime: input.startTime }),
+        ...(input.endTime === undefined ? {} : { endTime: input.endTime }),
+      },
       recurrenceRule: input.rule,
     });
     if (!result.ok) {

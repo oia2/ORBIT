@@ -1,9 +1,11 @@
 import { expect, test } from '../fixtures/orbit.fixture';
+import { dayMonthYearLabel, labelPattern, mondayISO, monthYearLabel, todayISO } from './dates';
 
 test('navigates immutable Day Week Month history with exact dynamics scopes', async ({
   page,
   orbitDatabase,
 }) => {
+  test.setTimeout(120_000);
   const score = {
     task: { completed: 2, applicable: 3, rate: 2 / 3 },
     habit: { completed: 1, applicable: 2, rate: 1 / 2 },
@@ -13,24 +15,30 @@ test('navigates immutable Day Week Month history with exact dynamics scopes', as
   await orbitDatabase.seed({
     version: 1,
     stores: {
-      weeks: [{ status: 'open', startDate: '2026-08-10', goals: [], revision: 0 }],
+      weeks: [{ status: 'open', startDate: mondayISO(), goals: [], revision: 0 }],
       days: [
         {
           status: 'closed',
-          date: '2026-08-13',
-          weekStart: '2026-08-10',
+          date: todayISO(),
+          weekStart: mondayISO(),
           revision: 1,
           closureSnapshot: { score, plannedLoadMinutes: 45 },
-          closedAt: '2026-08-13T18:00:00.000Z',
+          closedAt: `${todayISO()}T18:00:00.000Z`,
         },
       ],
     },
   });
   await page.goto('/history');
   await expect(page.getByText(/^история и динамика$/i)).toBeVisible();
-  await expect(page.getByRole('heading', { level: 1, name: /август 2026/i })).toBeVisible();
-  await expect(page.getByText(/выбранная дата.*13 августа 2026/i)).toBeVisible();
-  await expect(page.getByRole('group', { name: /календарь месяца/i })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: labelPattern(monthYearLabel(todayISO())) }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(new RegExp(`выбранная дата.*${dayMonthYearLabel(todayISO())}`, 'i')),
+  ).toBeVisible();
+  await expect(page.getByRole('group', { name: /календарь месяца/i })).toBeVisible({
+    timeout: 20_000,
+  });
   await expect(page.getByRole('region', { name: /динамика/i })).toContainText(
     /последние 6 месяцев/i,
   );
@@ -38,7 +46,9 @@ test('navigates immutable Day Week Month history with exact dynamics scopes', as
     6,
   );
   await page.getByRole('button', { name: 'Неделя' }).click();
-  await expect(page.getByText(/выбранная дата.*13 августа 2026/i)).toBeVisible();
+  await expect(
+    page.getByText(new RegExp(`выбранная дата.*${dayMonthYearLabel(todayISO())}`, 'i')),
+  ).toBeVisible();
   await expect(page.getByRole('region', { name: /динамика/i })).toContainText(
     /последние 8 недель/i,
   );

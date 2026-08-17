@@ -10,7 +10,7 @@ import { HabitRecurrenceDialog } from './HabitRecurrenceDialog';
 afterEach(cleanup);
 
 describe('HabitRecurrenceDialog', () => {
-  it('creates a definition with weekdays and an inclusive end', async () => {
+  it('creates a definition with weekdays, defaulting the start date without asking the user', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(true);
     render(
@@ -24,15 +24,39 @@ describe('HabitRecurrenceDialog', () => {
         onSubmit={onSubmit}
       />,
     );
+    expect(screen.queryByLabelText(/дата начала/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/дата окончания/i)).not.toBeInTheDocument();
     await user.type(screen.getByLabelText(/название привычки/i), 'Прогулка');
-    await user.type(screen.getByLabelText(/дата начала/i), '2026-05-20');
-    await user.type(screen.getByLabelText(/дата окончания/i), '2026-05-27');
     await user.click(screen.getByLabelText(/среда/i));
     await user.click(screen.getByRole('button', { name: /сохранить/i }));
     expect(onSubmit).toHaveBeenCalledWith({
       title: 'Прогулка',
-      rule: { startDate: localDate('2026-05-20'), endDate: localDate('2026-05-27'), weekdays: [3] },
+      rule: { startDate: localDate('2026-05-20'), weekdays: [3] },
     });
+  });
+
+  it('selects and deselects all weekdays at once', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(true);
+    render(
+      <HabitRecurrenceDialog
+        open
+        clock={createFixedClock({
+          instant: instant('2026-05-20T08:00:00.000Z'),
+          currentLocalDate: localDate('2026-05-20'),
+        })}
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+    const selectAll = screen.getByLabelText(/выбрать все дни/i);
+    await user.click(selectAll);
+    expect(screen.getByLabelText(/среда/i)).toBeChecked();
+    expect(screen.getByLabelText(/воскресенье/i)).toBeChecked();
+    await user.click(screen.getByLabelText(/среда/i));
+    expect(selectAll).not.toBeChecked();
+    expect(screen.getByLabelText(/воскресенье/i)).toBeChecked();
+    expect(screen.getByLabelText(/среда/i)).not.toBeChecked();
   });
 
   it('offers update and stop with the final D+1 boundary', () => {
@@ -48,10 +72,10 @@ describe('HabitRecurrenceDialog', () => {
         initialRule={{ startDate: localDate('2026-05-20'), weekdays: [3] }}
         onClose={vi.fn()}
         onSubmit={vi.fn().mockResolvedValue(true)}
-        onStop={vi.fn().mockResolvedValue(true)}
       />,
     );
     expect(screen.getByText(/21 мая 2026/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /остановить повтор/i })).toBeInTheDocument();
+    // Stopping a recurrence now lives in the habit row's menu, not this dialog.
+    expect(screen.queryByRole('button', { name: /остановить повтор/i })).not.toBeInTheDocument();
   });
 });

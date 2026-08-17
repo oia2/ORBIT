@@ -4,7 +4,19 @@
 
 **Created**: 2026-08-10
 
-**Status**: Approved for Implementation
+**Status**: Implemented and verified — closed 2026-08-17
+
+All tasks in `tasks.md` are complete and `npm run verify` passes (439 unit tests,
+49 Playwright tests across desktop/tablet/mobile/visual, coverage 86.29%
+statements and 80.36% branches). Requirement-to-evidence mapping is in
+`traceability.md`; the gate run is recorded in `verification.md`.
+
+Two verification tasks were removed by product-owner decision on 2026-08-17
+because they require resources unavailable for this delivery: T107 (real-device
+and assistive-technology checks) and T108 (timed single-participant usability).
+As a result SC-001, SC-002, SC-003, and SC-010 are covered functionally but their
+time bounds carry no measured human evidence, and no screen-reader verification
+exists. See the "Explicitly not evidenced" section of `traceability.md`.
 
 **Input**: Define the first usable ORBIT release around the loop
 plan → execute → record → review → adjust, covering weekly and daily planning,
@@ -160,6 +172,41 @@ reflection, and trustworthy history.
   state excluded, factual load without capacity/overload semantics, descriptive
   goals, IndexedDB, complete workout omission, no Close Day default, and only
   explicit valid-date carry-forward.
+
+### Session 2026-08-16
+
+- A targeted post-release remediation pass (UI polish and two bug fixes)
+  additionally approved two small data-model changes, recorded here per the
+  constitution's requirement that behavior-affecting changes update the
+  specification before/alongside implementation:
+  - Tasks may optionally record a clock start time and/or end time,
+    independent of planned duration (FR-015a). This applies to both one-off
+    dated tasks and recurring task-series templates; it does not add
+    scheduling semantics beyond the two optional fields.
+  - Habit recurrence rules no longer collect an explicit start or end date
+    from the user (FR-015 amended). ORBIT assigns the effective start date
+    as the current local date at save time for a new habit, and preserves an
+    existing habit's previously recorded start date unchanged when its rule
+    is edited, so editing an existing habit's weekdays never retroactively
+    changes its past applicability or history. The rule has no end date.
+    Task recurrence rules are unaffected and still require an explicit
+    user-entered start date.
+- The product owner additionally reinstated the Open Design status ladder
+  inside the Daily Score / Weekly Progress ring, reversing the earlier
+  "no additional textual score label is required" resolution. The ring now
+  shows, in priority order: `Не начат` for a period later than the current
+  local date; `Пока нет данных` when neither category applies; `Итог сохранён`
+  for a closed day or completed week; and otherwise the score's own band —
+  `Успешно` at `>=70`, `Частично` at `50–69`, `В процессе` below `50`. The
+  bands reuse FR-034's existing thresholds and state the measured result only;
+  punitive, shaming, or person-directed praise remains prohibited under
+  FR-057/SC-014.
+- Habit marking was simplified to the reference's single toggle. The explicit
+  "not completed" control was removed from the day's habit list; a habit row now
+  only marks completed and can undo that mark while the day is open (FR-020
+  amended). Resolving a still-pending habit as not completed happens inside the
+  Close Day dialog, which is the flow that requires it. Stopping a recurrence
+  moved out of the habit dialog into the habit row's own menu.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -573,9 +620,20 @@ facts or encountering workout-history functionality.
 #### Recurring Tasks and Habits
 
 - **FR-015**: ORBIT MUST let the user define a recurrence rule for a task or
-  habit using an effective start date and one or more applicable weekdays, with
-  an optional inclusive end date or explicit stop action. If the end date
-  matches the rule, that date MUST produce an occurrence.
+  habit using one or more applicable weekdays, with an explicit stop action.
+  For a recurring **task**, the user MUST also enter an effective start date
+  and MAY enter an optional inclusive end date. For a **habit**, ORBIT MUST
+  NOT collect a start or end date from the user; it assigns the effective
+  start date as the current local date at save time, preserving a
+  previously recorded start date unchanged when editing an existing habit's
+  rule, and the rule otherwise has no end date. If a task's end date matches
+  the rule, that date MUST produce an occurrence.
+- **FR-015a**: ORBIT MAY let the user record an optional clock start time
+  and/or end time ("HH:MM") on a task, independent of its planned duration.
+  Both fields are independently optional; when both are present, the end
+  time MUST be strictly after the start time. Omitting both MUST NOT change
+  any other task behavior, and existing tasks without a recorded time remain
+  valid.
 - **FR-016**: Each applicable date MUST produce a separate task or habit
   occurrence with its own identity and outcome. A newly materialized recurring
   task occurrence MUST be appended to the end of that date's ordered task list
@@ -598,9 +656,14 @@ facts or encountering workout-history functionality.
   date ends, it MUST automatically become not completed. While that day remains
   open, the user MUST be able to correct the automatic result to completed; the
   correction MUST update the live score and history MUST preserve both the
-  automatic boundary transition and correction. Successful day closure MUST
+  automatic boundary transition and correction. While the day remains open, the
+  user MUST also be able to undo their own mark, returning the occurrence to
+  pending; history MUST preserve the original mark and the undo. An automatic
+  boundary miss is not a user mark and MUST NOT be undone this way — it is
+  changed only through the correction above. Successful day closure MUST
   make the final outcome immutable. Before the local date ends, ORBIT MUST reject
-  closure while any applicable habit remains pending.
+  closure while any applicable habit remains pending; the closure flow MUST let
+  the user resolve each pending habit without leaving it.
 - **FR-021**: Task and habit occurrences in a closed day or completed week MUST
   NOT be editable, deletable, or returned to an earlier lifecycle state.
 
@@ -654,7 +717,11 @@ facts or encountering workout-history functionality.
 - **FR-034**: ORBIT MUST display the score's contributing task and habit rates so
   that the result is explainable. It MUST display the numeric whole percentage.
   Daily Score MUST use semantic threshold coloring: `>=70%` good, `50–69%`
-  neutral/warning, and `<50%` low. No additional textual score label is required.
+  neutral/warning, and `<50%` low. ORBIT MUST also show a short textual status
+  in the aggregate ring, using period and data state first (`Не начат`,
+  `Пока нет данных`, `Итог сохранён`) and otherwise the same threshold bands
+  (`Успешно`, `Частично`, `В процессе`). The status MUST describe the measured
+  period or result only and MUST NOT praise, shame, or address the user.
 - **FR-035**: While a day is open, its score MUST reflect current outcomes as a
   live preview. The displayed score MUST be rounded to the nearest whole
   percentage, with an exact half-percentage tie rounded upward: 74.4% becomes

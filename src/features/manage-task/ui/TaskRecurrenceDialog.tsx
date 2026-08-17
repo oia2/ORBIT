@@ -1,6 +1,11 @@
 import { useState } from 'react';
 
-import type { RecurrenceRule, IsoWeekday } from '@/entities/planning';
+import { isValidLocalTime, type RecurrenceRule, type IsoWeekday } from '@/entities/planning';
+
+/** `time` is already validated as "HH:MM" — fixed-position slicing avoids an unsafe split/destructure. */
+function timeToMinutes(time: string): number {
+  return Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+}
 import type { ApplicationClock } from '@/shared/lib/local-date/clock';
 import {
   addDays,
@@ -29,11 +34,15 @@ export interface TaskRecurrenceDialogProps {
   readonly clock: ApplicationClock;
   readonly initialTitle?: string;
   readonly initialDuration?: number;
+  readonly initialStartTime?: string;
+  readonly initialEndTime?: string;
   readonly initialRule?: RecurrenceRule;
   readonly onClose: () => void;
   readonly onSubmit: (input: {
     title: string;
     duration: number;
+    startTime?: string;
+    endTime?: string;
     rule: RecurrenceRule;
   }) => Promise<boolean>;
   readonly onStop?: () => Promise<boolean>;
@@ -42,6 +51,8 @@ export interface TaskRecurrenceDialogProps {
 export function TaskRecurrenceDialog(props: TaskRecurrenceDialogProps) {
   const [title, setTitle] = useState(props.initialTitle ?? '');
   const [duration, setDuration] = useState(props.initialDuration?.toString() ?? '');
+  const [startTime, setStartTime] = useState(props.initialStartTime ?? '');
+  const [endTime, setEndTime] = useState(props.initialEndTime ?? '');
   const [startDate, setStartDate] = useState<string>(props.initialRule?.startDate ?? '');
   const [endDate, setEndDate] = useState<string>(props.initialRule?.endDate ?? '');
   const [weekdays, setWeekdays] = useState<readonly IsoWeekday[]>(
@@ -51,6 +62,23 @@ export function TaskRecurrenceDialog(props: TaskRecurrenceDialogProps) {
   const [error, setError] = useState<string>();
   const mode = props.mode ?? 'create';
   const effectiveDate = addDays(reviewDate, 1);
+
+  // When both a start and end time are set, the duration is derived from them
+  // instead of asking the user to compute and re-enter it separately.
+  const deriveDuration = (nextStartTime: string, nextEndTime: string) => {
+    if (
+      nextStartTime === '' ||
+      nextEndTime === '' ||
+      !isValidLocalTime(nextStartTime) ||
+      !isValidLocalTime(nextEndTime)
+    ) {
+      return;
+    }
+    const minutes = timeToMinutes(nextEndTime) - timeToMinutes(nextStartTime);
+    if (minutes > 0) {
+      setDuration(String(minutes));
+    }
+  };
 
   const confirmCurrentBoundary = (): boolean => {
     const current = props.clock.currentLocalDate();
@@ -81,12 +109,33 @@ export function TaskRecurrenceDialog(props: TaskRecurrenceDialogProps) {
       setError('Дата окончания не может быть раньше даты начала.');
       return;
     }
+    if (startTime !== '' && !isValidLocalTime(startTime)) {
+      setError('Введите корректное время начала.');
+      return;
+    }
+    if (endTime !== '' && !isValidLocalTime(endTime)) {
+      setError('Введите корректное время окончания.');
+      return;
+    }
+    if (startTime !== '' && endTime !== '' && endTime <= startTime) {
+      setError('Время окончания должно быть позже времени начала.');
+      return;
+    }
     const rule: RecurrenceRule = {
       startDate,
       weekdays: [...weekdays].sort(),
       ...(isLocalDate(endDate) ? { endDate } : {}),
     };
-    if (await props.onSubmit({ title, duration: minutes, rule })) props.onClose();
+    if (
+      await props.onSubmit({
+        title,
+        duration: minutes,
+        rule,
+        ...(startTime === '' ? {} : { startTime }),
+        ...(endTime === '' ? {} : { endTime }),
+      })
+    )
+      props.onClose();
   };
 
   const stop = async () => {
@@ -108,7 +157,37 @@ export function TaskRecurrenceDialog(props: TaskRecurrenceDialogProps) {
           }}
         />
       </FormField>
-      <FormField id="recurring-task-duration" label="Длительность, минут">
+      <div className="orbit-form-grid">
+        <FormField id="recurring-task-start-time" label="Начало" hint="Необязательно">
+          <input
+            type="time"
+            value={startTime}
+            onChange={(event) => {
+              setStartTime(event.target.value);
+              deriveDuration(event.target.value, endTime);
+            }}
+          />
+        </FormField>
+        <FormField id="recurring-task-end-time" label="Окончание" hint="Необязательно">
+          <input
+            type="time"
+            value={endTime}
+            onChange={(event) => {
+              setEndTime(event.target.value);
+              deriveDuration(startTime, event.target.value);
+            }}
+          />
+        </FormField>
+      </div>
+      <FormField
+        id="recurring-task-duration"
+        label="Длительность, минут"
+        hint={
+          startTime !== '' && endTime !== ''
+            ? 'Вычислена из начала и окончания. Можно исправить вручную.'
+            : undefined
+        }
+      >
         <input
           type="number"
           min="1"
