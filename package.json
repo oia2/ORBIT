@@ -23,7 +23,7 @@
     "build:server": "vite build --config vite.server.config.ts",
     "test:e2e": "npm run build && npm run build:server && playwright test",
     "test:visual": "npm run build && npm run build:server && playwright test --project=visual-chromium",
-    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage && npm run test:e2e",
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test:server && npm run test:coverage && npm run test:e2e",
     "db:migrate": "tsx server/db/migrate.ts"
   },
   "dependencies": {

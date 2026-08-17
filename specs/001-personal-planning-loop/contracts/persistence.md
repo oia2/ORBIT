@@ -1,6 +1,29 @@
 # Contract: Device-Local Persistence
 
-**Adapter**: IndexedDB via `idb`  
+> **Superseded in part by feature 002 (`002-server-backed-persistence`), 2026-08-17.**
+>
+> The **storage mechanism** described here — the IndexedDB adapter, its stores
+> and indexes, its transaction and database-lifecycle rules, and its
+> storage-specific error codes (`StorageUnavailable`, `QuotaExceeded`,
+> `UpgradeBlocked`, `UnexpectedStorageFailure`) — is replaced by
+> `specs/002-server-backed-persistence/data-model.md` and
+> `specs/002-server-backed-persistence/contracts/planning-api.md`. The
+> IndexedDB adapter no longer exists in the codebase.
+>
+> The **domain semantics** in this document remain binding and unchanged:
+> the `PlanningRepository` port and its named use cases, one transaction per
+> boundary operation, fixed weeks and task membership, recurrence and
+> habit-boundary rules, day/week finalization, history access, and optimistic
+> concurrency by revision. Feature 002 preserves every one of them, and proves
+> it by running this feature's repository suites against the new implementation
+> (`specs/002-server-backed-persistence/traceability.md`).
+>
+> Sections that describe the mechanism rather than the domain — §2 Store
+> contract, §8 Database lifecycle and concurrency, and the storage-error part of
+> §9 — should be read as a record of what 001 shipped, not as a current
+> constraint.
+
+**Adapter**: IndexedDB via `idb` (superseded — see above)  
 **Database version**: 1 for the initial schema
 
 ## 1. Architectural boundary

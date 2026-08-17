@@ -253,8 +253,8 @@ data, `docker compose down`, `up` again, and the data is still there.
 - [X] T085 [US4] Add the `/api` dev proxy to `vite.config.ts` targeting `http://localhost:3000`, so the client uses relative `/api` paths identically in development and production
 - [X] T086 [US4] Create a multi-stage `Dockerfile`: build stage runs `npm ci`, `npm run build`, and `npm run build:server`; runtime stage is `node:22-alpine` with production dependencies, `dist/`, and `dist-server/`
 - [X] T087 [US4] Add the `app` service to `docker-compose.yml`: builds from the Dockerfile, `depends_on` `db` with a health condition, publishes the app port, and receives `DATABASE_URL` and `NODE_ENV=production`
-- [ ] T088 [US4] Verify a first run against an empty volume produces a working, empty ORBIT rather than an error, with migrations applied automatically (FR-004, SC-009)
-- [ ] T089 [US4] Verify `docker compose down` followed by `docker compose up` preserves all recorded data on the `orbit-db-data` volume (SC-010)
+- [X] T088 [US4] Verify a first run against an empty volume produces a working, empty ORBIT rather than an error, with migrations applied automatically (FR-004, SC-009)
+- [X] T089 [US4] Verify `docker compose down` followed by `docker compose up` preserves all recorded data on the `orbit-db-data` volume (SC-010)
 - [X] T090 [US4] Add a `.dockerignore` excluding `node_modules`, `dist`, `dist-server`, `.git`, `coverage`, and `e2e/visual/__screenshots__`
 
 **Checkpoint**: `docker compose up` from a clean checkout produces a working application with no manual setup.
@@ -263,16 +263,16 @@ data, `docker compose down`, `up` again, and the data is still there.
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T091 Update the `verify` script in `package.json` to include `test:server`
-- [ ] T092 Extend coverage configuration in `vitest.config.ts` to include `server/**/*.ts`, preserving the existing global thresholds and the per-file thresholds on the untouched domain files
-- [ ] T093 [P] Update feature 001's `specs/001-personal-planning-loop/contracts/persistence.md` to record that its storage-mechanism section is superseded by 002's `data-model.md` and `contracts/planning-api.md`, while its domain semantics remain binding (plan.md Principle V)
-- [ ] T094 [P] Update `README.md` with the development and `docker compose up` instructions from quickstart.md, replacing any device-local storage description, and **document that Docker is a prerequisite for `verify`, `test:server`, `test:server:tz`, and `test:e2e`**
-- [ ] T095 Create `vitest.server-tz.config.ts` extending the `server` project with `test.env.TZ` set to a non-UTC zone (e.g. `Pacific/Auckland`), wired to the `test:server:tz` script from T008. **Do not use the POSIX-only `TZ=… command` shell prefix** — it does not work in PowerShell and this project is developed on Windows
-- [ ] T096 Run `npm run test:server:tz` and confirm results and recorded instants are byte-identical to `npm run test:server` (SC-007)
-- [ ] T097 Grep `server/` for `createSystemClock`, `Date.now()`, and `new Date()` in request-handling paths and confirm zero occurrences (FR-009)
-- [ ] T098 Run `npm run test:visual` and confirm zero snapshot diffs; investigate any diff rather than accepting it (SC-012)
-- [ ] T099 Review all user-facing strings changed in this feature and confirm the only removals are device-local storage messaging (SC-012, FR-024)
-- [ ] T100 Confirm browser storage holds zero planning records during normal operation (SC-008), then run the full `npm run verify` gate, walk every validation scenario in [quickstart.md](./quickstart.md), and record the result per success criterion in `specs/002-server-backed-persistence/verification.md` following the format 001 used
+- [X] T091 Update the `verify` script in `package.json` to include `test:server`
+- [X] T092 Extend coverage configuration in `vitest.config.ts` to include `server/**/*.ts`, preserving the existing global thresholds and the per-file thresholds on the untouched domain files
+- [X] T093 [P] Update feature 001's `specs/001-personal-planning-loop/contracts/persistence.md` to record that its storage-mechanism section is superseded by 002's `data-model.md` and `contracts/planning-api.md`, while its domain semantics remain binding (plan.md Principle V)
+- [X] T094 [P] Update `README.md` with the development and `docker compose up` instructions from quickstart.md, replacing any device-local storage description, and **document that Docker is a prerequisite for `verify`, `test:server`, `test:server:tz`, and `test:e2e`**
+- [X] T095 Create `vitest.server-tz.config.ts` extending the `server` project with `test.env.TZ` set to a non-UTC zone (e.g. `Pacific/Auckland`), wired to the `test:server:tz` script from T008. **Do not use the POSIX-only `TZ=… command` shell prefix** — it does not work in PowerShell and this project is developed on Windows
+- [X] T096 Run `npm run test:server:tz` and confirm results and recorded instants are byte-identical to `npm run test:server` (SC-007)
+- [X] T097 Grep `server/` for `createSystemClock`, `Date.now()`, and `new Date()` in request-handling paths and confirm zero occurrences (FR-009)
+- [X] T098 Run `npm run test:visual` and confirm zero snapshot diffs; investigate any diff rather than accepting it (SC-012)
+- [X] T099 Review all user-facing strings changed in this feature and confirm the only removals are device-local storage messaging (SC-012, FR-024)
+- [X] T100 Confirm browser storage holds zero planning records during normal operation (SC-008), then run the full `npm run verify` gate, walk every validation scenario in [quickstart.md](./quickstart.md), and record the result per success criterion in `specs/002-server-backed-persistence/verification.md` following the format 001 used
 
 ---
 
