@@ -203,24 +203,48 @@ rewritten wholesale as part of their aggregate.
 
 ## Decision 7: Transactions and concurrency
 
-**Decision**: Every command executes inside a single explicit `db.transaction()`. Reads that
-span multiple tables run in one transaction too, so a projection cannot observe a half-applied
-command. Optimistic concurrency keeps feature 001's `expectedRevision` mechanism: the
-`UPDATE` carries `WHERE revision = $expected`, and a zero row count produces the existing
-`RevisionConflict` error.
+**Decision**: Commands and reads use different isolation levels, each chosen for what it
+must guarantee.
+
+**Commands** execute inside a single explicit `db.transaction()` at the default
+**`READ COMMITTED`**. Optimistic concurrency keeps feature 001's `expectedRevision`
+mechanism: the `UPDATE` carries `WHERE revision = $expected`, and a zero row count produces
+the existing `RevisionConflict` error.
+
+**Reads** — the multi-query projections `getWeekView`, `getDayView`, `getBacklogView`,
+`getHistoryView`, and `getTaskHistory` — execute inside a transaction at
+**`REPEATABLE READ`**, giving every statement in the projection one consistent snapshot.
 
 **Rationale**: FR-007 requires each boundary operation to be atomic, and `closeDay` in
 particular touches days, task occurrences, plan entries, events, and habit occurrences.
-Reusing the existing revision mechanism rather than introducing database-level locking keeps
-the behavior — and the error the client already handles — identical (FR-008).
+For commands, reusing the existing revision mechanism rather than database-level locking
+keeps the behavior — and the error the client already handles — identical (FR-008).
+
+Reads need a stronger guarantee than commands do. Every projection issues several queries
+(a day's tasks, its plan entries, its habit occurrences, its events), and under
+`READ COMMITTED` each statement takes a *fresh* snapshot. A command committing between two
+of those statements would produce a projection assembled from two different states of the
+world — a `DayView` whose task list and score disagree. That is a torn read, and 001 FR-013
+requires a change to appear consistently across views. Wrapping the queries in one
+transaction is not by itself sufficient at `READ COMMITTED`; the isolation level is what
+makes the snapshot consistent.
+
+`REPEATABLE READ` is safe for read-only work: PostgreSQL never raises a serialization
+failure for a transaction that only reads, so this introduces no new error condition the
+client would have to represent.
 
 **Alternatives considered**:
 
+- *`READ COMMITTED` for reads too, relying on the single transaction*: rejected. This was an
+  earlier draft of this decision and it was wrong — a transaction alone does not pin a
+  snapshot at `READ COMMITTED`, so the torn read above remains possible.
+- *One giant query per projection instead of several*: would also be consistent, but it
+  trades a one-word isolation setting for large, hard-to-review joins across eight tables.
 - *`SELECT … FOR UPDATE` pessimistic locking*: unnecessary for a single-user deployment, and
   it would change the observable outcome of a stale write from `RevisionConflict` to a wait.
-- *`SERIALIZABLE` isolation*: would surface serialization failures the client has no
-  representation for. Default `READ COMMITTED` plus the existing revision guard is
-  sufficient and behavior-preserving.
+- *`SERIALIZABLE` for commands*: would surface serialization failures the client has no
+  representation for. `READ COMMITTED` plus the existing revision guard is sufficient and
+  behavior-preserving for writes.
 
 ## Decision 8: Request validation without a schema library
 
@@ -297,10 +321,23 @@ concurrent-migration hazard.
    functions and are the bulk of existing coverage. No database.
 2. **Repository behavioral tests** — the nine existing adapter suites (`us1`–`us7`,
    `failures`, `foundation`, `seeded-scale`, ~2,600 lines) are **retargeted** from
-   `createIndexedDbPlanningRepository` to `createPostgresPlanningRepository`. Their
-   assertions are written against the interface, so they carry over as the direct evidence
-   for SC-001. They move to `server/planning/` and run in a new `server` Vitest project
-   against a real PostgreSQL.
+   `createIndexedDbPlanningRepository` to `createPostgresPlanningRepository`. They move to
+   `server/planning/` and run in a new `server` Vitest project against a real PostgreSQL.
+
+   **Two categories of assertion, with different rules.** Most assertions are written
+   against the interface and against domain behavior; those carry over **verbatim** and are
+   the direct evidence for SC-001. A minority assert IndexedDB *storage* semantics — quota
+   exhaustion, blocked version upgrades, a terminated connection — and those have no
+   meaning against PostgreSQL. They are replaced with server equivalents (connection loss,
+   statement failure mid-transaction, constraint violation), which is legitimate precisely
+   because 002 supersedes 001's storage mechanism and FR-014 replaces those error codes.
+   This affects the `failures` suite most, and parts of `foundation`.
+
+   The distinction is the whole point: **a domain or product-behavior assertion may never be
+   changed**, because changing one would hide exactly the drift SC-001 exists to catch. A
+   storage-mechanism assertion *must* be changed, because the mechanism it describes is
+   gone. Every replacement is recorded in `traceability.md` so the two categories stay
+   auditable and nobody can quietly reclassify the first as the second.
 3. **Transport contract tests** — exercise `HttpPlanningRepository` against a Fastify
    instance with an in-process injection, covering envelope round-tripping, brand
    preservation, header validation, and the `ServerUnavailable` mapping.
@@ -311,9 +348,11 @@ once, with all tables truncated between test cases. Simple, fast, and gives real
 enforcement.
 
 **Rationale**: The strongest available evidence that behavior is unchanged is that the tests
-written to pin 001's behavior still pass unmodified against the new implementation. That is
-exactly SC-001's wording ("no test altered to accommodate different product behavior"), so
-the suites must be preserved rather than rewritten.
+written to pin 001's *behavior* still pass unmodified against the new implementation. SC-001's
+wording is "no test altered to accommodate different **product behavior**" — which permits
+adapting a storage-mechanism assertion whose mechanism 002 deliberately replaced, and forbids
+touching anything else. The suites are therefore preserved rather than rewritten, with the
+narrow, recorded exception above.
 
 **Trade-off accepted**: `npm run verify` now needs Docker for a PostgreSQL instance. The fast
 domain tests stay database-free, so the tight inner loop is unaffected.
@@ -348,6 +387,14 @@ page independently. `retry()` keeps working, now re-probing.
 `UnexpectedServerFailure`; `QuotaExceeded` and `UpgradeBlocked` are removed as
 IndexedDB-specific with no server analogue. The union's exported type name
 `DomainOrStorageError` is **kept** to avoid touching consumers for a rename.
+
+**The change is staged, not atomic.** The new codes are *added* in Phase 2 while the
+IndexedDB-specific ones remain in place, and the old ones are removed only after the HTTP
+cutover, once no consumer still references them. Renaming in one step would leave typecheck
+failing across every intervening task — a broken `main` for the length of the migration —
+which no milestone should ever plan for. The union carrying both sets for a few phases is
+the cost of keeping every checkpoint green, and it is temporary by construction: the removal
+is an explicit task, not a cleanup someone might forget.
 
 **Alternatives considered**:
 

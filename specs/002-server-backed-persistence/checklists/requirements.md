@@ -32,7 +32,7 @@
 ## Notes
 
 - **Scoped exception on "No implementation details"**: FR-001 through FR-024 and SC-001
-  through SC-013 are technology-neutral and name no language, framework, database, or
+  through SC-012 are technology-neutral and name no language, framework, database, or
   protocol. Technology choices appear only in the clearly separated **Technical Direction**
   section, which is labelled as product-owner-supplied binding input to `/speckit-plan`
   rather than as a requirement. This is deliberate: the constitution's Specification and
@@ -70,6 +70,13 @@
   request never apply an outcome twice was **removed**. Satisfying it would have meant
   idempotency keys or request deduplication, which FR-023 now explicitly excludes.
   Per-request atomicity (FR-007) is unaffected and remains required.
+
+- **Scope correction, 2026-08-17 (second pass)**: a proposed SC-011 requiring common
+  operations to complete in under one second was **removed**, and the remaining criteria
+  renumbered. Feature 001 defined no performance budget, so adding a latency SLO during a
+  persistence migration would have introduced a requirement the product never had — the
+  precise kind of scope creep this feature forbids itself. Responsiveness remains governed
+  by 001's existing usability criteria.
 
 - No items require spec updates. The specification is ready for `/speckit-clarify` or
   `/speckit-plan`.

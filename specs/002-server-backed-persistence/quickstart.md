@@ -65,8 +65,13 @@ Individual suites:
 ```bash
 npm run test              # domain + UI tests; no database needed
 npm run test:server       # repository + transport tests; needs PostgreSQL
+npm run test:server:tz    # same suites under a non-UTC timezone (SC-007)
 npm run test:e2e          # Playwright against the built app
 ```
+
+**Docker is a prerequisite for `verify`, `test:server`, `test:server:tz`, and `test:e2e`.**
+Start the database first with `docker compose up -d db`. This prerequisite is also recorded
+in `README.md`.
 
 ## Validation scenarios
 
@@ -118,11 +123,15 @@ The server must have no clock of its own. Every timestamp it records and every t
 decision it makes comes from the client's supplied reading (FR-009).
 
 ```bash
-TZ=Pacific/Auckland npm run test:server
+npm run test:server:tz
 ```
 
-**Expected**: identical results to a UTC run — same outcomes *and* byte-identical recorded
-instants. Any difference means server time leaked into a code path.
+This runs the server suites through `vitest.server-tz.config.ts`, which sets a non-UTC
+timezone via Vitest's `test.env` rather than a shell prefix — `TZ=… command` is POSIX-only
+syntax and does not work in PowerShell, and this project is developed on Windows.
+
+**Expected**: identical results to `npm run test:server` — same outcomes *and*
+byte-identical recorded instants. Any difference means server time leaked into a code path.
 
 Also verify by inspection that no request-handling code calls `createSystemClock`,
 `Date.now()`, or `new Date()`. Because the client sends both `X-Orbit-Local-Date` and
@@ -140,12 +149,7 @@ docker compose up -d
 **Expected**: all data present. The named volume `orbit-db-data` is what makes this true;
 `docker compose down -v` deletes it and is the documented way to start clean.
 
-### 8. Responsiveness — SC-011
-
-Open a day and a week view, save a task, toggle completion. Each completes in under 1 second
-on a local deployment.
-
-### 9. No new product surface — SC-013
+### 8. No new product surface — SC-012
 
 Compare the running application against feature 001's approved design references and visual
 snapshots. **Expected**: zero new screens, controls, settings, or workflows, and no wording

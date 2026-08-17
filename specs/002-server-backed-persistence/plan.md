@@ -49,8 +49,9 @@ load-bearing, so an in-memory substitute would not prove them.
 **Project Type**: Web application — existing React/Vite SPA plus a new Fastify API, served
 from a single origin
 
-**Performance Goals**: Common planning operations under 1 s on a local deployment (SC-011).
-This is a single-user application; there is no throughput target.
+**Performance Goals**: None defined. Feature 001 set no performance budget and this feature
+does not introduce one — a persistence migration is not the place to add a latency SLO the
+product never had. This is a single-user application; there is no throughput target either.
 
 **Constraints**:
 - No product behavior may change (FR-010, FR-024)
@@ -92,7 +93,7 @@ The single authorized exception is removal of device-local storage messaging and
 persistent-storage request, which FR-015 requires. This deletes `PersistenceStatusContext`,
 `PersistentStorageState`, and the copy they drove. Any user-visible string removed this way
 must be identified during implementation and confirmed against 001's content review, so that
-SC-013's "0 changes to user-facing wording other than the removal of device-local storage
+SC-012's "0 changes to user-facing wording other than the removal of device-local storage
 messaging" is verifiable rather than assumed.
 
 ### III. Simplicity and Maintainability — **PASS**

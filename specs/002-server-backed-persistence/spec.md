@@ -350,14 +350,16 @@ still there.
   command produces a working application with no additional manual setup steps.
 - **SC-010**: In 100% of restart tests, data recorded before stopping the deployment is
   present after starting it again.
-- **SC-011**: Common planning operations — opening a day or week, saving a task, toggling
-  completion — complete in under 1 second on a local deployment, so the interface remains as
-  responsive as it was before the migration.
-- **SC-012**: Every quality gate that feature 001 was accepted against passes for the
+- **SC-011**: Every quality gate that feature 001 was accepted against passes for the
   migrated application.
-- **SC-013**: Review confirms 0 new user-facing screens, controls, settings, or workflows
+- **SC-012**: Review confirms 0 new user-facing screens, controls, settings, or workflows
   compared with feature 001, and 0 changes to user-facing wording other than the removal of
   device-local storage messaging.
+
+> **No latency criterion is defined.** Feature 001 set no performance budget, and this
+> feature is a persistence migration; introducing a response-time target here would add a
+> requirement the product never had. Responsiveness remains governed by 001's existing
+> usability criteria.
 
 ## Technical Direction *(product-owner supplied; binding input to planning)*
 
