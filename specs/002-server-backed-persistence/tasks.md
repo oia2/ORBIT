@@ -231,12 +231,12 @@ IndexedDB database exists.
 **Independent Test**: Stop the database; attempt reads and writes; every one surfaces a clear
 failure and nothing appears saved. Restart; the app recovers and prior data is intact.
 
-- [ ] T078 [US3] Verify every page presents an unavailable-data state rather than an empty or stale view when a query returns `ServerUnavailable` (FR-012), fixing any page in `src/pages/` that currently renders empty
-- [ ] T079 [US3] Audit the mutation hooks in `src/features/*/model/use-*.ts` and confirm each surfaces failure and never optimistically shows a change as saved (FR-011)
-- [ ] T080 [P] [US3] Write `server/planning/repository.atomicity.test.ts` proving a command failing mid-transaction leaves zero partial state, with `closeDay` as the primary case since it touches days, occurrences, plan entries, events, and habit occurrences (SC-005)
-- [ ] T081 [P] [US3] Write `server/planning/repository.concurrency.test.ts` proving two commands against the same `expectedRevision` produce one success and one `RevisionConflict` carrying both revisions, with no overwrite (SC-006)
-- [ ] T082 [P] [US3] Add `e2e/journeys/server-unavailable.spec.ts` covering the SC-004 scenarios: unreachable on load, unreachable mid-session, and recovery after the server returns
-- [ ] T083 [US3] Add a 503 path test in `src/entities/planning/api/http/http-planning-repository.test.ts` asserting the client maps a database-unavailable response to `ServerUnavailable` rather than to a domain error
+- [X] T078 [US3] Verify every page presents an unavailable-data state rather than an empty or stale view when a query returns `ServerUnavailable` (FR-012), fixing any page in `src/pages/` that currently renders empty
+- [X] T079 [US3] Audit the mutation hooks in `src/features/*/model/use-*.ts` and confirm each surfaces failure and never optimistically shows a change as saved (FR-011)
+- [X] T080 [P] [US3] Write `server/planning/repository.atomicity.test.ts` proving a command failing mid-transaction leaves zero partial state, with `closeDay` as the primary case since it touches days, occurrences, plan entries, events, and habit occurrences (SC-005)
+- [X] T081 [P] [US3] Write `server/planning/repository.concurrency.test.ts` proving two commands against the same `expectedRevision` produce one success and one `RevisionConflict` carrying both revisions, with no overwrite (SC-006)
+- [X] T082 [P] [US3] Add `e2e/journeys/server-unavailable.spec.ts` covering the SC-004 scenarios: unreachable on load, unreachable mid-session, and recovery after the server returns
+- [X] T083 [US3] Add a 503 path test in `src/entities/planning/api/http/http-planning-repository.test.ts` asserting the client maps a database-unavailable response to `ServerUnavailable` rather than to a domain error
 
 **Checkpoint**: Failure behavior is honest and covered by tests at every layer.
 
@@ -249,13 +249,13 @@ failure and nothing appears saved. Restart; the app recovers and prior data is i
 **Independent Test**: From a clean checkout, `docker compose up` yields a working app; record
 data, `docker compose down`, `up` again, and the data is still there.
 
-- [ ] T084 [US4] Add static file serving to `server/app.ts` via `@fastify/static` when `NODE_ENV=production`, serving `dist/` with an SPA fallback to `index.html` for non-`/api` routes, so one origin serves both (FR-016)
+- [X] T084 [US4] Add static file serving to `server/app.ts` via `@fastify/static` when `NODE_ENV=production`, serving `dist/` with an SPA fallback to `index.html` for non-`/api` routes, so one origin serves both (FR-016)
 - [X] T085 [US4] Add the `/api` dev proxy to `vite.config.ts` targeting `http://localhost:3000`, so the client uses relative `/api` paths identically in development and production
-- [ ] T086 [US4] Create a multi-stage `Dockerfile`: build stage runs `npm ci`, `npm run build`, and `npm run build:server`; runtime stage is `node:22-alpine` with production dependencies, `dist/`, and `dist-server/`
-- [ ] T087 [US4] Add the `app` service to `docker-compose.yml`: builds from the Dockerfile, `depends_on` `db` with a health condition, publishes the app port, and receives `DATABASE_URL` and `NODE_ENV=production`
+- [X] T086 [US4] Create a multi-stage `Dockerfile`: build stage runs `npm ci`, `npm run build`, and `npm run build:server`; runtime stage is `node:22-alpine` with production dependencies, `dist/`, and `dist-server/`
+- [X] T087 [US4] Add the `app` service to `docker-compose.yml`: builds from the Dockerfile, `depends_on` `db` with a health condition, publishes the app port, and receives `DATABASE_URL` and `NODE_ENV=production`
 - [ ] T088 [US4] Verify a first run against an empty volume produces a working, empty ORBIT rather than an error, with migrations applied automatically (FR-004, SC-009)
 - [ ] T089 [US4] Verify `docker compose down` followed by `docker compose up` preserves all recorded data on the `orbit-db-data` volume (SC-010)
-- [ ] T090 [US4] Add a `.dockerignore` excluding `node_modules`, `dist`, `dist-server`, `.git`, `coverage`, and `e2e/visual/__screenshots__`
+- [X] T090 [US4] Add a `.dockerignore` excluding `node_modules`, `dist`, `dist-server`, `.git`, `coverage`, and `e2e/visual/__screenshots__`
 
 **Checkpoint**: `docker compose up` from a clean checkout produces a working application with no manual setup.
 

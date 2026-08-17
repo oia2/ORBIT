@@ -16,5 +16,22 @@ services:
       retries: 10
       start_period: 10s
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        # The server applies migrations at startup, so it must not start before
+        # the database can answer (FR-019).
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://orbit:orbit@db:5432/orbit
+      NODE_ENV: production
+      PORT: '3000'
+    ports:
+      - '3000:3000'
+    restart: unless-stopped
+
 volumes:
   orbit-db-data:
