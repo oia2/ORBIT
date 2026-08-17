@@ -3,6 +3,7 @@ node_modules/
 node_modules.incomplete/
 .cache-deps/
 dist/
+dist-server/
 build/
 coverage/
 playwright-report/
