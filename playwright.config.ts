@@ -45,6 +45,9 @@ export default defineConfig({
         colorScheme: 'dark',
         deviceScaleFactor: 1,
         locale: 'ru-RU',
+        // The orbit field animates on a canvas, so screenshots are only stable
+        // with motion reduced — which also renders its deterministic frame.
+        contextOptions: { reducedMotion: 'reduce' },
         timezoneId: 'Asia/Krasnoyarsk',
         viewport: { width: 1440, height: 900 },
       },

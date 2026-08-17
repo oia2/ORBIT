@@ -28,6 +28,7 @@ import { prepareDailyStateUpdate, type Day, type ScoreBreakdown } from '../../mo
 import { prepareDayClosure, type DayClosureError } from '../../model/day-closure';
 import {
   catchUpHabitDateBoundary,
+  clearHabitOutcome as prepareHabitOutcomeClear,
   correctBoundaryMissToCompleted as prepareBoundaryMissCorrection,
   deleteHabitOccurrence as prepareHabitOccurrenceDeletion,
   recordHabitOutcome as prepareHabitOutcome,
@@ -62,6 +63,7 @@ import {
   validateRecurringTaskTemplate,
   type RecurrenceValidationError,
 } from '../../model/recurrence';
+import { validateTaskTimeRange } from '../../model/task';
 import type {
   BacklogTaskOccurrence,
   DeletedTaskOccurrence,
@@ -645,6 +647,8 @@ class IndexedDbPlanningRepository implements DisposablePlanningRepository {
             ruleRevision: effect.ruleRevision,
             title: effect.title,
             ...(effect.notes === undefined ? {} : { notes: effect.notes }),
+            ...(effect.startTime === undefined ? {} : { startTime: effect.startTime }),
+            ...(effect.endTime === undefined ? {} : { endTime: effect.endTime }),
             plannedDurationMinutes: effect.plannedDurationMinutes,
             isException: false,
             createdSequence: nextCreatedSequence,
@@ -865,6 +869,7 @@ class IndexedDbPlanningRepository implements DisposablePlanningRepository {
 
   readonly createTask: PlanningRepository['createTask'] = async (input) => {
     let title: string;
+    let timeRange: { readonly startTime?: string; readonly endTime?: string };
     try {
       title = canonicalRequiredText(input.title, 'title');
       if (input.placement.kind === 'day' && !isPositiveDuration(input.durationMinutes)) {
@@ -887,6 +892,14 @@ class IndexedDbPlanningRepository implements DisposablePlanningRepository {
           issues: [{ field: 'durationMinutes', message: 'Duration must be positive' }],
         });
       }
+      const timeValidation = validateTaskTimeRange(input.startTime, input.endTime);
+      if (!timeValidation.ok) {
+        throw new DomainFailure({
+          code: 'ValidationFailure',
+          issues: [{ field: 'endTime', message: 'End time must be after start time' }],
+        });
+      }
+      timeRange = timeValidation.value;
     } catch (error) {
       return this.commandError(error);
     }
@@ -923,6 +936,7 @@ class IndexedDbPlanningRepository implements DisposablePlanningRepository {
             id: occurrenceId,
             title,
             ...(input.notes === undefined ? {} : { notes: input.notes }),
+            ...timeRange,
             isException: false,
             createdSequence: createdSequenceValue,
             revision: revision(0),
@@ -941,6 +955,7 @@ class IndexedDbPlanningRepository implements DisposablePlanningRepository {
               title,
               ...(input.notes === undefined ? {} : { notes: input.notes }),
               plannedDurationMinutes: duration,
+              ...timeRange,
             },
             enteredAt: occurredAt,
             outcome: 'planned',
@@ -960,6 +975,7 @@ class IndexedDbPlanningRepository implements DisposablePlanningRepository {
             id: occurrenceId,
             title,
             ...(input.notes === undefined ? {} : { notes: input.notes }),
+            ...timeRange,
             isException: false,
             createdSequence: createdSequenceValue,
             revision: revision(0),
@@ -1041,12 +1057,25 @@ class IndexedDbPlanningRepository implements DisposablePlanningRepository {
           issues: [{ field: 'durationMinutes', message: 'Duration must be positive' }],
         });
       }
+      const nextStartTime = input.startTime === null ? undefined : input.startTime;
+      const nextEndTime = input.endTime === null ? undefined : input.endTime;
+      const startTime = input.startTime === undefined ? occurrence.startTime : nextStartTime;
+      const endTime = input.endTime === undefined ? occurrence.endTime : nextEndTime;
+      const timeValidation = validateTaskTimeRange(startTime, endTime);
+      if (!timeValidation.ok) {
+        throw new DomainFailure({
+          code: 'ValidationFailure',
+          issues: [{ field: 'endTime', message: 'End time must be after start time' }],
+        });
+      }
 
       const updated = {
         ...occurrence,
         title,
         ...(input.notes === undefined ? {} : { notes: input.notes }),
         ...(duration === undefined ? {} : { plannedDurationMinutes: duration }),
+        startTime: timeValidation.value.startTime,
+        endTime: timeValidation.value.endTime,
         isException: occurrence.seriesId === undefined ? occurrence.isException : true,
         revision: nextRevision(occurrence.revision),
       } as TaskOccurrence;
@@ -1369,6 +1398,10 @@ class IndexedDbPlanningRepository implements DisposablePlanningRepository {
                   title: occurrence.title,
                   ...(occurrence.notes === undefined ? {} : { notes: occurrence.notes }),
                   plannedDurationMinutes: input.durationMinutes,
+                  ...(occurrence.startTime === undefined
+                    ? {}
+                    : { startTime: occurrence.startTime }),
+                  ...(occurrence.endTime === undefined ? {} : { endTime: occurrence.endTime }),
                 },
                 enteredAt: occurredAt,
                 outcome: 'planned',
@@ -1749,6 +1782,10 @@ class IndexedDbPlanningRepository implements DisposablePlanningRepository {
           title,
           ...(input.template.notes === undefined ? {} : { notes: input.template.notes }),
           plannedDurationMinutes: input.template.plannedDurationMinutes,
+          ...(input.template.startTime === undefined
+            ? {}
+            : { startTime: input.template.startTime }),
+          ...(input.template.endTime === undefined ? {} : { endTime: input.template.endTime }),
         },
         ruleVersions: [initialVersion.value],
         revision: initialRevision,
@@ -1967,6 +2004,15 @@ class IndexedDbPlanningRepository implements DisposablePlanningRepository {
             clock: this.dependencies.clock,
           }),
       );
+
+  readonly clearHabitOutcome: PlanningRepository['clearHabitOutcome'] = async (input) =>
+    this.executeHabitTransition(input.occurrenceId, input.expectedRevision, (occurrence, status) =>
+      prepareHabitOutcomeClear({
+        occurrence,
+        dayStatus: status,
+        clock: this.dependencies.clock,
+      }),
+    );
 
   readonly deleteHabitOccurrence: PlanningRepository['deleteHabitOccurrence'] = async (input) =>
     this.executeHabitTransition(input.occurrenceId, input.expectedRevision, (occurrence, status) =>
@@ -2244,6 +2290,8 @@ class IndexedDbPlanningRepository implements DisposablePlanningRepository {
         ruleRevision: effect.ruleRevision,
         title: effect.title,
         ...(effect.notes === undefined ? {} : { notes: effect.notes }),
+        ...(effect.startTime === undefined ? {} : { startTime: effect.startTime }),
+        ...(effect.endTime === undefined ? {} : { endTime: effect.endTime }),
         plannedDurationMinutes: effect.plannedDurationMinutes,
         isException: false,
         createdSequence: nextCreatedSequence,
@@ -2443,6 +2491,8 @@ class IndexedDbPlanningRepository implements DisposablePlanningRepository {
       ...(occurrence.plannedDurationMinutes === undefined
         ? {}
         : { plannedDurationMinutes: occurrence.plannedDurationMinutes }),
+      ...(occurrence.startTime === undefined ? {} : { startTime: occurrence.startTime }),
+      ...(occurrence.endTime === undefined ? {} : { endTime: occurrence.endTime }),
     };
   }
 

@@ -79,3 +79,49 @@ affect the 70/30 result.
   reload/deep-link persistence, desktop/tablet/mobile locality disclosure, no
   workout link, 70/30 formula copy, factual load, neutral feedback, axe serious
   violations, reduced motion, non-color status, and viewport overflow coverage.
+
+## T111 addendum — 2026-08-17 remediation copy re-audit
+
+The 2026-08-16/17 remediation replaced or removed a large share of the shipped
+Russian copy. The audit below re-checks the strings that changed.
+
+### Removed copy
+
+Four descriptive widget lines were removed at the product owner's request:
+"Сумма плановых длительностей задач на выбранную дату.",
+"Отмечайте выполнение и управляйте задачей на месте.",
+"Отметки этого дня", "Контекст, не часть результата", and
+"Проверьте незавершённые задачи и привычки перед сохранением итога.".
+Each card retains its heading and factual values, so no fact lost its label.
+
+### Added or reworded copy
+
+| String | Where | Verdict |
+|---|---|---|
+| `Успешно` / `Частично` / `В процессе` | score ring status | Factual threshold bands reusing FR-034's existing `>=70` / `50–69` / `<50` cut-offs. They describe the measured result, not the person, so FR-057/SC-014 hold. Recorded as an explicit spec amendment (Session 2026-08-16). |
+| `Не начат` / `Пока нет данных` / `Итог сохранён` | score ring status | Period and data states, no evaluation. |
+| `Следом: <задача>` | day score panel | Names the next unfinished task; factual. |
+| `Дней закрыто: N из 7` | week score panel | Count of closed days; factual. |
+| `Сон, часов` + `7,5 ч` | daily state | Unit changed from minutes to hours; storage remains minutes. |
+| `Выполнена` / `Осталась незавершённой` / `Перенесена…` / `Отменена при закрытии` | closed-day task row | Renders the recorded disposition only. No `partial` or persistence-only marker is shown. |
+| `Остановить повтор` | day habit menu | Distinguishes stopping the series from deleting one occurrence (T113). |
+| `Быстрая длительность` presets | task dialog | Neutral labels. |
+
+### Verification commands and results
+
+```powershell
+rg -n -i -P --glob '*.ts' --glob '*.tsx' --glob '!*.test.*' '(молодец|отлично|плохо|стыд|лень|провал|неудач|срочно|перегруз|вместимость|лимит нагрузки)' src
+rg -n --glob '*.tsx' --glob '!*.test.*' "'partial'|suppressed" src
+rg -n -i -P --glob '*.ts' --glob '*.tsx' --glob '!*.test.*' '(тренировк|workout)' src
+```
+
+All three searches return zero matches: no punitive, praising, or alarmist
+wording; no overload/capacity vocabulary; no `partial` or persistence-only marker
+surfaced as a product outcome; no workout copy. 439 unit tests pass and the
+33 Playwright journeys pass on desktop 1440, tablet 820, and mobile 390.
+
+### Outstanding
+
+The visual baselines themselves are **not** re-approved by this addendum. The 13
+frozen screenshots still differ from the remediated build and remain gated behind
+`ORBIT_VISUAL_BASELINE_APPROVAL`; that approval is the remaining half of T111.

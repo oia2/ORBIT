@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -148,9 +148,7 @@ describe('WeekPage presentation branches', () => {
       `Действия с целью «${week.goals[0]?.statement ?? ''}»`,
     );
     await user.click(goalActions);
-    const goal = goalActions.closest('li');
-    if (goal === null) throw new Error('Expected completed weekly goal');
-    expect(within(goal).getByRole('button', { name: /Редактировать/ })).toBeDisabled();
-    expect(within(goal).getByRole('button', { name: /Удалить/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Редактировать/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Удалить/ })).toBeDisabled();
   });
 });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type RefObject } from 'react';
 
 import type { LocalDate } from '@/shared/lib/local-date/local-date';
 import { Button } from '@/shared/ui/button';
@@ -6,6 +6,7 @@ import { Dialog } from '@/shared/ui/dialog';
 import { FormField } from '@/shared/ui/form-field';
 
 export interface TaskMoveDialogProps {
+  readonly returnFocusRef?: RefObject<HTMLElement | null>;
   readonly open: boolean;
   readonly sourceDate?: LocalDate;
   readonly availableDates: readonly LocalDate[];
@@ -16,6 +17,7 @@ export interface TaskMoveDialogProps {
 
 export function TaskMoveDialog({
   open,
+  returnFocusRef,
   sourceDate,
   availableDates,
   initialDuration,
@@ -42,7 +44,12 @@ export function TaskMoveDialog({
   };
 
   return (
-    <Dialog open={open} title="Переместить задачу" onClose={onClose}>
+    <Dialog
+      open={open}
+      title="Переместить задачу"
+      onClose={onClose}
+      {...(returnFocusRef === undefined ? {} : { returnFocusRef })}
+    >
       <FormField id="task-destination" label="Дата назначения" error={error}>
         <select
           value={destination}

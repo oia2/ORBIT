@@ -36,6 +36,11 @@ export type HabitOutcomeEvent =
   | (HabitOutcomeEventBase & {
       readonly source: 'user-correction';
       readonly outcome: 'completed';
+    })
+  /** The user undid their own mark while the day was still open. */
+  | (HabitOutcomeEventBase & {
+      readonly source: 'user-cleared';
+      readonly outcome: 'pending';
     });
 
 export interface HabitOccurrence {
@@ -122,6 +127,46 @@ export function recordHabitOutcome(
     occurrence: {
       ...input.occurrence,
       outcome: input.outcome,
+      outcomeEvents: [...input.occurrence.outcomeEvents, event],
+      updatedAt: occurredAt,
+    },
+  });
+}
+
+/**
+ * Undoes the user's own mark while the day is still open, returning the
+ * occurrence to pending. An automatic date-boundary miss is not a user mark,
+ * so it is corrected through `correctBoundaryMissToCompleted` instead.
+ */
+export function clearHabitOutcome(
+  input: HabitTransitionInput,
+): Result<HabitTransition, HabitTransitionError> {
+  if (input.dayStatus === 'closed') {
+    return err(immutableError(input.occurrence));
+  }
+
+  const latestEvent = input.occurrence.outcomeEvents.at(-1);
+  const isUserMark = latestEvent?.source === 'user' || latestEvent?.source === 'user-correction';
+  if (
+    (input.occurrence.outcome !== 'completed' && input.occurrence.outcome !== 'not-completed') ||
+    !isUserMark
+  ) {
+    return err(invalidTransition(input.occurrence, 'clear-outcome'));
+  }
+
+  const occurredAt = input.clock.now();
+  const event: HabitOutcomeEvent = {
+    ordinal: nextOutcomeOrdinal(input.occurrence.outcomeEvents),
+    occurredAt,
+    source: 'user-cleared',
+    outcome: 'pending',
+  };
+
+  return ok({
+    changed: true,
+    occurrence: {
+      ...input.occurrence,
+      outcome: 'pending',
       outcomeEvents: [...input.occurrence.outcomeEvents, event],
       updatedAt: occurredAt,
     },

@@ -187,6 +187,8 @@ export function toStoredTaskSeries(series: TaskSeries): TaskSeries {
       title: series.template.title,
       ...optionalProperty('notes', series.template.notes),
       plannedDurationMinutes: series.template.plannedDurationMinutes,
+      ...optionalProperty('startTime', series.template.startTime),
+      ...optionalProperty('endTime', series.template.endTime),
     },
     ruleVersions: series.ruleVersions.map(mapRecurrenceRuleVersion),
     revision: series.revision,
@@ -232,6 +234,8 @@ function taskOccurrenceBase(occurrence: TaskOccurrence) {
     ...optionalProperty('ruleRevision', occurrence.ruleRevision),
     title: occurrence.title,
     ...optionalProperty('notes', occurrence.notes),
+    ...optionalProperty('startTime', occurrence.startTime),
+    ...optionalProperty('endTime', occurrence.endTime),
     isException: occurrence.isException,
     createdSequence: occurrence.createdSequence,
     revision: occurrence.revision,
@@ -322,6 +326,8 @@ function mapTaskPlannedSnapshot(
     title: snapshot.title,
     ...optionalProperty('notes', snapshot.notes),
     plannedDurationMinutes: snapshot.plannedDurationMinutes,
+    ...optionalProperty('startTime', snapshot.startTime),
+    ...optionalProperty('endTime', snapshot.endTime),
   };
 }
 
@@ -377,6 +383,8 @@ function mapTaskValueSnapshot(snapshot: TaskValueSnapshot): TaskValueSnapshot {
     title: snapshot.title,
     ...optionalProperty('notes', snapshot.notes),
     ...optionalProperty('plannedDurationMinutes', snapshot.plannedDurationMinutes),
+    ...optionalProperty('startTime', snapshot.startTime),
+    ...optionalProperty('endTime', snapshot.endTime),
   };
 }
 
@@ -543,6 +551,8 @@ function mapHabitOutcomeEvent(event: HabitOutcomeEvent): HabitOutcomeEvent {
       return { ...base, source: 'date-boundary', outcome: 'not-completed' };
     case 'user-correction':
       return { ...base, source: 'user-correction', outcome: 'completed' };
+    case 'user-cleared':
+      return { ...base, source: 'user-cleared', outcome: 'pending' };
     default:
       return assertNever(event);
   }

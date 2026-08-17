@@ -36,7 +36,7 @@ export function CompleteWeekDialog({
           ))}
         </ul>
       )}
-      <ScoreBreakdown score={progress} label="Прогресс недели" />
+      <ScoreBreakdown score={progress} label="Прогресс недели" periodStatus="open" />
       <FormField id="week-reflection" label="Рефлексия" hint="Необязательно">
         <textarea
           value={reflection}

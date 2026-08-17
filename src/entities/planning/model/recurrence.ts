@@ -9,7 +9,7 @@ import {
 } from '@/shared/lib/local-date/local-date';
 import { err, ok, type Result } from '@/shared/lib/result';
 
-import type { TaskTemplate } from './task';
+import { validateTaskTimeRange, type TaskTemplate } from './task';
 
 export type { IsoWeekday } from '@/shared/lib/local-date/local-date';
 
@@ -62,7 +62,8 @@ export type RecurrenceValidationError =
       readonly field: 'weekdays';
       readonly value: IsoWeekday;
     }
-  | { readonly code: 'InvalidDateRange'; readonly field: 'endDate' };
+  | { readonly code: 'InvalidDateRange'; readonly field: 'endDate' }
+  | { readonly code: 'InvalidTimeRange'; readonly field: 'startTime' | 'endTime' };
 
 export function validateRecurringTaskTemplate(
   template: TaskTemplate,
@@ -74,6 +75,11 @@ export function validateRecurringTaskTemplate(
         field: 'plannedDurationMinutes',
       },
     ]);
+  }
+
+  const timeRange = validateTaskTimeRange(template.startTime, template.endTime);
+  if (!timeRange.ok) {
+    return err([{ code: 'InvalidTimeRange', field: 'endTime' }]);
   }
 
   return ok(template);

@@ -46,16 +46,33 @@ export async function closeOpenDetails(
     await activate(page, details.locator(':scope > summary'), project);
     await expect(details).not.toHaveAttribute('open', '');
   }
+  await closeOpenActionMenu(page);
+}
+
+/**
+ * Action menus are controlled buttons whose popover is portaled to document.body,
+ * so it is never a descendant of the row that owns the trigger.
+ */
+export function actionMenuPopover(page: Page): Locator {
+  return page.locator('.orbit-action-menu__popover');
+}
+
+export async function closeOpenActionMenu(page: Page): Promise<void> {
+  const openTrigger = page.locator('.orbit-action-menu__trigger[aria-expanded="true"]');
+  if ((await openTrigger.count()) === 0) return;
+  await page.keyboard.press('Escape');
+  await expect(actionMenuPopover(page)).toHaveCount(0);
 }
 
 export async function exposeItemActions(
   page: Page,
   item: Locator,
-  summaryName: RegExp,
+  triggerName: RegExp,
   project: JourneyProjectName,
 ): Promise<Locator> {
-  const summary = item.getByLabel(summaryName);
-  const details = summary.locator('..');
-  await exposeDetails(page, details, project);
-  return details;
+  await closeOpenActionMenu(page);
+  await activate(page, item.getByLabel(triggerName), project);
+  const popover = actionMenuPopover(page);
+  await expect(popover).toBeVisible();
+  return popover;
 }

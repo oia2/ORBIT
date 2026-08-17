@@ -37,6 +37,7 @@ describe('CloseDayDialog', () => {
         availableMoveDates={[localDate('2026-05-21')]}
         onClose={vi.fn()}
         onSubmit={onSubmit}
+        onRecordHabit={vi.fn().mockResolvedValue(true)}
       />,
     );
     const choice = screen.getByLabelText(new RegExp(occurrence.title, 'i'));
@@ -59,6 +60,7 @@ describe('CloseDayDialog', () => {
         availableMoveDates={[localDate('2026-05-21')]}
         onClose={vi.fn()}
         onSubmit={onSubmit}
+        onRecordHabit={vi.fn().mockResolvedValue(true)}
       />,
     );
     await user.selectOptions(
@@ -73,14 +75,18 @@ describe('CloseDayDialog', () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it('blocks pending habits and exposes all four closure-only choices', () => {
+  it('resolves pending habits in place and exposes all four closure-only choices', async () => {
+    const user = userEvent.setup();
+    const onRecordHabit = vi.fn().mockResolvedValue(true);
+    const habit = buildHabitOccurrence();
     render(
       <CloseDayDialog
         open
-        view={{ ...view, habits: [buildHabitOccurrence()] }}
+        view={{ ...view, habits: [habit] }}
         availableMoveDates={[]}
         onClose={vi.fn()}
         onSubmit={vi.fn()}
+        onRecordHabit={onRecordHabit}
       />,
     );
     expect(screen.getByRole('alert')).toHaveTextContent(/отметьте.*привычки/i);
@@ -89,5 +95,9 @@ describe('CloseDayDialog', () => {
       /оставить незавершённой.*перенести на дату.*в бэклог.*отменить/i,
     );
     expect(screen.getByRole('button', { name: /закрыть день/i })).toBeDisabled();
+
+    // The pending habit is resolved here rather than back on the day list.
+    await user.click(screen.getByRole('button', { name: 'Не выполнено' }));
+    expect(onRecordHabit).toHaveBeenCalledWith(habit, 'not-completed');
   });
 });

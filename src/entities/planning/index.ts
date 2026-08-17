@@ -28,7 +28,7 @@ export type { Day, DailyStateEntry, ScoreBreakdown as ScoreBreakdownValue } from
 export type { ProjectedTaskMembership } from './model/history';
 export type { HabitOccurrence, HabitOutcome } from './model/habit';
 export type { RecurrenceRule, IsoWeekday } from './model/recurrence';
-export { createOneOffTask, isDatedTaskOccurrence } from './model/task';
+export { createOneOffTask, isDatedTaskOccurrence, isValidLocalTime } from './model/task';
 export { calculateWeeklyProgressFromClosedDays } from './model/week-completion';
 export { calculateCompletionScore } from './model/scoring';
 export type { BacklogTaskOccurrence } from './model/task';

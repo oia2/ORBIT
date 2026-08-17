@@ -7,6 +7,8 @@ import {
   type RefObject,
 } from 'react';
 
+import { Icon } from '@/shared/ui/icon';
+
 export interface DialogProps {
   readonly open: boolean;
   readonly title: string;
@@ -37,7 +39,12 @@ export function Dialog({
     const previouslyFocused =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const explicitReturnTarget = returnFocusRef?.current;
-    const focusTarget = dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+    // Prefer the first control inside the body so the header's close button
+    // never steals initial focus from the form.
+    const body = dialogRef.current?.querySelector('.orbit-dialog__body');
+    const focusTarget =
+      body?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR) ??
+      dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
     (focusTarget ?? dialogRef.current)?.focus();
 
     return () => {
@@ -67,14 +74,25 @@ export function Dialog({
         onKeyDown={handleKeyDown}
       >
         <header className="orbit-dialog__header">
-          <h2 className="orbit-dialog__title" id={titleId}>
-            {title}
-          </h2>
-          {description === undefined ? null : (
-            <p className="orbit-dialog__description" id={descriptionId}>
-              {description}
-            </p>
-          )}
+          <div className="orbit-dialog__heading">
+            <h2 className="orbit-dialog__title" id={titleId}>
+              {title}
+            </h2>
+            {description === undefined ? null : (
+              <p className="orbit-dialog__description" id={descriptionId}>
+                {description}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            className="orbit-dialog__close"
+            aria-label="Закрыть форму"
+            title="Закрыть"
+            onClick={onClose}
+          >
+            <Icon name="close" aria-hidden="true" />
+          </button>
         </header>
         <div className="orbit-dialog__body">{children}</div>
       </dialog>

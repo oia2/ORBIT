@@ -27,6 +27,12 @@ no `idb`, schema, migration, or adapter implementation.
 | `habitDefinitions` | `id` | none |
 | `habitOccurrences` | `id` | unique `by-definition-date`; `by-date`; `by-weekStart` |
 
+Stored `taskSeries.template`, `taskOccurrences`, and `taskPlanEntries.plannedSnapshot`
+records may carry optional `startTime`/`endTime` strings (`"HH:MM"`) per FR-015a.
+They are plain optional value properties on existing stores: they add no index and
+require no schema version change, so records written before the field existed stay
+valid and simply read back without it.
+
 `placementKey` is `day:YYYY-MM-DD`, `backlog`, or `none`. Backlog queries use
 the compound index prefix `backlog` and ascending `createdSequence`; UUID breaks
 an impossible/corrupt equal-sequence tie. No backlog position or sort preference

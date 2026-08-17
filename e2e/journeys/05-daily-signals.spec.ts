@@ -16,17 +16,16 @@ test('records daily state and explains score and factual load without capacity s
   await moodThree.click();
   await expect(energyFour).toHaveAttribute('aria-pressed', 'true');
   await expect(moodThree).toHaveAttribute('aria-pressed', 'true');
-  await signals.getByLabel(/сон.*минут/i).fill('450');
+  await signals.getByLabel(/сон/i).fill('7.5');
   await signals.getByRole('button', { name: /сохранить состояние/i }).click();
   await expect(energyFour).toHaveAttribute('aria-pressed', 'true');
   await expect(signals.getByRole('status')).toHaveText(/состояние сохранено/i);
   await page.reload();
   await expect(energyFour).toHaveAttribute('aria-pressed', 'true');
   await expect(moodThree).toHaveAttribute('aria-pressed', 'true');
-  await expect(signals.getByLabel(/сон.*минут/i)).toHaveValue('450');
+  await expect(signals.getByLabel(/сон/i)).toHaveValue('7.5');
   await expect(
     page.getByText(/перегруз|вместимость|лимит нагрузки|предупреждение о нагрузке/i),
   ).toHaveCount(0);
   await expect(page.getByRole('heading', { name: /плановая нагрузка/i })).toBeVisible();
-  await expect(page.getByText(/сумма плановых длительностей задач/i)).toBeVisible();
 });

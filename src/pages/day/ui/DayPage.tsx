@@ -11,6 +11,7 @@ import {
 } from '@/features/manage-habit';
 import { TaskEditorDialog, TaskExecution, useManageTask } from '@/features/manage-task';
 import { useRecordDailyState } from '@/features/record-daily-state';
+import { formatDurationMinutes } from '@/shared/lib/duration';
 import { createSystemClock, type ApplicationClock } from '@/shared/lib/local-date/clock';
 import {
   addDays,
@@ -28,13 +29,6 @@ import { DaySignals } from './DaySignals';
 export interface DayPageProps {
   readonly date: LocalDate;
   readonly clock?: ApplicationClock;
-}
-
-function formatMinutes(value: number): string {
-  const hours = Math.floor(value / 60);
-  const minutes = value % 60;
-  if (hours === 0) return `${String(minutes)} мин`;
-  return minutes === 0 ? `${String(hours)} ч` : `${String(hours)} ч ${String(minutes)} мин`;
 }
 
 function taskNoun(value: number): string {
@@ -92,7 +86,12 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
       ({ occurrence }) => 'completion' in occurrence && occurrence.completion === 'completed',
     ).length ?? 0;
   const taskCount = ready?.tasks.length ?? 0;
-  const remainingTaskCount = taskCount - completedTaskCount;
+  const nextTaskTitle = ready?.tasks.find(
+    ({ occurrence }) => 'completion' in occurrence && occurrence.completion === 'incomplete',
+  )?.occurrence.title;
+  // A deleted occurrence stays in the projection for history, but the day's
+  // own list only shows the habits that still apply to it.
+  const visibleHabits = ready?.habits.filter((habit) => habit.outcome !== 'deleted') ?? [];
   const load = Number(ready?.plannedLoadMinutes ?? 0);
   const dateEyebrow = formatLocalDate(date, 'ru-RU', {
     weekday: 'long',
@@ -112,7 +111,7 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
               ? 'План на выбранную дату.'
               : taskCount === 0
                 ? 'В плане пока нет задач.'
-                : `В плане ${String(taskCount)} ${taskNoun(taskCount)} · ${formatMinutes(load)}.`}
+                : `В плане ${String(taskCount)} ${taskNoun(taskCount)} · ${formatDurationMinutes(load)}.`}
           </p>
         </div>
         <nav className={styles.headerActions} aria-label="Навигация по дням и создание задачи">
@@ -145,16 +144,6 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
               <Chevron direction="right" />
             </Link>
           )}
-          <Button
-            className={styles.newTask}
-            aria-label="Добавить задачу"
-            disabled={ready?.day.status !== 'open'}
-            onClick={() => {
-              setEditorOpen(true);
-            }}
-          >
-            Новая задача
-          </Button>
         </nav>
       </header>
 
@@ -185,7 +174,7 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
               </header>
               <div className={styles.loadFacts}>
                 <div>
-                  <strong>{formatMinutes(load)}</strong>
+                  <strong>{formatDurationMinutes(load)}</strong>
                   <span>в запланированных задачах</span>
                 </div>
                 <div>
@@ -199,24 +188,23 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
                   <span>выполнено</span>
                 </div>
               </div>
-              <p className={styles.loadNote}>
-                Сумма плановых длительностей задач на выбранную дату.
-              </p>
             </article>
 
             <article className={classNames(styles.card, 'orbit-card')} data-od-id="day-tasks">
               <header className={classNames(styles.cardHeader, styles.dividedHeader)}>
                 <div>
                   <h2 className={styles.cardTitle}>Задачи</h2>
-                  <p className={styles.cardNote}>
-                    Отмечайте выполнение и управляйте задачей на месте.
-                  </p>
                 </div>
-                <span className={styles.cardMeta}>
-                  {taskCount === 0
-                    ? '0 задач'
-                    : `${String(completedTaskCount)} выполнено · ${String(remainingTaskCount)} осталось`}
-                </span>
+                <Button
+                  className={styles.newTask}
+                  aria-label="Добавить задачу"
+                  disabled={ready.day.status !== 'open'}
+                  onClick={() => {
+                    setEditorOpen(true);
+                  }}
+                >
+                  Новая задача
+                </Button>
               </header>
               {ready.tasks.length === 0 ? (
                 <div className="orbit-empty-state">
@@ -260,11 +248,13 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
                           onDelete={() =>
                             manageTask.remove(task.occurrence.id, task.occurrence.revision)
                           }
-                          onEdit={({ title, duration }) =>
+                          onEdit={({ title, duration, startTime, endTime }) =>
                             manageTask.edit({
                               occurrenceId: task.occurrence.id,
                               title,
                               duration,
+                              startTime,
+                              endTime,
                               revision: task.occurrence.revision,
                             })
                           }
@@ -302,13 +292,13 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
                 <h2 className={styles.cardTitle} id="close-day-title">
                   {ready.day.status === 'closed' ? 'День закрыт' : 'Закрыть день'}
                 </h2>
-                <p className={styles.closeNote}>
-                  {ready.day.status === 'closed'
-                    ? 'Результат и плановая нагрузка сохранены. Повторное открытие недоступно.'
-                    : compareLocalDates(date, currentDate) > 0
-                      ? 'Будущий день пока нельзя закрыть.'
-                      : 'Проверьте незавершённые задачи и привычки перед сохранением итога.'}
-                </p>
+                {ready.day.status === 'closed' ? (
+                  <p className={styles.closeNote}>
+                    Результат и плановая нагрузка сохранены. Повторное открытие недоступно.
+                  </p>
+                ) : compareLocalDates(date, currentDate) > 0 ? (
+                  <p className={styles.closeNote}>Будущий день пока нельзя закрыть.</p>
+                ) : null}
               </div>
               {ready.day.status !== 'closed' && compareLocalDates(date, currentDate) <= 0 ? (
                 <Button
@@ -331,6 +321,8 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
             <DaySignals
               day={ready.day}
               score={ready.score}
+              notStarted={compareLocalDates(date, currentDate) > 0}
+              {...(nextTaskTitle === undefined ? {} : { nextTaskTitle })}
               saveConfirmed={dailyState.saved}
               {...(dailyState.error === undefined ? {} : { error: dailyState.error })}
               onSave={(draft) => dailyState.save({ date, revision: ready.day.revision, ...draft })}
@@ -339,7 +331,6 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
                 <header className={classNames(styles.cardHeader, styles.dividedHeader)}>
                   <div>
                     <h2 className={styles.cardTitle}>Привычки сегодня</h2>
-                    <p className={styles.cardNote}>Отметки этого дня</p>
                   </div>
                   <Button
                     className={styles.cardAction}
@@ -353,24 +344,35 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
                     Добавить
                   </Button>
                 </header>
-                {ready.habits.length === 0 ? (
+                {visibleHabits.length === 0 ? (
                   <div className="orbit-empty-state">
                     <strong>На сегодня привычек нет</strong>
                     <p>Добавьте повтор, и отметка появится в подходящие дни.</p>
                   </div>
                 ) : (
                   <ul className={styles.habits} aria-label="Привычки">
-                    {ready.habits.map((occurrence) => (
+                    {visibleHabits.map((occurrence) => (
                       <HabitRow
                         key={occurrence.id}
                         occurrence={occurrence}
+                        {...(ready.day.status === 'open' &&
+                        (occurrence.outcome === 'pending' || occurrence.outcome === 'completed')
+                          ? {
+                              onToggle: () => {
+                                void (occurrence.outcome === 'completed'
+                                  ? habitOutcome.clear(occurrence.id, ready.day.revision)
+                                  : habitOutcome.record(
+                                      occurrence.id,
+                                      'completed',
+                                      ready.day.revision,
+                                    ));
+                              },
+                            }
+                          : {})}
                         actions={
                           <HabitOutcomeControl
                             occurrence={occurrence}
                             dayStatus={ready.day.status}
-                            onRecord={(outcome) =>
-                              habitOutcome.record(occurrence.id, outcome, ready.day.revision)
-                            }
                             onCorrect={() =>
                               habitOutcome.correct(occurrence.id, ready.day.revision)
                             }
@@ -381,6 +383,9 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
                             onEditSeries={() => {
                               setHabitSeriesEditor(occurrence);
                             }}
+                            onStopSeries={() =>
+                              manageHabit.stop(occurrence.definitionId, occurrence.ruleRevision)
+                            }
                           />
                         }
                       />
@@ -389,9 +394,9 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
                 )}
                 <footer className={styles.cardFooter}>
                   {String(
-                    ready.habits.filter((occurrence) => occurrence.outcome === 'completed').length,
+                    visibleHabits.filter((occurrence) => occurrence.outcome === 'completed').length,
                   )}{' '}
-                  / {String(ready.habits.length)} выполнено
+                  / {String(visibleHabits.length)} выполнено
                 </footer>
                 {manageHabit.error === undefined ? null : (
                   <p className={styles.cardError} role="alert">
@@ -450,9 +455,6 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
               revision: habitSeriesEditor.ruleRevision,
             })
           }
-          onStop={() =>
-            manageHabit.stop(habitSeriesEditor.definitionId, habitSeriesEditor.ruleRevision)
-          }
         />
       )}
       {closeDialogOpen && ready !== undefined ? (
@@ -465,6 +467,9 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
           }}
           onSubmit={(dispositions) =>
             closeDay.close({ date, revision: ready.day.revision, dispositions })
+          }
+          onRecordHabit={(habit, outcome) =>
+            habitOutcome.record(habit.id, outcome, ready.day.revision)
           }
         />
       ) : null}

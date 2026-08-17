@@ -1,1 +1,6 @@
-export { OrbitMetric, type OrbitMetricProps, type OrbitMetricTone } from './OrbitMetric';
+export {
+  OrbitMetric,
+  type OrbitMetricProps,
+  type OrbitMetricPeriodStatus,
+  type OrbitMetricTone,
+} from './OrbitMetric';

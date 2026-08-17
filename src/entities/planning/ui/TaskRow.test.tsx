@@ -68,6 +68,44 @@ describe('planning entity presentation', () => {
   });
 
   it.each([
+    [{ startTime: '09:00', endTime: '10:15' }, ['09:00', '10:15']],
+    [{ startTime: '09:00' }, ['09:00']],
+    [{ endTime: '10:15' }, ['10:15']],
+  ])('renders the optional time range %#', (times, expected) => {
+    const task = projection();
+    render(<TaskRow task={{ ...task, occurrence: { ...task.occurrence, ...times } }} />);
+    for (const label of expected) expect(screen.getByText(label)).toBeVisible();
+  });
+
+  it('hides the disposition while the day is still open', () => {
+    render(<TaskRow task={projection()} />);
+    expect(
+      screen.queryByText(/выполнена|осталась незавершённой|отменена/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['completed', 'Выполнена'],
+    ['kept-unfinished', 'Осталась незавершённой'],
+    ['canceled', 'Отменена при закрытии'],
+  ] as const)('states the frozen %s disposition once the day is closed', (outcome, label) => {
+    const task = projection();
+    render(
+      <TaskRow
+        task={{
+          ...task,
+          membership: {
+            ...task.membership,
+            outcome,
+            finalizedAt: instant('2026-05-21T00:00:00.000Z'),
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText(label)).toBeVisible();
+  });
+
+  it.each([
     ['open', 'Открыт'],
     ['closed', 'Закрыт'],
     ['completed', 'Завершён'],

@@ -13,7 +13,7 @@ export function useWeekPage(weekStart: LocalDate) {
   const [state, setState] = useState<WeekPageState>({ status: 'loading' });
 
   const reload = useCallback(async () => {
-    setState({ status: 'loading' });
+    setState((current) => (current.status === 'ready' ? current : { status: 'loading' }));
     const ensured = await repository.ensureCalendarWeek({ date: weekStart });
     if (!ensured.ok) {
       setState({ status: 'error', message: 'Не удалось подготовить неделю.' });

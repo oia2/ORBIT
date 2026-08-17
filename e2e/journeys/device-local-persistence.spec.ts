@@ -9,10 +9,14 @@ test('keeps IndexedDB facts across reload and deep-link refresh without account 
   await dialog.getByLabel(/название задачи/i).fill('Локальная запись');
   await dialog.getByLabel(/длительность/i).fill('25');
   await dialog.getByRole('button', { name: /сохранить/i }).click();
-  await expect(page.getByText('Локальная запись', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('list', { name: 'Задачи' }).getByText('Локальная запись', { exact: true }),
+  ).toBeVisible();
   await page.reload();
   await expect(page).toHaveURL(/\/day\/2026-08-13$/);
-  await expect(page.getByText('Локальная запись', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('list', { name: 'Задачи' }).getByText('Локальная запись', { exact: true }),
+  ).toBeVisible();
   const persistence = page.locator('details[data-od-id="persistence-status"]');
   const persistenceSummary = persistence.locator('summary');
   await expect(persistenceSummary.getByRole('status')).toHaveText(

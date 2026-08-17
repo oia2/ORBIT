@@ -98,7 +98,7 @@
   position: relative;
   margin-top: auto;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.02em;
 }
 
@@ -152,7 +152,7 @@
 .persistenceDetails p {
   margin: var(--space-2) 0 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.55;
 }
 
@@ -234,7 +234,7 @@
     bottom: calc(82px + env(safe-area-inset-bottom));
     display: block;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .persistence summary {
@@ -283,7 +283,7 @@
     justify-content: center;
     gap: 2px;
     padding: 3px;
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.02em;
   }
 

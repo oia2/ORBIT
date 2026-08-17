@@ -5,11 +5,13 @@ import {
   PeriodStatus,
   TaskRow,
   type DayView,
+  type HabitOccurrence,
   type HabitOutcome,
   type ProjectedTaskMembership,
   calculateCompletionScore,
 } from '@/entities/planning';
 import { CompleteWeekDialog, useCompleteWeek } from '@/features/complete-week';
+import { HabitRecurrenceDialog, useManageHabit } from '@/features/manage-habit';
 import {
   TaskEditorDialog,
   TaskExecution,
@@ -27,6 +29,8 @@ import {
   weekDates,
   type LocalDate,
 } from '@/shared/lib/local-date/local-date';
+import { ActionMenu } from '@/shared/ui/action-menu';
+import { formatDurationMinutes } from '@/shared/lib/duration';
 import { Button } from '@/shared/ui/button';
 import { OrbitMetric } from '@/shared/ui/orbit-metric';
 
@@ -82,12 +86,19 @@ interface HabitWeekRow {
   readonly id: string;
   readonly title: string;
   readonly outcomes: ReadonlyMap<LocalDate, HabitOutcome>;
+  /** Any occurrence of the series, used to edit or stop the whole recurrence. */
+  readonly occurrence: HabitOccurrence;
 }
 
 function buildHabitRows(dayViews: readonly DayView[]): readonly HabitWeekRow[] {
   const grouped = new Map<
     string,
-    { readonly id: string; readonly title: string; readonly outcomes: Map<LocalDate, HabitOutcome> }
+    {
+      readonly id: string;
+      readonly title: string;
+      readonly outcomes: Map<LocalDate, HabitOutcome>;
+      readonly occurrence: HabitOccurrence;
+    }
   >();
 
   for (const dayView of dayViews) {
@@ -98,6 +109,7 @@ function buildHabitRows(dayViews: readonly DayView[]): readonly HabitWeekRow[] {
         id,
         title: habit.definitionSnapshot.title,
         outcomes: new Map<LocalDate, HabitOutcome>(),
+        occurrence: habit,
       };
       row.outcomes.set(dayView.day.date, habit.outcome);
       grouped.set(id, row);
@@ -162,6 +174,8 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
     { mode: 'create' } | { mode: 'update'; task: ProjectedTaskMembership }
   >();
   const [completionOpen, setCompletionOpen] = useState(false);
+  const [habitEditorOpen, setHabitEditorOpen] = useState(false);
+  const [habitSeriesEditor, setHabitSeriesEditor] = useState<HabitOccurrence>();
   const today = clock.currentLocalDate();
   const [expandedPlannerDays, setExpandedPlannerDays] = useState<ReadonlySet<LocalDate>>(
     () => new Set([today]),
@@ -181,6 +195,7 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
     onCommitted: reload,
   });
   const manageTask = useManageTask(reload);
+  const manageHabit = useManageHabit(reload);
   const completeWeek = useCompleteWeek(reload);
   const allDaysClosed = ready?.dayViews.every((day) => day.day.status === 'closed') === true;
 
@@ -307,7 +322,12 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
                   label="Прогресс недели"
                   value={reviewProgress.value}
                   tone="neutral"
-                  description="Общий результат учитывает задачи и привычки. Состояние дня не влияет на расчёт."
+                  periodStatus={week.status}
+                  contextLabel="Задачи и привычки недели"
+                  stateHint={{
+                    label: 'Дней закрыто:',
+                    value: `${String(ready.dayViews.filter((day) => day.day.status === 'closed').length)} из 7`,
+                  }}
                 />
               </section>
 
@@ -361,6 +381,108 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
                     {completeWeek.error}
                   </p>
                 )}
+              </section>
+
+              <section
+                className={['orbit-card', styles.goals].filter(Boolean).join(' ')}
+                data-od-id="week-goals"
+                aria-labelledby="goals-title"
+              >
+                <header className={styles.cardHeader}>
+                  <div>
+                    <h2 id="goals-title">Цели недели</h2>
+                    <p>Описательные результаты, а не числовой прогресс</p>
+                  </div>
+                  <Button
+                    className={styles.contextButton}
+                    variant="quiet"
+                    disabled={week.status !== 'open'}
+                    onClick={() => {
+                      setGoalEditor({ statement: '' });
+                    }}
+                  >
+                    Добавить цель
+                  </Button>
+                </header>
+                {week.goals.length === 0 ? (
+                  <div className={styles.compactEmpty}>
+                    <strong>Целей пока нет</strong>
+                    <p>Добавьте короткое описание результата, которого хотите достичь.</p>
+                  </div>
+                ) : (
+                  <ol className={styles.goalList} aria-label="Цели недели">
+                    {week.goals.map((goal, index) => (
+                      <li className={styles.goal} key={goal.id} data-od-id="week-goal">
+                        <span className={styles.goalIndex}>
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                        <span className={styles.goalStatement}>{goal.statement}</span>
+                        <ActionMenu triggerLabel={`Действия с целью «${goal.statement}»`}>
+                          {(close) => (
+                            <>
+                              <Button
+                                variant="quiet"
+                                disabled={week.status !== 'open'}
+                                onClick={() => {
+                                  close();
+                                  setGoalEditor({ id: goal.id, statement: goal.statement });
+                                }}
+                              >
+                                Редактировать «{goal.statement}»
+                              </Button>
+                              <Button
+                                variant="quiet"
+                                disabled={week.status !== 'open' || index === 0}
+                                onClick={() => {
+                                  close();
+                                  void reorderGoal(index, -1);
+                                }}
+                              >
+                                Переместить «{goal.statement}» вверх
+                              </Button>
+                              <Button
+                                variant="quiet"
+                                disabled={week.status !== 'open' || index === week.goals.length - 1}
+                                onClick={() => {
+                                  close();
+                                  void reorderGoal(index, 1);
+                                }}
+                              >
+                                Переместить «{goal.statement}» вниз
+                              </Button>
+                              <Button
+                                variant="danger"
+                                disabled={week.status !== 'open'}
+                                onClick={() => {
+                                  close();
+                                  void manageWeek.remove(goal.id);
+                                }}
+                              >
+                                Удалить «{goal.statement}»
+                              </Button>
+                            </>
+                          )}
+                        </ActionMenu>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                {manageWeek.error === undefined ? null : (
+                  <p className={styles.inlineError} role="alert">
+                    {manageWeek.error}
+                  </p>
+                )}
+                {week.status === 'completed' ? (
+                  <aside className={styles.review} id="week-review">
+                    <div>
+                      <strong>Неделя завершена</strong>
+                      <p>Факты этой недели доступны только для чтения.</p>
+                    </div>
+                    {week.reflection === undefined ? null : (
+                      <blockquote>{week.reflection}</blockquote>
+                    )}
+                  </aside>
+                ) : null}
               </section>
             </div>
 
@@ -431,6 +553,15 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
                     <p>Ритм по дням недели</p>
                   </div>
                   <span className={styles.cardMeta}>{habitRows.length} в плане</span>
+                  <Button
+                    className={styles.contextButton}
+                    variant="quiet"
+                    onClick={() => {
+                      setHabitEditorOpen(true);
+                    }}
+                  >
+                    Добавить привычку
+                  </Button>
                 </header>
                 {habitRows.length === 0 ? (
                   <div className={styles.compactEmpty}>
@@ -439,6 +570,17 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
                   </div>
                 ) : (
                   <div className={styles.habitList}>
+                    <div className={styles.habitLegend} aria-hidden="true">
+                      <span />
+                      <div className={styles.habitDots}>
+                        {dates.map((date) => (
+                          <span key={date} className={styles.habitLegendDay}>
+                            {shortDayLabel(date)}
+                          </span>
+                        ))}
+                      </div>
+                      <span />
+                    </div>
                     {habitRows.map((habit) => (
                       <div className={styles.habitLine} key={habit.id} data-od-id="week-habit-row">
                         <strong>{habit.title}</strong>
@@ -459,6 +601,33 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
                             );
                           })}
                         </div>
+                        <ActionMenu triggerLabel={`Действия с привычкой «${habit.title}»`}>
+                          {(close) => (
+                            <>
+                              <Button
+                                variant="quiet"
+                                onClick={() => {
+                                  close();
+                                  setHabitSeriesEditor(habit.occurrence);
+                                }}
+                              >
+                                Изменить повтор
+                              </Button>
+                              <Button
+                                variant="danger"
+                                onClick={() => {
+                                  close();
+                                  void manageHabit.stop(
+                                    habit.occurrence.definitionId,
+                                    habit.occurrence.ruleRevision,
+                                  );
+                                }}
+                              >
+                                Удалить
+                              </Button>
+                            </>
+                          )}
+                        </ActionMenu>
                       </div>
                     ))}
                   </div>
@@ -468,95 +637,6 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
                 </footer>
               </section>
             </div>
-
-            <section
-              className={['orbit-card', styles.goals].filter(Boolean).join(' ')}
-              data-od-id="week-goals"
-              aria-labelledby="goals-title"
-            >
-              <header className={styles.cardHeader}>
-                <div>
-                  <h2 id="goals-title">Цели недели</h2>
-                  <p>Описательные результаты, а не числовой прогресс</p>
-                </div>
-                <Button
-                  className={styles.contextButton}
-                  variant="quiet"
-                  disabled={week.status !== 'open'}
-                  onClick={() => {
-                    setGoalEditor({ statement: '' });
-                  }}
-                >
-                  Добавить цель
-                </Button>
-              </header>
-              {week.goals.length === 0 ? (
-                <div className={styles.compactEmpty}>
-                  <strong>Целей пока нет</strong>
-                  <p>Добавьте короткое описание результата, которого хотите достичь.</p>
-                </div>
-              ) : (
-                <ol className={styles.goalList} aria-label="Цели недели">
-                  {week.goals.map((goal, index) => (
-                    <li className={styles.goal} key={goal.id} data-od-id="week-goal">
-                      <span className={styles.goalIndex}>{String(index + 1).padStart(2, '0')}</span>
-                      <span className={styles.goalStatement}>{goal.statement}</span>
-                      <details className={styles.actionMenu}>
-                        <summary aria-label={`Действия с целью «${goal.statement}»`}>•••</summary>
-                        <div className={styles.actionMenuPopover}>
-                          <Button
-                            variant="quiet"
-                            disabled={week.status !== 'open'}
-                            onClick={() => {
-                              setGoalEditor({ id: goal.id, statement: goal.statement });
-                            }}
-                          >
-                            Редактировать «{goal.statement}»
-                          </Button>
-                          <Button
-                            variant="quiet"
-                            disabled={week.status !== 'open' || index === 0}
-                            onClick={() => void reorderGoal(index, -1)}
-                          >
-                            Переместить «{goal.statement}» вверх
-                          </Button>
-                          <Button
-                            variant="quiet"
-                            disabled={week.status !== 'open' || index === week.goals.length - 1}
-                            onClick={() => void reorderGoal(index, 1)}
-                          >
-                            Переместить «{goal.statement}» вниз
-                          </Button>
-                          <Button
-                            variant="danger"
-                            disabled={week.status !== 'open'}
-                            onClick={() => void manageWeek.remove(goal.id)}
-                          >
-                            Удалить «{goal.statement}»
-                          </Button>
-                        </div>
-                      </details>
-                    </li>
-                  ))}
-                </ol>
-              )}
-              {manageWeek.error === undefined ? null : (
-                <p className={styles.inlineError} role="alert">
-                  {manageWeek.error}
-                </p>
-              )}
-              {week.status === 'completed' ? (
-                <aside className={styles.review} id="week-review">
-                  <div>
-                    <strong>Неделя завершена</strong>
-                    <p>Факты этой недели доступны только для чтения.</p>
-                  </div>
-                  {week.reflection === undefined ? null : (
-                    <blockquote>{week.reflection}</blockquote>
-                  )}
-                </aside>
-              ) : null}
-            </section>
           </div>
 
           <section
@@ -611,7 +691,7 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
                     </span>
                     <span className={styles.dayFacts}>
                       {countLabel(dayView.tasks.length, ['задача', 'задачи', 'задач'])} ·{' '}
-                      {String(dayView.plannedLoadMinutes)} мин
+                      {formatDurationMinutes(Number(dayView.plannedLoadMinutes))}
                     </span>
                   </summary>
                   <div className={styles.plannerDayBody}>
@@ -676,11 +756,13 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
                                 onDelete={() =>
                                   manageTask.remove(task.occurrence.id, task.occurrence.revision)
                                 }
-                                onEdit={({ title, duration }) =>
+                                onEdit={({ title, duration, startTime, endTime }) =>
                                   manageTask.edit({
                                     occurrenceId: task.occurrence.id,
                                     title,
                                     duration,
+                                    startTime,
+                                    endTime,
                                     revision: task.occurrence.revision,
                                   })
                                 }
@@ -726,6 +808,38 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
         </>
       )}
 
+      {habitEditorOpen ? (
+        <HabitRecurrenceDialog
+          open
+          clock={clock}
+          onClose={() => {
+            setHabitEditorOpen(false);
+          }}
+          onSubmit={({ title, rule }) => manageHabit.create({ title, rule })}
+        />
+      ) : null}
+      {habitSeriesEditor === undefined ? null : (
+        <HabitRecurrenceDialog
+          open
+          mode="update"
+          clock={clock}
+          initialTitle={habitSeriesEditor.definitionSnapshot.title}
+          initialRule={{
+            startDate: habitSeriesEditor.date,
+            weekdays: [isoWeekday(habitSeriesEditor.date)],
+          }}
+          onClose={() => {
+            setHabitSeriesEditor(undefined);
+          }}
+          onSubmit={({ rule }) =>
+            manageHabit.update({
+              definitionId: habitSeriesEditor.definitionId,
+              rule,
+              revision: habitSeriesEditor.ruleRevision,
+            })
+          }
+        />
+      )}
       {goalEditor === undefined ? null : (
         <WeekEditorDialog
           open
@@ -758,8 +872,8 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
           onClose={() => {
             setRecurrenceEditor(undefined);
           }}
-          onSubmit={({ title, duration, rule }) =>
-            manageTask.createSeries({ title, duration, rule })
+          onSubmit={({ title, duration, startTime, endTime, rule }) =>
+            manageTask.createSeries({ title, duration, startTime, endTime, rule })
           }
         />
       ) : (

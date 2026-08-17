@@ -52,6 +52,8 @@ export interface GeneratedTaskBundleEffect {
   readonly title: string;
   readonly notes?: string;
   readonly plannedDurationMinutes: TaskPlannedSnapshot['plannedDurationMinutes'];
+  readonly startTime?: string;
+  readonly endTime?: string;
   readonly placement: { readonly kind: 'day'; readonly date: LocalDate };
   readonly dayPosition: DayPosition;
   readonly completion: 'incomplete';
@@ -167,6 +169,8 @@ function createTaskEffect(
     title: series.template.title,
     ...(series.template.notes === undefined ? {} : { notes: series.template.notes }),
     plannedDurationMinutes: series.template.plannedDurationMinutes,
+    ...(series.template.startTime === undefined ? {} : { startTime: series.template.startTime }),
+    ...(series.template.endTime === undefined ? {} : { endTime: series.template.endTime }),
   };
 
   return {
@@ -177,6 +181,8 @@ function createTaskEffect(
     title: series.template.title,
     ...(series.template.notes === undefined ? {} : { notes: series.template.notes }),
     plannedDurationMinutes: series.template.plannedDurationMinutes,
+    ...(series.template.startTime === undefined ? {} : { startTime: series.template.startTime }),
+    ...(series.template.endTime === undefined ? {} : { endTime: series.template.endTime }),
     placement: { kind: 'day', date },
     dayPosition: position,
     completion: 'incomplete',

@@ -139,3 +139,53 @@ viewport/seed/clock/build provenance, difference classifications, and a guarded
 16-check visual suite. T106 was rerun after that stable visual gate and passes.
 T107–T110 remain blocked and no manual accessibility, usability, or release
 approval is inferred from these automated results.
+
+## Second remediation pass (2026-08-16)
+
+The product owner issued a further targeted UI/UX and bug-fixing remediation
+pass (dialog centering, typography, optional task time, context-menu bugs,
+apparent-reload bug, motion, habit-form simplification, Day/Week result
+presentation, Day State defaults, habit marking, Week habit entry point).
+This does not reopen the release gate; T107–T110 remain blocked pending their
+own execution. Key visual/product decisions from this pass:
+
+- **Daily Score / Weekly Progress presentation (FR-034/FR-048)**: the ring
+  previously repeated its own identity label ("Дневной результат"/"Прогресс
+  недели") inside the circle, duplicating the counts already shown in a
+  separate facts table below it. Re-inspecting the fresh Open Design source
+  (`daily-detail-v2.html`'s `#daily-orbit` and `life-os.css`'s
+  `.score-status`/`.score-part-track`) shows the reference never repeats the
+  widget's identity inside the ring; instead it shows only the percentage
+  plus a short status word (e.g. "в процессе"), with identity context placed
+  above the ring and the task/habit breakdown shown as compact animated rate
+  bars. The remediated implementation now follows that structure: a small
+  eyebrow above the ring carries identity/context, the ring itself shows only
+  the percentage and the day/week's existing open/closed/completed status
+  word (reusing `PeriodStatus`'s exact wording — no new copy invented), and
+  the breakdown is two rate-bars styled and animated after the reference's
+  `.score-part-track > span { transition: width }`. The static formula
+  sentence moved behind a disclosure instead of always-visible text. Numeric
+  score semantics, thresholds, and the 70/30 formula are unchanged.
+- **Dialog centering**: `.orbit-dialog` never set `position`, so the native
+  `<dialog>` UA stylesheet's `position: absolute` silently defeated the
+  backdrop's `place-items: center`. Fixed by giving `.orbit-dialog`
+  `position: static` so it re-enters the backdrop's grid flow; the existing
+  mobile bottom-sheet override is unchanged and remains intentional.
+  Reference CSS was checked for a declared dialog open/close transition and
+  has none, so only an entrance fade/scale was added, gated by
+  `prefers-reduced-motion`.
+- **Context/action menus**: the two independent `<details>`-based
+  implementations (task/habit row menu, week goal menu) were replaced by one
+  shared, portal-rendered, controlled `ActionMenu` component, fixing missing
+  click-outside handling, the week goal menu never closing after an action,
+  and popovers being clipped by an ancestor `overflow: hidden` card.
+- **Habits**: recurrence start/end dates are no longer collected from the
+  user (see `spec.md` FR-015 amendment, Session 2026-08-16). An existing
+  habit's previously recorded start date is preserved unchanged on every
+  edit; only a brand-new habit gets the current local date. A habit can now
+  also be created from the Week page's Привычки card, reusing the same
+  `HabitRecurrenceDialog`/`useManageHabit` flow already used from Today.
+- **Tasks**: optional start/end clock time (see `spec.md` FR-015a) applies to
+  both one-off dated tasks and recurring task-series templates, since the
+  recurring template mechanically copies into materialized occurrences the
+  same way `notes`/`plannedDurationMinutes` already do.

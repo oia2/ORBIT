@@ -66,7 +66,11 @@ describe('DayPage', () => {
         </PlanningRepositoryProvider>
       </MemoryRouter>,
     );
-    expect(await screen.findByText(occurrence.title, { exact: true })).toBeVisible();
+    // The title also appears in the score panel's "Следом:" state hint.
+    expect((await screen.findAllByText(occurrence.title, { exact: true }))[0]).toBeVisible();
+    expect(document.querySelector('[data-od-id="day-score"]')).toHaveTextContent(
+      new RegExp(`Следом:.*${occurrence.title}`, 's'),
+    );
     expect(screen.getByText(/плановая нагрузка/i)).toBeVisible();
     expect(document.querySelector('[data-od-id="day-load"]')).toHaveTextContent(
       /45 мин.*в запланированных задачах/is,
@@ -77,6 +81,45 @@ describe('DayPage', () => {
     await user.click(screen.getByRole('button', { name: 'Добавить привычку' }));
     expect(screen.getByRole('dialog', { name: /новая привычка/i })).toBeVisible();
   });
+
+  it('offers task creation from the tasks card header', async () => {
+    const user = userEvent.setup();
+    const date = localDate('2026-05-20');
+    const view = {
+      day: buildOpenDay(),
+      tasks: [],
+      habits: [],
+      score: buildScoreBreakdown(),
+      plannedLoadMinutes: nonNegativeDurationMinutes(0),
+      unfinishedTaskIds: [],
+    };
+    const repository = {
+      ensureCalendarWeek: vi
+        .fn()
+        .mockResolvedValue({ ok: true, value: date, affectedDates: [], affectedWeeks: [] }),
+      prepareOpenPeriod: vi
+        .fn()
+        .mockResolvedValue({ ok: true, value: undefined, affectedDates: [], affectedWeeks: [] }),
+      getDayView: vi.fn().mockResolvedValue({ ok: true, value: view }),
+      getWeekView: vi.fn().mockResolvedValue({
+        ok: true,
+        value: { week: buildOpenWeek(), days: [] },
+      }),
+    } as unknown as PlanningRepository;
+    render(
+      <MemoryRouter>
+        <PlanningRepositoryProvider repository={repository}>
+          <DayPage date={date} />
+        </PlanningRepositoryProvider>
+      </MemoryRouter>,
+    );
+
+    const addTask = await screen.findByRole('button', { name: /добавить задачу/i });
+    expect(document.querySelector('[data-od-id="day-tasks"]')).toContainElement(addTask);
+    await user.click(addTask);
+    expect(screen.getByRole('dialog', { name: /новая задача/i })).toBeVisible();
+  });
+
   it('renders dated planning actions and factual load without capacity semantics', () => {
     const repository = {
       ensureCalendarWeek: () => new Promise(() => undefined),
@@ -90,7 +133,8 @@ describe('DayPage', () => {
     );
     expect(screen.getByRole('heading', { name: /день|сегодня/i })).toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent(/загружаем день/i);
-    expect(screen.getByRole('button', { name: /добавить задачу/i })).toBeInTheDocument();
+    // Task creation now lives in the tasks card, so it appears only once loaded.
+    expect(screen.queryByRole('button', { name: /добавить задачу/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/вместимость|перегруз|лимит нагрузки/i)).not.toBeInTheDocument();
   });
 

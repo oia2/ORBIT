@@ -1,27 +1,10 @@
 import type { Locator, Page, TestInfo } from '@playwright/test';
 
 import { expect, test } from '../fixtures/orbit.fixture';
-import {
-  activate,
-  closeOpenDetails,
-  exposeDetails,
-  exposeItemActions,
-  weekPlannerDay,
-} from './journey-helpers';
+import { activate, exposeDetails, exposeItemActions, weekPlannerDay } from './journey-helpers';
 
 const WEEK_START = '2026-08-10';
 const TUESDAY = '2026-08-11';
-
-async function exposeDisclosure(
-  page: Page,
-  container: Locator,
-  summary: Locator,
-  projectName: TestInfo['project']['name'],
-): Promise<void> {
-  await closeOpenDetails(page, container, projectName);
-  const details = summary.locator('..');
-  await exposeDetails(page, details, projectName);
-}
 
 async function addGoal(
   page: Page,
@@ -68,15 +51,15 @@ test('plans one fixed week consistently with keyboard and touch-ready controls',
 
   const goals = page.getByRole('list', { name: /цели недели/i });
   await expect(goals.getByRole('listitem')).toHaveText([/Подготовить {3}обзор/, /Сверить план/]);
-  await exposeDisclosure(
+  let goalActions = await exposeItemActions(
     page,
     goals,
-    goals.getByLabel(/действия с целью.*Подготовить/i),
+    /действия с целью.*Подготовить/i,
     testInfo.project.name,
   );
   await activate(
     page,
-    goals.getByRole('button', { name: /редактировать.*Подготовить/i }),
+    goalActions.getByRole('button', { name: /редактировать.*Подготовить/i }),
     testInfo.project.name,
   );
   const editGoalDialog = page.getByRole('dialog', { name: /редактировать цель/i });
@@ -90,30 +73,30 @@ test('plans one fixed week consistently with keyboard and touch-ready controls',
   );
   await expect(goals.getByText('Подготовить   итоговый обзор', { exact: true })).toBeVisible();
 
-  await exposeDisclosure(
+  goalActions = await exposeItemActions(
     page,
     goals,
-    goals.getByLabel(/действия с целью.*Сверить план/i),
+    /действия с целью.*Сверить план/i,
     testInfo.project.name,
   );
   await activate(
     page,
-    goals.getByRole('button', { name: /переместить.*Сверить план.*вверх/i }),
+    goalActions.getByRole('button', { name: /переместить.*Сверить план.*вверх/i }),
     testInfo.project.name,
   );
   await expect(goals.getByRole('listitem')).toHaveText([
     /Сверить план/,
     /Подготовить {3}итоговый обзор/,
   ]);
-  await exposeDisclosure(
+  goalActions = await exposeItemActions(
     page,
     goals,
-    goals.getByLabel(/действия с целью.*Подготовить/i),
+    /действия с целью.*Подготовить/i,
     testInfo.project.name,
   );
   await activate(
     page,
-    goals.getByRole('button', { name: /удалить.*Подготовить/i }),
+    goalActions.getByRole('button', { name: /удалить.*Подготовить/i }),
     testInfo.project.name,
   );
   await expect(goals.getByText('Подготовить   итоговый обзор')).toHaveCount(0);
@@ -147,7 +130,7 @@ test('plans one fixed week consistently with keyboard and touch-ready controls',
     [/Созвон с командой.*45 мин/, /Подготовить заметки.*30 мин/],
     { timeout: 15_000 },
   );
-  await expect(tuesday.locator(':scope > summary')).toContainText(/2 задачи.*75 мин/i);
+  await expect(tuesday.locator(':scope > summary')).toContainText(/2 задачи.*1 ч 15 мин/i);
   await expect(wednesday.locator(':scope > summary')).toContainText(/1 задача.*20 мин/i);
   await expect(page.getByText(/вместимость|перегруз|лимит нагрузки/i)).toHaveCount(0);
 
@@ -167,7 +150,6 @@ test('plans one fixed week consistently with keyboard and touch-ready controls',
   const dayPlan = page.getByRole('region', { name: /план дня/i });
   await expect(dayPlan.getByRole('heading', { name: /плановая нагрузка/i })).toBeVisible();
   await expect(dayPlan.getByText('1 ч 15 мин', { exact: true })).toBeVisible();
-  await expect(dayPlan.getByText(/сумма плановых длительностей задач/i)).toBeVisible();
 
   await page.reload();
   await expect(dayTasks.getByRole('listitem')).toHaveText([
@@ -176,10 +158,9 @@ test('plans one fixed week consistently with keyboard and touch-ready controls',
   ]);
   await expect(dayPlan.getByRole('heading', { name: /плановая нагрузка/i })).toBeVisible();
   await expect(dayPlan.getByText('1 ч 15 мин', { exact: true })).toBeVisible();
-  await expect(dayPlan.getByText(/сумма плановых длительностей задач/i)).toBeVisible();
 
   await page.goto(`/week/${WEEK_START}`);
   await expect(page.locator('li > span').getByText('Сверить план', { exact: true })).toBeVisible();
-  await expect(tuesday.locator(':scope > summary')).toContainText(/2 задачи.*75 мин/i);
+  await expect(tuesday.locator(':scope > summary')).toContainText(/2 задачи.*1 ч 15 мин/i);
   await expect(page.getByRole('link', { name: /войти|регистрац|аккаунт/i })).toHaveCount(0);
 });

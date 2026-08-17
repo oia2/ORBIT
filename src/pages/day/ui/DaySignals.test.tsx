@@ -12,13 +12,17 @@ afterEach(cleanup);
 describe('DaySignals', () => {
   it('shows the primary score with transparent 70/30 counts and separate state context', () => {
     render(<DaySignals day={buildOpenDay()} score={buildScoreBreakdown()} onSave={vi.fn()} />);
-    expect(screen.getByRole('region', { name: /дневной результат/i })).toHaveTextContent(
-      /62%.*задачи 2 из 3.*привычки 1 из 2.*70%.*30%/is,
-    );
+    const region = screen.getByRole('region', { name: /дневной результат/i });
+    expect(region).toHaveTextContent(/62%/);
+    expect(region).toHaveTextContent(/задачи/i);
+    expect(region).toHaveTextContent(/2 из 3/);
+    expect(region).toHaveTextContent(/привычки/i);
+    expect(region).toHaveTextContent(/1 из 2/);
+    expect(region).toHaveTextContent(/70%.*30%/is);
     expect(screen.getByRole('heading', { name: /состояние дня/i })).toBeVisible();
     expect(screen.getByRole('group', { name: /энергия/i })).toBeVisible();
     expect(screen.getByRole('group', { name: /настроение/i })).toBeVisible();
-    expect(screen.getByLabelText(/сон.*минут/i)).toBeVisible();
+    expect(screen.getByLabelText(/сон/i)).toBeVisible();
     expect(screen.queryByText(/плановая нагрузка|перегруз|вместимость|лимит нагрузки/i)).toBeNull();
   });
 
@@ -29,7 +33,8 @@ describe('DaySignals', () => {
       <DaySignals day={buildOpenDay()} score={buildScoreBreakdown()} onSave={onSave} />,
     );
     await user.click(screen.getByRole('button', { name: 'Энергия 5' }));
-    await user.type(screen.getByLabelText(/сон.*минут/i), '-1');
+    await user.clear(screen.getByLabelText(/сон/i));
+    await user.type(screen.getByLabelText(/сон/i), '-1');
     await user.click(screen.getByRole('button', { name: /сохранить состояние/i }));
     expect(screen.getByRole('alert')).toHaveTextContent(/неотрицательным/i);
     expect(screen.getByRole('button', { name: 'Энергия 5' })).toHaveAttribute(

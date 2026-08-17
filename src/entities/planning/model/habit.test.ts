@@ -6,6 +6,7 @@ import { localDate, startOfWeek } from '@/shared/lib/local-date/local-date';
 
 import {
   catchUpHabitDateBoundary,
+  clearHabitOutcome,
   correctBoundaryMissToCompleted,
   deleteHabitOccurrence,
   isHabitOccurrenceApplicable,
@@ -45,6 +46,62 @@ function valueOf<T>(result: { ok: true; value: T } | { ok: false; error: unknown
 
   return result.value;
 }
+
+describe('clearing a user mark', () => {
+  function completedOccurrence(): HabitOccurrence {
+    return valueOf(
+      recordHabitOutcome({
+        occurrence: pendingOccurrence(),
+        outcome: 'completed',
+        dayStatus: 'open',
+        clock: clock(DATE, FIRST_INSTANT),
+      }),
+    ).occurrence;
+  }
+
+  it('returns a user-marked habit to pending while the day is open', () => {
+    const transition = valueOf(
+      clearHabitOutcome({
+        occurrence: completedOccurrence(),
+        dayStatus: 'open',
+        clock: clock(DATE, CORRECTION_INSTANT),
+      }),
+    );
+
+    expect(transition.occurrence.outcome).toBe('pending');
+    expect(transition.occurrence.outcomeEvents.at(-1)).toMatchObject({
+      source: 'user-cleared',
+      outcome: 'pending',
+    });
+    // The original mark stays in the audit trail.
+    expect(transition.occurrence.outcomeEvents).toHaveLength(2);
+  });
+
+  it('refuses to clear a closed day or an automatic boundary miss', () => {
+    expect(
+      clearHabitOutcome({
+        occurrence: completedOccurrence(),
+        dayStatus: 'closed',
+        clock: clock(DATE, CORRECTION_INSTANT),
+      }).ok,
+    ).toBe(false);
+
+    const missed = valueOf(
+      catchUpHabitDateBoundary({
+        occurrence: pendingOccurrence(),
+        dayStatus: 'open',
+        clock: clock(NEXT_DATE, BOUNDARY_INSTANT),
+      }),
+    ).occurrence;
+    expect(
+      clearHabitOutcome({
+        occurrence: missed,
+        dayStatus: 'open',
+        clock: clock(NEXT_DATE, CORRECTION_INSTANT),
+      }).ok,
+    ).toBe(false);
+  });
+});
 
 describe('habit outcome transitions', () => {
   it.each(['completed', 'not-completed'] as const)(

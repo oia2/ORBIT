@@ -73,7 +73,7 @@
   color: var(--muted);
   background: transparent;
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -384,7 +384,7 @@
 }
 
 .factList strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 550;
   line-height: 1.4;
 }
@@ -545,7 +545,7 @@
 .chartValues {
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 11px;
   text-align: center;
 }
 

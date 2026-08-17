@@ -30,6 +30,9 @@ export interface TaskTemplate {
   readonly title: string;
   readonly notes?: string;
   readonly plannedDurationMinutes: DurationMinutes;
+  /** Optional clock time, "HH:MM" 24-hour, independent of `plannedDurationMinutes`. */
+  readonly startTime?: string;
+  readonly endTime?: string;
 }
 
 export interface TaskSeries {
@@ -60,6 +63,8 @@ interface TaskOccurrenceBase {
   readonly ruleRevision?: Revision;
   readonly title: string;
   readonly notes?: string;
+  readonly startTime?: string;
+  readonly endTime?: string;
   readonly isException: boolean;
   readonly createdSequence: CreationSequence;
   readonly revision: Revision;
@@ -111,6 +116,8 @@ export interface TaskPlannedSnapshot {
   readonly title: string;
   readonly notes?: string;
   readonly plannedDurationMinutes: DurationMinutes;
+  readonly startTime?: string;
+  readonly endTime?: string;
 }
 
 interface TaskPlanEntryBase {
@@ -181,6 +188,8 @@ export interface TaskValueSnapshot {
   readonly title: string;
   readonly notes?: string;
   readonly plannedDurationMinutes?: DurationMinutes;
+  readonly startTime?: string;
+  readonly endTime?: string;
 }
 
 export interface TaskEventPayloadByType {
@@ -244,6 +253,8 @@ export interface CreateOneOffTaskInput {
   readonly planEntryId?: TaskPlanEntryId;
   readonly title: string;
   readonly notes?: string;
+  readonly startTime?: string;
+  readonly endTime?: string;
   readonly placement: DayTaskPlacement | BacklogTaskPlacement;
   readonly plannedDurationMinutes?: number | undefined;
   readonly dayPosition?: number | undefined;
@@ -264,19 +275,61 @@ export type TaskPlanningError =
   | { readonly code: 'BacklogPositionNotAllowed' }
   | { readonly code: 'DuplicateMembership'; readonly date: LocalDate }
   | { readonly code: 'DatedPlacementRequired'; readonly date: LocalDate }
-  | { readonly code: 'DatedOrderMismatch' };
+  | { readonly code: 'DatedOrderMismatch' }
+  | { readonly code: 'InvalidTimeRange' };
 
 function optionalNotes(notes: string | undefined): { readonly notes?: string } {
   return notes === undefined ? {} : { notes };
 }
 
+const LOCAL_TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** "HH:MM" 24-hour clock time, independent of calendar date. */
+export function isValidLocalTime(value: string): boolean {
+  return LOCAL_TIME_PATTERN.test(value);
+}
+
+export interface TaskTimeRange {
+  readonly startTime?: string;
+  readonly endTime?: string;
+}
+
+/**
+ * Both fields are independently optional. When both are present, `endTime`
+ * must be strictly after `startTime` (same-day clock comparison only).
+ */
+export function validateTaskTimeRange(
+  startTime: string | undefined,
+  endTime: string | undefined,
+): Result<TaskTimeRange, TaskPlanningError> {
+  if (startTime !== undefined && !isValidLocalTime(startTime)) {
+    return err({ code: 'InvalidTimeRange' });
+  }
+  if (endTime !== undefined && !isValidLocalTime(endTime)) {
+    return err({ code: 'InvalidTimeRange' });
+  }
+  if (startTime !== undefined && endTime !== undefined && endTime <= startTime) {
+    return err({ code: 'InvalidTimeRange' });
+  }
+  return ok({
+    ...(startTime === undefined ? {} : { startTime }),
+    ...(endTime === undefined ? {} : { endTime }),
+  });
+}
+
 export function createOneOffTask(
   input: CreateOneOffTaskInput,
 ): Result<OneOffTaskPlanningResult, TaskPlanningError> {
+  const timeRange = validateTaskTimeRange(input.startTime, input.endTime);
+  if (!timeRange.ok) {
+    return timeRange;
+  }
+
   const common = {
     id: input.id,
     title: input.title,
     ...optionalNotes(input.notes),
+    ...timeRange.value,
     isException: false,
     createdSequence: input.createdSequence,
     revision: INITIAL_REVISION,
@@ -332,6 +385,7 @@ export function createOneOffTask(
       title: input.title,
       ...optionalNotes(input.notes),
       plannedDurationMinutes,
+      ...timeRange.value,
     },
     outcome: 'planned',
     enteredAt: input.createdAt,
@@ -382,6 +436,10 @@ export function ensureDatedMembership(
       title: input.occurrence.title,
       ...optionalNotes(input.occurrence.notes),
       plannedDurationMinutes: input.occurrence.plannedDurationMinutes,
+      ...(input.occurrence.startTime === undefined
+        ? {}
+        : { startTime: input.occurrence.startTime }),
+      ...(input.occurrence.endTime === undefined ? {} : { endTime: input.occurrence.endTime }),
     },
     outcome: 'planned',
     enteredAt: input.enteredAt,

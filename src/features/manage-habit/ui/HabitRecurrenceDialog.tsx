@@ -1,14 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { IsoWeekday, RecurrenceRule } from '@/entities/planning';
 import type { ApplicationClock } from '@/shared/lib/local-date/clock';
-import {
-  addDays,
-  compareLocalDates,
-  formatLocalDate,
-  isLocalDate,
-  type LocalDate,
-} from '@/shared/lib/local-date/local-date';
+import { addDays, formatLocalDate, type LocalDate } from '@/shared/lib/local-date/local-date';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
 import { FormField } from '@/shared/ui/form-field';
@@ -23,6 +17,8 @@ const DAYS: readonly [IsoWeekday, string][] = [
   [7, 'Воскресенье'],
 ];
 
+const ALL_WEEKDAYS: readonly IsoWeekday[] = DAYS.map(([value]) => value);
+
 export interface HabitRecurrenceDialogProps {
   readonly open: boolean;
   readonly mode?: 'create' | 'update';
@@ -31,13 +27,10 @@ export interface HabitRecurrenceDialogProps {
   readonly initialRule?: RecurrenceRule;
   readonly onClose: () => void;
   readonly onSubmit: (input: { title: string; rule: RecurrenceRule }) => Promise<boolean>;
-  readonly onStop?: () => Promise<boolean>;
 }
 
 export function HabitRecurrenceDialog(props: HabitRecurrenceDialogProps) {
   const [title, setTitle] = useState(props.initialTitle ?? '');
-  const [startDate, setStartDate] = useState<string>(props.initialRule?.startDate ?? '');
-  const [endDate, setEndDate] = useState<string>(props.initialRule?.endDate ?? '');
   const [weekdays, setWeekdays] = useState<readonly IsoWeekday[]>(
     props.initialRule?.weekdays ?? [],
   );
@@ -53,29 +46,35 @@ export function HabitRecurrenceDialog(props: HabitRecurrenceDialogProps) {
     }
     return true;
   };
+  const allSelected = weekdays.length === ALL_WEEKDAYS.length;
+  const someSelected = weekdays.length > 0 && !allSelected;
+  const toggleAllWeekdays = () => {
+    setWeekdays(allSelected ? [] : ALL_WEEKDAYS);
+  };
+  const selectAllRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (selectAllRef.current !== null) {
+      selectAllRef.current.indeterminate = someSelected;
+    }
+  }, [someSelected]);
   const submit = async () => {
     if (!confirmBoundary()) return;
-    if (title.trim().length === 0 || !isLocalDate(startDate) || weekdays.length === 0) {
-      setError('Заполните название, дату начала и выберите хотя бы один день недели.');
+    if (title.trim().length === 0 || weekdays.length === 0) {
+      setError('Заполните название и выберите хотя бы один день недели.');
       return;
     }
-    if (!isLocalDate(endDate) && endDate.length > 0) {
-      setError('Введите корректную дату окончания.');
-      return;
-    }
-    if (isLocalDate(endDate) && compareLocalDates(endDate, startDate) < 0) {
-      setError('Дата окончания не может быть раньше даты начала.');
-      return;
-    }
+    // Existing habits keep their originally recorded start date; only a brand-new habit
+    // gets today's date. `applyRecurrenceRuleChange` always makes updates effective from
+    // tomorrow regardless of this value, so preserving it here never rewrites past history.
+    const startDate =
+      mode === 'update' && props.initialRule !== undefined
+        ? props.initialRule.startDate
+        : props.clock.currentLocalDate();
     const rule: RecurrenceRule = {
       startDate,
       weekdays: [...weekdays].sort(),
-      ...(isLocalDate(endDate) ? { endDate } : {}),
     };
     if (await props.onSubmit({ title, rule })) props.onClose();
-  };
-  const stop = async () => {
-    if (confirmBoundary() && (await props.onStop?.())) props.onClose();
   };
   return (
     <Dialog
@@ -91,26 +90,17 @@ export function HabitRecurrenceDialog(props: HabitRecurrenceDialogProps) {
           }}
         />
       </FormField>
-      <FormField id="habit-start" label="Дата начала">
-        <input
-          type="date"
-          value={startDate}
-          onChange={(event) => {
-            setStartDate(event.target.value);
-          }}
-        />
-      </FormField>
-      <FormField id="habit-end" label="Дата окончания" hint="Дата окончания включительно.">
-        <input
-          type="date"
-          value={endDate}
-          onChange={(event) => {
-            setEndDate(event.target.value);
-          }}
-        />
-      </FormField>
       <fieldset className="orbit-check-list">
         <legend>Дни недели</legend>
+        <label className="orbit-check-list__select-all">
+          <input
+            ref={selectAllRef}
+            type="checkbox"
+            checked={allSelected}
+            onChange={toggleAllWeekdays}
+          />
+          Выбрать все дни
+        </label>
         {DAYS.map(([value, label]) => (
           <label key={value}>
             <input
@@ -140,11 +130,6 @@ export function HabitRecurrenceDialog(props: HabitRecurrenceDialogProps) {
         </p>
       ) : null}
       <footer className="orbit-dialog__actions">
-        {mode === 'update' && props.onStop !== undefined ? (
-          <Button variant="danger" onClick={() => void stop()}>
-            Остановить повтор
-          </Button>
-        ) : null}
         <Button variant="quiet" onClick={props.onClose}>
           Отмена
         </Button>

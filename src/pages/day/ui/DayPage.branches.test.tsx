@@ -146,7 +146,7 @@ describe('DayPage presentation branches', () => {
     expect(screen.getByText('День закрыт — результат сохранён.')).toBeVisible();
     expect(screen.getByText('Энергия: 3')).toBeVisible();
     expect(screen.getByText('Настроение: 4')).toBeVisible();
-    expect(screen.getByText('Сон: 450 минут')).toBeVisible();
+    expect(screen.getByText('Сон: 7,5 ч')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Сохранить состояние' })).not.toBeInTheDocument();
   });
 });
