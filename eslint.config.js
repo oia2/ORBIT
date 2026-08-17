@@ -262,6 +262,28 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  {
+    /*
+     * The transport contract test is the one place the two sides meet on
+     * purpose: it drives the real client adapter against the real server to
+     * prove they agree. Production server code still may not reach into the
+     * client.
+     */
+    files: ['server/**/contract.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/app/**', '@/pages/**', '@/features/**', '@/entities/*/ui/**'],
+              message: 'The server may only use the shared domain, not client layers.',
+            },
+          ],
+        },
+      ],
       'no-restricted-globals': [
         'error',
         ...domOnlyGlobals.map((name) => ({

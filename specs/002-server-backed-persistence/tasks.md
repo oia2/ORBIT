@@ -179,19 +179,19 @@ IndexedDB database exists.
 - [X] T050 [US2] Create `server/api/parsers.ts` with one parser per endpoint input, reusing the brand validators from `@/shared/lib/ids` and `@/shared/lib/local-date`, returning the existing `ValidationFailure` issue list on failure
 - [X] T051 [US2] In `server/api/parsers.ts`, preserve the `undefined` vs `null` distinction for `EditTaskOccurrenceInput.startTime`/`endTime`, where `undefined` means "leave unchanged" and `null` means "clear" (see the interface comment at `planning-repository.ts:163`)
 - [X] T052 [US2] In `server/api/parsers.ts`, reject per-entity audit instants and caller-selected recurrence effective dates in request bodies — these were never on the boundary and must not become reachable now that a clock reading crosses it
-- [ ] T053 [P] [US2] Write `server/api/parsers.test.ts` covering rejection of malformed brands, the `undefined`/`null` distinction, and rejection of the forbidden body fields from T052
+- [X] T053 [P] [US2] Write `server/api/parsers.test.ts` covering rejection of malformed brands, the `undefined`/`null` distinction, and rejection of the forbidden body fields from T052
 - [X] T054 [US2] Create `server/api/routes.ts` registering all 32 `POST /api/planning/<methodName>` routes from a method table, returning the result envelope with HTTP 200 for both `ok: true` and domain `ok: false` (research Decision 4)
 - [X] T055 [US2] Add `GET /api/health` in `server/api/health.ts` returning 200 when the database is reachable and 503 otherwise
 - [X] T056 [US2] Create `server/app.ts` as a Fastify factory that takes its dependencies as arguments so tests can build an app without listening on a port
 - [X] T057 [US2] Create `server/main.ts`: load config, run migrations, build the app, listen. Migrations must complete before the server accepts requests (FR-019)
-- [ ] T058 [P] [US2] Write `server/api/routes.test.ts` using Fastify injection: every method routes correctly, domain errors return 200 with the envelope, unknown methods return 404, malformed JSON returns 400, missing clock headers return 400
+- [X] T058 [P] [US2] Write `server/api/routes.test.ts` using Fastify injection: every method routes correctly, domain errors return 200 with the envelope, unknown methods return 404, malformed JSON returns 400, missing clock headers return 400
 
 ### Client adapter
 
-- [ ] T059 [US2] Create `src/entities/planning/api/http/http-planning-repository.ts` implementing `PlanningRepository` via `createHttpPlanningRepository({ baseUrl, clock, fetch })`, sending both clock headers read at call time, returning 200 envelopes unchanged, and mapping transport failures to `ServerUnavailable` / `UnexpectedServerFailure`
-- [ ] T060 [US2] Review `src/entities/planning/api/http/http-planning-repository.ts` and confirm it holds no cache, no queue, no retry, and no local storage of any kind (FR-002, FR-023)
-- [ ] T061 [P] [US2] Write `src/entities/planning/api/http/http-planning-repository.test.ts` covering envelope round-tripping, brand preservation across the wire, both headers being sent, and the failure mappings
-- [ ] T062 [US2] Write `server/api/contract.test.ts` driving `HttpPlanningRepository` against a real in-process Fastify app and real database, proving client and server agree on every one of the 32 methods
+- [X] T059 [US2] Create `src/entities/planning/api/http/http-planning-repository.ts` implementing `PlanningRepository` via `createHttpPlanningRepository({ baseUrl, clock, fetch })`, sending both clock headers read at call time, returning 200 envelopes unchanged, and mapping transport failures to `ServerUnavailable` / `UnexpectedServerFailure`
+- [X] T060 [US2] Review `src/entities/planning/api/http/http-planning-repository.ts` and confirm it holds no cache, no queue, no retry, and no local storage of any kind (FR-002, FR-023)
+- [X] T061 [P] [US2] Write `src/entities/planning/api/http/http-planning-repository.test.ts` covering envelope round-tripping, brand preservation across the wire, both headers being sent, and the failure mappings
+- [X] T062 [US2] Write `server/api/contract.test.ts` driving `HttpPlanningRepository` against a real in-process Fastify app and real database, proving client and server agree on every one of the 32 methods
 
 ### Cutover
 
