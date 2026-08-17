@@ -112,17 +112,21 @@ Covered by repository tests: two commands against the same `expectedRevision` �
 succeeds, the second returns `RevisionConflict` with `expectedRevision` and `actualRevision`,
 and does not overwrite (FR-008).
 
-### 6. Timezone independence — SC-007
+### 6. Clock independence — SC-007
 
-Run the server with a non-UTC `TZ` (e.g. `TZ=Pacific/Auckland`) and a client local date that
-differs from the server's date. Day-closure eligibility, recurrence effective dates, and the
-habit boundary miss must follow the **client's** date (FR-009).
+The server must have no clock of its own. Every timestamp it records and every time-dependent
+decision it makes comes from the client's supplied reading (FR-009).
 
 ```bash
 TZ=Pacific/Auckland npm run test:server
 ```
 
-**Expected**: identical results to a UTC run. Any difference means server date leakage.
+**Expected**: identical results to a UTC run — same outcomes *and* byte-identical recorded
+instants. Any difference means server time leaked into a code path.
+
+Also verify by inspection that no request-handling code calls `createSystemClock`,
+`Date.now()`, or `new Date()`. Because the client sends both `X-Orbit-Local-Date` and
+`X-Orbit-Instant`, the server needs no time source, so any such call is a defect.
 
 ### 7. Data survives restart — SC-010
 

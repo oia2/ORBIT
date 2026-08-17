@@ -53,12 +53,13 @@ serves one user, with no account creation, sign-in, or user switching.
   user-management functionality is introduced. The deployment is single-owner and is
   intended to run where only its owner can reach it; exposing it on an untrusted network
   is outside this feature.
-- Q: Which side determines the current local date, given that day-closure eligibility,
-  recurrence effective dates, and the habit boundary miss all depend on it? → A: The client
-  continues to determine the current local date and supplies it with each request, exactly
-  as the browser clock does today. Server behavior must not depend on the server's own
-  timezone or system date. This keeps 001's date semantics identical regardless of where
-  the server runs.
+- Q: Which side determines the current time, given that day-closure eligibility, recurrence
+  effective dates, the habit boundary miss, and every recorded audit timestamp depend on
+  it? → A: The client. It supplies **both** the current local date and the current instant
+  with each request, and the server reconstructs feature 001's existing application clock
+  from those two values. Server behavior must not depend on the server's own timezone,
+  system date, or system time. This keeps 001's clock semantics identical — the whole clock
+  crosses the boundary, not half of it — regardless of where the server runs.
 - Q: What happens when the server cannot be reached? → A: The operation fails visibly and
   is never presented as saved. Offline reads, offline writes, local caching for
   availability, and retry queues are out of scope.
@@ -197,8 +198,6 @@ still there.
 - The server is unreachable when the application first loads, mid-session, or partway
   through a multi-step flow such as day closure.
 - The database is reachable but the server cannot complete a request.
-- A request is retried or duplicated after a network interruption; the recorded outcome
-  must not be applied twice.
 - A day closure, week completion, or task move fails partway through: no partial result may
   remain, because feature 001 treats each of these as one atomic outcome.
 - Two windows or devices submit changes to the same day, week, task, or habit; feature
@@ -247,11 +246,13 @@ still there.
 - **FR-008**: The server MUST enforce the revision checks that feature 001 already defines.
   A change submitted against a stale revision MUST be rejected with the existing conflict
   meaning and MUST NOT overwrite the newer state.
-- **FR-009**: The client MUST supply the current local date with each request that depends
-  on it. Server behavior that depends on the current local date — closure eligibility,
-  recurrence effective dates, the automatic habit boundary miss, and audit instants — MUST
-  derive from the supplied value rather than the server's own timezone or system date, so
-  that behavior is identical to feature 001 regardless of where the server runs.
+- **FR-009**: The client MUST supply both the current local date and the current instant
+  with each request that depends on them, and the server MUST reconstruct feature 001's
+  application clock from exactly those two supplied values. Every time-dependent server
+  behavior — closure eligibility, recurrence effective dates, the automatic habit boundary
+  miss, and every recorded audit timestamp — MUST derive from that reconstructed clock and
+  MUST NOT read the server's own timezone, system date, or system time, so that behavior is
+  identical to feature 001 regardless of where the server runs.
 - **FR-010**: The server MUST NOT introduce any product rule, default, calculation, or
   restriction that feature 001 does not define.
 
@@ -296,7 +297,7 @@ still there.
   hardening it for an untrusted network is outside this feature.
 - **FR-023**: This feature MUST NOT add offline reads, offline writes, local writable
   replicas, background synchronization, retry queues, conflict merging, realtime or pushed
-  updates, or new analytics.
+  updates, idempotency keys, request deduplication, replay protection, or new analytics.
 - **FR-024**: This feature MUST NOT change any user-facing wording, layout, interaction, or
   workflow defined by feature 001 and its approved design references, except where wording
   described device-local storage as required by FR-015.
@@ -314,9 +315,11 @@ still there.
 - **Backend Service**: The component that receives requests from the interface, applies
   feature 001's domain rules authoritatively, performs each operation as a single atomic
   unit, and reads and writes the canonical data store.
-- **Client Local Date**: The current local date determined on the owner's device and
-  supplied with requests that depend on it, so that date-sensitive behavior remains
-  identical to feature 001 regardless of the server's timezone.
+- **Client Clock Reading**: The current local date and current instant, both determined on
+  the owner's device and supplied together with requests that depend on them. The server
+  reconstructs feature 001's application clock from this pair, so that all time-dependent
+  behavior and every recorded timestamp remain identical to feature 001 regardless of the
+  server's timezone or system time.
 - **Deployment**: The runnable combination of interface, backend service, and database,
   together with the persistent storage that preserves recorded data across restarts.
 
@@ -338,8 +341,9 @@ still there.
   closure and week completion, 0 partial changes remain recorded.
 - **SC-006**: In 100% of concurrent-change tests, a change submitted against a stale
   revision is rejected and 0% of newer changes are silently overwritten.
-- **SC-007**: In 100% of date-sensitive tests, behavior is identical when the server runs
-  in a different timezone from the client, including across a local midnight boundary.
+- **SC-007**: In 100% of time-dependent tests, behavior and every recorded timestamp are
+  identical when the server runs in a different timezone from the client and when its system
+  clock is offset from the client's, including across a local midnight boundary.
 - **SC-008**: Browser-local database storage holds 0 planning records during normal
   operation, and the application performs 0 planning reads or writes against it.
 - **SC-009**: From a clean checkout with documented prerequisites, a single documented
@@ -385,8 +389,8 @@ the chosen technologies so the plan does not re-open settled decisions.
   a production system with data the owner needs to keep.
 - One ORBIT deployment holds one owner's data. Separating data by user does not arise,
   because 001 FR-052's single-user model is retained.
-- The owner's device clock is the authority for the current local date, exactly as it is in
-  feature 001.
+- The owner's device clock is the authority for both the current local date and the current
+  instant, exactly as it is in feature 001. The server holds no independent notion of "now".
 - The owner is online with respect to their ORBIT deployment while using it. Offline use was
   never a feature 001 guarantee beyond device-local storage, and is explicitly out of scope
   here.
@@ -420,6 +424,9 @@ the chosen technologies so the plan does not re-open settled decisions.
 - Offline-first support, offline reads or writes, local writable replicas, background
   synchronization, retry queues, and conflict merging beyond feature 001's existing
   revision checks.
+- Idempotency keys, request deduplication, and replay protection. Each individual request
+  is applied atomically (FR-007), but the feature adds no machinery to recognise a
+  duplicated or retried request as one already applied.
 - Realtime or pushed updates, and collaboration.
 - Accounts, registration, sign-in, sessions, user switching, multi-user support, and
   user-management functionality.

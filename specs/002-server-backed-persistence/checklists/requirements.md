@@ -54,16 +54,22 @@
   workflow, and keeping access control as simple as the single-user model permits.
 
 - **Two decisions were resolved by informed default** and are recorded in Clarifications and
-  Assumptions for review during `/speckit-clarify`:
-  - **Clock ownership (FR-009)**: the client continues to determine the current local date
-    and supplies it with each request. Chosen because feature 001's domain logic threads an
-    application clock through nearly every mutation, and because deriving the date from the
-    server would make closure eligibility, recurrence effective dates, and the automatic
-    habit boundary miss depend on the server's timezone — a behavior change 001 does not
-    permit. Worth confirming, as it shapes the request contract.
+  Assumptions:
+  - **Clock ownership (FR-009)**: the client supplies its complete clock reading — both the
+    current local date and the current instant — with each request, and the server rebuilds
+    feature 001's clock from that pair. Chosen because 001's domain logic threads a single
+    `ApplicationClock` through nearly every mutation, so preserving its semantics means
+    moving it across the boundary whole. Confirmed by the product owner on 2026-08-17, after
+    an earlier draft split it (client date, server instant); the split was withdrawn because
+    a clock whose halves can disagree is a time model 001 does not have.
   - **Behavior when the server is unreachable (FR-011, FR-012)**: fail visibly, never
     present unsaved work as saved, no local fallback. Follows directly from 001's
     honest-reporting rule and from offline support being out of scope.
+
+- **Scope correction, 2026-08-17**: an edge case requiring that a duplicated or retried
+  request never apply an outcome twice was **removed**. Satisfying it would have meant
+  idempotency keys or request deduplication, which FR-023 now explicitly excludes.
+  Per-request atomicity (FR-007) is unaffected and remains required.
 
 - No items require spec updates. The specification is ready for `/speckit-clarify` or
   `/speckit-plan`.

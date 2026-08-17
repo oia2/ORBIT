@@ -55,7 +55,8 @@ This is a single-user application; there is no throughput target.
 **Constraints**:
 - No product behavior may change (FR-010, FR-024)
 - `PlanningRepository` interface preserved (FR-013)
-- Client owns the current local date; server must not use its own timezone (FR-009)
+- Client owns the whole clock — local date and instant; the server must never read its own
+  timezone, system date, or system time during request handling (FR-009)
 - Single origin for frontend and API (FR-016)
 - No accounts, offline support, sync, realtime, or new analytics (FR-021, FR-023)
 - Existing device-local data is discarded; no import path (FR-003)
@@ -74,11 +75,13 @@ did force — superseding 001's device-local guarantee, discarding existing loca
 access control — were surfaced to the product owner and recorded in the spec's Clarifications
 rather than resolved silently.
 
-One planning-level decision is recorded explicitly because it touches date semantics:
-audit instants (`now()`) come from the server's UTC clock while `currentLocalDate()` comes
-from the client (research Decision 5). This satisfies FR-009's purpose — an `Instant` carries
-no timezone or local-date meaning — and changes no observable behavior, since event ordering
-is driven by explicit sequence numbers rather than timestamps.
+Clock semantics are preserved rather than reinterpreted: the client supplies **both**
+`currentLocalDate()` and `now()` with every request, and the server rebuilds feature 001's
+clock with the existing `createFixedClock` (research Decision 5). The server holds no clock
+of its own. An earlier draft of this plan split the clock — client date, server instant —
+and that was corrected: a composite clock whose halves can disagree is a time model feature
+001 does not have, and introducing one during a persistence migration would be exactly the
+kind of silent semantic change Principle I forbids.
 
 ### II. Design Guidance and UX Consistency — **PASS**
 
@@ -179,7 +182,7 @@ server/                              # NEW — Fastify backend
 └── api/
     ├── routes.ts                    # method name → handler
     ├── parsers.ts                   # request validation via existing brand validators
-    ├── request-clock.ts             # X-Orbit-Local-Date → ApplicationClock
+    ├── request-clock.ts             # X-Orbit-Local-Date + X-Orbit-Instant → createFixedClock
     └── *.test.ts                    # transport contract tests
 
 src/                                 # EXISTING — client + shared domain

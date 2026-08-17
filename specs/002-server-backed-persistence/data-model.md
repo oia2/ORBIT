@@ -181,8 +181,9 @@ The append-only audit trail behind 001 FR-012 and FR-051.
 
 - Indexes: `(occurrence_id, sequence)`, `(series_id, sequence)`, `(effective_date, sequence)`
   — mirroring the existing IndexedDB indexes.
-- `sequence` is the ordering authority. Audit ordering therefore does **not** depend on
-  `occurred_at`, which is what makes server-sourced instants safe under research Decision 5.
+- `sequence` is the ordering authority, assigned by the database. Audit ordering therefore
+  does **not** depend on `occurred_at`, so a client device clock that moves backwards cannot
+  reorder history (research Decision 5).
 - Insert-only. Nothing updates or deletes a row here.
 
 ### `habit_definitions`

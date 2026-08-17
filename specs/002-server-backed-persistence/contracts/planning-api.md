@@ -31,22 +31,30 @@ interface disagree, the interface wins.
 | Origin | Same origin as the frontend (002 FR-016). No CORS configuration ships. |
 | Authentication | None (002 FR-021, FR-022) |
 
-### Required request header
+### Required request headers
 
 ```
 X-Orbit-Local-Date: YYYY-MM-DD
+X-Orbit-Instant:    YYYY-MM-DDTHH:MM:SS.sssZ
 ```
 
-The client's current local date, from the browser's `ApplicationClock`. **Required on every
-`/api/planning/*` request.** The server builds a per-request clock from it, so that closure
-eligibility, recurrence effective dates, and the habit boundary miss behave identically
-regardless of the server's timezone (002 FR-009).
+The client's complete clock reading, taken from the browser's `ApplicationClock`:
+`currentLocalDate()` and `now()` respectively. **Both are required on every
+`/api/planning/*` request.**
 
-A missing or malformed value is a `400`. The server never falls back to its own date — that
-fallback is precisely what FR-009 prohibits.
+The server reconstructs feature 001's clock with the existing
+`createFixedClock({ currentLocalDate, instant })` and injects it into the repository, so
+that closure eligibility, recurrence effective dates, the habit boundary miss, and every
+recorded audit timestamp behave identically regardless of where the server runs
+(002 FR-009).
 
-Audit instants (`now()`) come from the **server's** UTC clock, not the client
-(research Decision 5).
+**The server has no clock of its own.** It must never call `createSystemClock`, `Date.now()`,
+`new Date()`, or read its timezone during request handling. A missing or malformed header is
+a `400`; there is no fallback to server time, because that fallback is precisely what FR-009
+prohibits.
+
+Both values are validated with the existing brand validators (`localDate`, `instant`), so a
+malformed instant is rejected rather than silently coerced.
 
 ## Endpoints
 
@@ -115,7 +123,7 @@ statuses would be lossy and would place domain meaning in two places.
 | Status | Meaning | Client mapping |
 | ------ | ------- | -------------- |
 | `200` | Evaluated. Body is the envelope, `ok: true` or `ok: false`. | Return the envelope as-is |
-| `400` | Malformed JSON, or missing/invalid `X-Orbit-Local-Date` | `UnexpectedServerFailure` |
+| `400` | Malformed JSON, or missing/invalid `X-Orbit-Local-Date` / `X-Orbit-Instant` | `UnexpectedServerFailure` |
 | `404` | Unknown method | `UnexpectedServerFailure` |
 | `500` | Unexpected server failure | `UnexpectedServerFailure` |
 | `503` | Database unreachable | `ServerUnavailable` |
@@ -174,17 +182,24 @@ client-supplied brand (002 FR-005, FR-006). Validation reuses the existing brand
 in `@/shared/lib/ids` and `@/shared/lib/local-date` rather than a schema library
 (research Decision 8).
 
-The server also rejects anything the interface never exposed — notably caller-supplied audit
-instants and caller-supplied recurrence effective dates, which the interface comment at
-`planning-repository.ts:291` already calls out as deliberately absent from the boundary.
+The server also rejects anything the interface never exposed — notably **per-entity** audit
+instants and caller-selected recurrence effective dates in request bodies, which the
+interface comment at `planning-repository.ts:291` already calls out as deliberately absent
+from the boundary.
+
+This is distinct from the `X-Orbit-Instant` header. The header carries one clock *reading*
+per request, from which the server derives every timestamp it records — exactly as the
+browser clock does today. A request body may never name the instant to stamp on a specific
+event; that would let a caller backdate individual history entries, which the boundary has
+always forbidden.
 
 ## Client adapter
 
 `createHttpPlanningRepository({ baseUrl, clock, fetch })` implements `PlanningRepository`
 for the browser. Every method:
 
-1. `POST`s to `/api/planning/<methodName>` with the input as the body and
-   `X-Orbit-Local-Date` from the injected clock.
+1. `POST`s to `/api/planning/<methodName>` with the input as the body and both
+   `X-Orbit-Local-Date` and `X-Orbit-Instant` read from the injected clock at call time.
 2. On `200`, parses and returns the envelope unchanged.
 3. On any other status or a network failure, returns
    `{ ok: false, error: { code: 'ServerUnavailable' | 'UnexpectedServerFailure', message } }`.
@@ -197,6 +212,8 @@ forbid all of them. A failed call fails, visibly (002 FR-011).
 - Authentication, sessions, accounts, per-user scoping (FR-021, FR-022)
 - Realtime, WebSocket, SSE, polling for changes (FR-023)
 - Offline queuing, retry, background sync (FR-023)
+- Idempotency keys, request deduplication, replay protection (FR-023). Each request is
+  applied atomically, but a duplicated or retried request is treated as a new request.
 - Bulk import, export, or migration endpoints (FR-003)
 - Test-only or seeding routes — E2E fixtures reach PostgreSQL directly from Node instead
 - Pagination — the deployment holds one person's planning history (`data-model.md`)
