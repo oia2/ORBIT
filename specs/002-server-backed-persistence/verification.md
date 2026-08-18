@@ -26,7 +26,9 @@ rounding up.
 | `npm run test:server:tz` | **199 passed**, identical results under `Pacific/Auckland` |
 | `npm run test:coverage` | **603 passed**, 75 files — 86.4% statements, 81.54% branches, 86.51% functions (thresholds 85/80/80) |
 | `npm run test:e2e` | 67 Playwright tests across four projects |
-| `npm run test:visual` | 16 passed, no baseline replaced |
+| `npm run test:visual` | 16 passed; 13 baselines replaced once, under owner approval — see [Visual baselines](#visual-baselines-updated-under-owner-approval) |
+| `docker compose config` | valid |
+| `docker compose down -v && docker compose up -d --build` | image built from the committed Dockerfile; both services healthy |
 
 ## Success criteria
 
@@ -140,28 +142,41 @@ task.
 **Method**: `docker compose up` builds the client and server into one image and
 starts it beside PostgreSQL on the named volume.
 
-**Result**: **the behavior is verified; the container image build is not.**
+**Result**: pass — the image build and the first-run behavior are both verified.
 
-The first-run behavior FR-004 and SC-009 actually describe was verified
-directly. Against a genuinely empty database — created fresh, with no tables and
-no migration bookkeeping — the built `dist-server/main.js`:
+The packaging step was re-run from a clean state on 2026-08-18:
 
-- applied its migrations at startup, creating all eight tables plus
-  `kysely_migration` / `kysely_migration_lock`;
+```
+docker compose down -v      # volume harness-sdd-lab_orbit-db-data removed
+docker compose up -d --build
+```
+
+The image built from the committed Dockerfile — `docker history
+harness-sdd-lab-app:latest` shows the runtime layer as
+`npm ci --omit=dev --fetch-retries=5 && npm cache clean --force`, matching the
+file in the repository. The volume was recreated empty, `db` reached its
+healthcheck, and `app` started behind it. Against that genuinely empty database
+the running container then:
+
+- applied `001-initial-schema` at startup, leaving 10 tables — the eight domain
+  tables plus `kysely_migration` and `kysely_migration_lock`;
 - answered `GET /api/health` with `200 {"status":"ok"}`;
 - answered `POST /api/planning/getBacklogView` with
   `{"ok":true,"value":{"tasks":[]}}` — **a working, empty ORBIT, not an error**;
-- served `index.html` for the deep link `/day/2026-08-13`, from the same origin.
+- served `index.html` for the deep link `/day/2026-08-13` from the same origin.
 
-The same path runs on every E2E execution: `e2e/e2e-server.ts` drops and
-recreates the E2E database, and the server migrates it before the 67 Playwright
-tests run against it.
+An earlier attempt failed with `ECONNRESET` while `npm ci` ran inside the build
+container. That was transient npm-registry flakiness, not a defect in the
+Dockerfile: the registry answered `npm ping` from the same image, single and
+concurrent large tarball downloads from a container both succeeded, and the
+unchanged Dockerfile has since built cleanly.
 
-`docker compose config` is valid. The **image build could not be completed in
-this environment** — `npm ci` inside the build container cannot reach the npm
-registry here, while the same install succeeds from the host. So
-`docker compose up` as a single literal command remains unexercised; everything
-it would start has been exercised individually.
+The same first-run path also runs on every E2E execution: `e2e/e2e-server.ts`
+drops and recreates the E2E database, and the server migrates it before the 67
+Playwright tests run against it. The same behavior was verified against the
+built `dist-server/main.js` directly, before the image was exercised.
+
+`docker compose config` is valid.
 
 ### SC-010 — data survives a restart
 
@@ -217,39 +232,47 @@ the user in terms that are now true. Keeping "Не удалось открыть
 хранилище планов" while the data lives on a server would have been a false
 statement, which is the opposite of what 001's honest-reporting rule asks for.
 
-## Open item for product-owner review
+## Visual baselines updated under owner approval
 
-**The visual baselines still show the removed storage disclosure.**
-
-`npm run test:visual` passes 16/16, but that is not by itself proof of an
-unchanged interface: the removed element is small enough that the diff falls
-under the configured `maxDiffPixelRatio: 0.002`. Inspecting
-`desktop-shared-shell.png` confirms it still renders "✓ Сохранено на
-устройстве" in the rail.
+**Closed 2026-08-18.** The baselines previously still showed the removed storage
+disclosure. `npm run test:visual` passed 16/16 even so, because the removed
+element is small enough that the diff falls under the configured
+`maxDiffPixelRatio: 0.002` — so the baselines asserted a claim the product no
+longer makes, and could not have caught a regression in that region.
 
 Feature 001 deliberately guarded baseline replacement behind
-`ORBIT_VISUAL_BASELINE_APPROVAL=remediated-review-complete`, described as
-usable "only for that reviewed run". That guard worked as designed and refused
-an update here. Setting it is a reviewed decision, so the baselines were left
-untouched.
+`ORBIT_VISUAL_BASELINE_APPROVAL=remediated-review-complete`, usable "only for
+that reviewed run". The product owner granted that approval for one reviewed
+run, scoped to the device-local storage removal. All 13 baselines were
+regenerated with `--update-snapshots=all`; `--update-snapshots` alone changed
+nothing, because Playwright treats a within-tolerance diff as a match.
 
-**Recommended action**: a reviewer confirms the rail is the only difference,
-then re-runs with the approval token so the baselines stop asserting a claim the
-product no longer makes.
+The result was audited pixel-by-pixel against the previous baselines before
+being accepted. **Every image changed in exactly one region, and no image
+changed size:**
+
+| Baselines | Changed region | Pixels | What it is |
+| --------- | -------------- | ------ | ---------- |
+| 7 desktop (1440px) | `x 24–133, y 832–863` — identical box in all seven | 846 each | The rail disclosure "✓ Сохранено на устройстве" |
+| 3 tablet (820px) | `x 36–51, y 1118–1133` | 97 each | The same indicator, icon-only in the compact rail |
+| 3 mobile (390px) | `x 303–360, y 705–793` | 1,428–1,522 | The same indicator as a badge |
+
+Each region was cropped from the old and new baseline and compared visually: the
+old renders the storage indicator, the new renders the same area empty. Nothing
+else differs — no layout shift, no spacing change, no unrelated content. This is
+the removal FR-015 requires and nothing more.
 
 ## Limitations
 
-- **The container image build is unverified in this environment** (SC-009).
-  `npm ci` inside the build container cannot reach the npm registry here, while
-  the same install succeeds from the host. The Dockerfile is standard
-  multi-stage and nothing about it is known to be wrong, but it has not been
-  executed to completion. The behavior it packages — automatic migration on a
-  first run, single-origin serving, volume persistence — was each verified
-  directly against the built server, so what remains unproven is the packaging
-  step itself, not the deployment behavior.
 - **Sequences are allocated `MAX + 1`, not from a PostgreSQL sequence**, a
-  deliberate deviation from `data-model.md` recorded with its reasoning in
-  [traceability.md](./traceability.md).
+  deliberate implementation decision recorded with its reasoning in
+  [traceability.md](./traceability.md) Deviation 1 and described in
+  `data-model.md`. `task_events.sequence` is a primary key, so a colliding
+  allocation would fail its transaction rather than record a duplicate;
+  `task_occurrences.created_sequence` has no uniqueness constraint, so a tie
+  would leave two backlog rows with equal creation order. Neither arises in the
+  single-owner, one-request-at-a-time deployment this feature specifies
+  (FR-021, FR-022).
 - **E2E runs single-worker.** One shared server database has no per-worker
   isolation, so parallel workers would each see the other's fixture. This is a
   consequence of the migration, not a defect, and is documented in

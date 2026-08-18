@@ -49,6 +49,12 @@ This is the SC-009 path: from a clean checkout, one command, no manual setup ste
 run automatically at startup, so a first run against an empty volume yields a working, empty
 ORBIT (FR-004).
 
+Both services declare `restart: unless-stopped`, so the Docker daemon brings them back after
+a restart unless you stopped them yourself with `docker compose stop` or `down`. For that to
+survive a reboot, Docker Desktop must start with the session — enable **Settings → General →
+"Start Docker Desktop when you sign in"**. That is a per-user Windows setting; the repository
+cannot set it.
+
 ## Quality gates
 
 ```bash

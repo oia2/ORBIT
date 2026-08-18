@@ -31,7 +31,7 @@ Per research Decision 6:
 | `*Id` | `text` | Branded UUID strings. |
 | `DurationMinutes` | `integer` | Positive. |
 | `NonNegativeDurationMinutes` | `integer` | `>= 0`. |
-| `CreationSequence` | `bigint` | Monotonic; from a PostgreSQL sequence. |
+| `CreationSequence` | `bigint` | Monotonic and gap-free; allocated as `MAX + 1` inside the command transaction — see [Sequences](#sequences). |
 | `DayPosition` | `integer` | Ordering within a day. |
 | Optional (`?`) field | `NULL`able column | `undefined` ⇄ `NULL`. |
 
@@ -222,7 +222,7 @@ The append-only audit trail behind 001 FR-012 and FR-051.
 
 | Column | Type | Constraints | Domain field |
 | ------ | ---- | ----------- | ------------ |
-| `sequence` | `bigint` | **PK**, from sequence | ordering key |
+| `sequence` | `bigint` | **PK**, allocated `MAX + 1` in-transaction | ordering key |
 | `id` | `text` | `NOT NULL`, `UNIQUE` | `id` |
 | `occurrence_id` | `text` | `NULL`, **FK** → `task_occurrences.id` | |
 | `series_id` | `text` | `NULL`, **FK** → `task_series.id` | |
@@ -232,9 +232,9 @@ The append-only audit trail behind 001 FR-012 and FR-051.
 
 - Indexes: `(occurrence_id, sequence)`, `(series_id, sequence)`, `(effective_date, sequence)`
   — mirroring the existing IndexedDB indexes.
-- `sequence` is the ordering authority, assigned by the database. Audit ordering therefore
-  does **not** depend on `occurred_at`, so a client device clock that moves backwards cannot
-  reorder history (research Decision 5).
+- `sequence` is the ordering authority, derived from the stored rows rather than from the
+  clock. Audit ordering therefore does **not** depend on `occurred_at`, so a client device
+  clock that moves backwards cannot reorder history (research Decision 5).
 - Insert-only. Nothing updates or deletes a row here.
 
 ### `habit_definitions`
@@ -272,9 +272,32 @@ The append-only audit trail behind 001 FR-012 and FR-051.
 
 ## Sequences
 
-- `task_occurrence_created_sequence` — supplies `createdSequence`, giving backlog its stable
-  oldest-first creation order (001 FR-010).
-- `task_event_sequence` — supplies `task_events.sequence`.
+Both ordering keys are **logical sequences allocated as `MAX + 1` inside the command
+transaction**, not PostgreSQL `SEQUENCE` objects. The migration creates no sequence objects.
+
+- `task_occurrences.created_sequence` — supplies `createdSequence`, giving backlog its
+  stable oldest-first creation order (001 FR-010).
+- `task_events.sequence` — the audit ordering key.
+
+An earlier draft of this document declared `task_occurrence_created_sequence` and
+`task_event_sequence` as database sequences. That was changed during implementation and the
+reasoning is recorded in [traceability.md](./traceability.md) Deviation 1: a PostgreSQL
+sequence advances on rollback and therefore produces gaps, while feature 001's suites assert
+concrete values (`createdSequence` of `[1, 2]`, event sequences of `[1, 2, 3, 4]`) and the
+seeded-scale fixture inserts 1,442 events with explicit sequence values. Using a sequence
+object would have meant editing those assertions, which SC-001 forbids.
+
+The property this section protects is unchanged: the ordering key is monotonic, gap-free,
+and derived from stored rows rather than from the clock. `server/planning/audit.ts` reads
+`MAX` and adds one; both reads happen inside the command transaction that then writes the
+row. `task_events.sequence` is the table's primary key, so two commands that raced to the
+same value would fail the losing transaction outright rather than record a duplicate —
+consistent with FR-007, which requires a failed operation to leave nothing behind.
+`task_occurrences.created_sequence` carries `CHECK (created_sequence > 0)` and no uniqueness
+constraint; a tie there would leave two backlog rows with equal creation order, which the
+`(placement_kind, created_sequence)` index orders arbitrarily between them. Neither case
+arises in a single-owner deployment issuing one request at a time (FR-021, FR-022), which is
+the deployment model this feature is specified for.
 
 ## Invariants enforced by the database
 
