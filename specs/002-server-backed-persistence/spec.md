@@ -4,7 +4,17 @@
 
 **Created**: 2026-08-17
 
-**Status**: Draft
+**Status**: Implemented and verified — closed 2026-08-18
+
+All tasks in `tasks.md` are complete and every quality gate passes: format, lint,
+typecheck, 199 server tests (and the same 199 again under a non-UTC timezone), 603 unit
+and UI tests at 86.4% statements / 81.54% branches / 86.51% functions, 67 Playwright
+tests, 16 visual checks, and a valid `docker compose config`. `docker compose down -v`
+followed by `docker compose up -d --build` builds the image from the committed Dockerfile
+and brings up a working, empty ORBIT with migrations applied at startup. Each success
+criterion and its evidence — including what is proven directly and what is proven by
+proxy — is recorded in [verification.md](./verification.md), with the test-assertion
+provenance in [traceability.md](./traceability.md).
 
 **Input**: User description: "Migrate ORBIT from device-local IndexedDB persistence to a
 simple client-server architecture without changing existing product behavior. Replace
