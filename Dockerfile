@@ -9,6 +9,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --fetch-retries=5
 
 COPY tsconfig*.json vite.config.ts vite.server.config.ts index.html ./
+COPY public ./public
 COPY src ./src
 COPY server ./server
 
