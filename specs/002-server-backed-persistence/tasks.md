@@ -377,3 +377,18 @@ it depends only on Setup.
 - Every phase checkpoint must be green — no milestone plans for a broken typecheck
 - Domain assertions in the retargeted suites are never edited; storage-mechanism assertions are, and T032 records which
 - No task in this list adds product behavior; any task that appears to is a misreading and should be raised
+
+---
+
+## Phase 8: Convergence
+
+Appended by `/speckit-converge` on 2026-08-18 after assessing the codebase against
+`spec.md`, `plan.md`, and this file. No functional gap was found: every gate is green and
+all 24 functional requirements are satisfied in code. The three items below are
+**artifact-accuracy** gaps — places where a recorded artifact no longer states what is
+true — which Constitution Principle V requires to be corrected in the source artifact
+rather than left as a known-stale record.
+
+- [ ] T101 Re-run `docker compose up` from a clean state (`docker compose down -v` first, so the volume is genuinely empty) and update `specs/002-server-backed-persistence/verification.md` per SC-009 (partial): the image now builds from the committed Dockerfile — `docker history harness-sdd-lab-app:latest` shows `npm ci --omit=dev --fetch-retries=5 && npm cache clean --force` with no experimental layers — and the running stack answers `GET /api/health` with 200, `POST /api/planning/getBacklogView` with `{"ok":true,"value":{"tasks":[]}}`, serves the SPA deep link `/day/2026-08-13` from the same origin, and auto-applies migrations creating all eight tables plus `kysely_migration`/`kysely_migration_lock`. Replace the SC-009 "the container image build is not verified" result and the matching **Limitations** bullet with the verified result. The earlier `npm ci` `ECONNRESET` was transient registry flakiness, not a Dockerfile defect — record it as such rather than as an open risk
+- [ ] T102 Resolve the recorded open item in `verification.md` per SC-012 and FR-015 (contradicts): `e2e/visual/__screenshots__/visual-chromium/desktop-shared-shell.png` still renders "✓ Сохранено на устройстве" in the rail, a claim the product no longer makes. `npm run test:visual` passes only because the diff falls under `maxDiffPixelRatio: 0.002`, so the baseline cannot detect a regression in that region. **This needs a reviewed decision, not an automatic refresh**: a reviewer confirms the removed storage disclosure is the only difference, then re-runs with `ORBIT_VISUAL_BASELINE_APPROVAL=remediated-review-complete` so the baselines stop asserting removed UI. Do not set the token without that review — 001 guarded it deliberately
+- [ ] T103 [P] Add a supersession note to the `## Sequences` section of `specs/002-server-backed-persistence/data-model.md` per plan: data-model schema (contradicts): it declares `task_occurrence_created_sequence` and `task_event_sequence` (and describes `sequence` as "assigned by the database" at lines 34 and 235), but the migration creates no sequences and `server/planning/audit.ts` allocates `MAX + 1` inside the command transaction so values stay gap-free. The deviation and its reasoning are already recorded in `traceability.md` Deviation 1 — point the schema at that record so the two artifacts stop disagreeing. Do not change the implementation: a PostgreSQL sequence advances on rollback, which would break the concrete sequence values 001's suites assert
