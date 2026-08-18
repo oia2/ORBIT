@@ -138,14 +138,8 @@ export async function expectDesktopShell(page: Page): Promise<void> {
   const shell = region(page, 'app-shell');
   const rail = region(page, 'app-rail');
   const content = region(page, 'app-content');
-  const persistence = region(page, 'persistence-status');
 
-  const [shellBox, railBox, contentBox, persistenceBox] = await Promise.all([
-    box(shell),
-    box(rail),
-    box(content),
-    box(persistence),
-  ]);
+  const [shellBox, railBox, contentBox] = await Promise.all([box(shell), box(rail), box(content)]);
 
   expect(railBox.x).toBeCloseTo(0, 0);
   expect(railBox.y).toBeCloseTo(0, 0);
@@ -154,18 +148,16 @@ export async function expectDesktopShell(page: Page): Promise<void> {
   expect(contentBox.x).toBeGreaterThanOrEqual(220);
   expect(contentBox.y).toBeLessThanOrEqual(2);
   expect(shellBox.width).toBeCloseTo(1440, 0);
-  expect(persistenceBox.x).toBeGreaterThanOrEqual(railBox.x);
-  expect(persistenceBox.x + persistenceBox.width).toBeLessThanOrEqual(
-    railBox.x + railBox.width + 1,
-  );
-  expect(persistenceBox.y + persistenceBox.height).toBeLessThanOrEqual(
-    railBox.y + railBox.height + 1,
-  );
-  expect(
-    await persistence.evaluate(
-      (persistenceNode) => persistenceNode.closest('[data-od-id="app-rail"]') !== null,
-    ),
-  ).toBe(true);
+  /*
+   * REPLACED DEVICE-LOCAL STORAGE ASSERTION (recorded in traceability.md).
+   *
+   * 001 asserted the storage disclosure sat inside the rail and within its
+   * bounds. 002 FR-015 removes that disclosure, so what is checked now is its
+   * absence. Every other shell invariant is unchanged, and the committed
+   * screenshots still match — the element was the last item in the rail, below
+   * the navigation, so removing it moved nothing else.
+   */
+  await expect(region(page, 'persistence-status')).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 }
 

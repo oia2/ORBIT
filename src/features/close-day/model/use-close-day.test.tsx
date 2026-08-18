@@ -104,7 +104,7 @@ describe('useCloseDay', () => {
     ['PendingHabitOutcomes', /привычки/i, 0],
     ['FutureDayClosure', /будущий день/i, 0],
     ['RevisionConflict', /не удалось закрыть/i, 1],
-    ['StorageUnavailable', /не удалось закрыть/i, 0],
+    ['ServerUnavailable', /не удалось закрыть/i, 0],
   ])('maps %s without false completion', async (code, message, reloads) => {
     const context = setup({ ok: false, error: { code } });
     const dispositions = { [taskId]: { kind: 'cancel' as const } } as ValidClosureDraft;

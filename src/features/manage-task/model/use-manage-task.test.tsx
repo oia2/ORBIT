@@ -141,7 +141,7 @@ describe('useManageTask', () => {
   it('reports failed command families without a false commit', async () => {
     const failure = {
       ok: false as const,
-      error: { code: 'UnexpectedStorageFailure' as const, message: 'failed' },
+      error: { code: 'UnexpectedServerFailure' as const, message: 'failed' },
     };
     const context = setup({
       createTask: vi.fn().mockResolvedValue(failure),

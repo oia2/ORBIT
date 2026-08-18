@@ -396,19 +396,13 @@ const DEFAULT_REPOSITORY_FAILURES = {
     expectedRevision: revision(0),
     actualRevision: revision(1),
   },
-  StorageUnavailable: {
-    code: 'StorageUnavailable',
-    message: 'IndexedDB is unavailable',
+  ServerUnavailable: {
+    code: 'ServerUnavailable',
+    message: 'The ORBIT server is unavailable',
   },
-  QuotaExceeded: { code: 'QuotaExceeded', message: 'Storage quota exceeded' },
-  UpgradeBlocked: {
-    code: 'UpgradeBlocked',
-    currentVersion: 1,
-    requestedVersion: 2,
-  },
-  UnexpectedStorageFailure: {
-    code: 'UnexpectedStorageFailure',
-    message: 'Unexpected storage failure',
+  UnexpectedServerFailure: {
+    code: 'UnexpectedServerFailure',
+    message: 'Unexpected server failure',
   },
 } as const satisfies Record<RepositoryFailureCode, DomainOrStorageError>;
 
@@ -422,8 +416,8 @@ export function buildRepositoryFailure<TCode extends RepositoryFailureCode>(
   } as unknown as RepositoryFailureOf<TCode>;
 }
 
-export function buildStorageUnavailableFailure(
-  message = 'IndexedDB is unavailable',
-): RepositoryFailureOf<'StorageUnavailable'> {
-  return buildRepositoryFailure('StorageUnavailable', { message });
+export function buildServerUnavailableFailure(
+  message = 'The ORBIT server is unavailable',
+): RepositoryFailureOf<'ServerUnavailable'> {
+  return buildRepositoryFailure('ServerUnavailable', { message });
 }

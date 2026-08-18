@@ -5,12 +5,7 @@ import type { PlanningRepository } from '@/entities/planning';
 import type { ApplicationClock } from '@/shared/lib/local-date/clock';
 
 import { createHabitBoundaryCoordinator } from '../runtime/habit-boundary';
-import type {
-  AppRuntime,
-  BlockedAppRuntimeSnapshot,
-  FailedAppRuntimeSnapshot,
-} from '../runtime/create-app-runtime';
-import { PersistenceStatusContext } from './PersistenceStatusContext';
+import type { AppRuntime } from '../runtime/create-app-runtime';
 
 export interface AppProvidersProps {
   readonly runtime: AppRuntime;
@@ -18,12 +13,6 @@ export interface AppProvidersProps {
   readonly clock?: ApplicationClock;
   /** T027 supplies AppRouter here; bootstrap remains independently testable. */
   readonly children?: ReactNode;
-  /** Injectable so reload-required behavior is deterministic in component tests. */
-  readonly reloadPage?: () => void;
-}
-
-function reloadCurrentPage(): void {
-  globalThis.location.reload();
 }
 
 function InitializingState() {
@@ -31,65 +20,26 @@ function InitializingState() {
     <section className="orbit-runtime-state" aria-labelledby="orbit-startup-title">
       <span className="orbit-brand-mark" aria-hidden="true" />
       <h1 id="orbit-startup-title">ORBIT</h1>
-      <p role="status">Подготавливаем локальные данные…</p>
+      <p role="status">Загружаем данные…</p>
     </section>
   );
 }
 
-function BlockedState({
-  snapshot,
-  retry,
-  reloadPage,
-}: {
-  readonly snapshot: BlockedAppRuntimeSnapshot;
-  readonly retry: () => void;
-  readonly reloadPage: () => void;
-}) {
-  if (snapshot.requiresReload) {
-    return (
-      <section className="orbit-runtime-state" role="alert" aria-labelledby="orbit-blocked-title">
-        <h1 id="orbit-blocked-title">Нужно перезагрузить ORBIT</h1>
-        <p>Версия локального хранилища изменилась. Перезагрузите эту страницу, чтобы продолжить.</p>
-        <button type="button" onClick={reloadPage}>
-          Перезагрузить страницу
-        </button>
-      </section>
-    );
-  }
-
-  return (
-    <section className="orbit-runtime-state" role="alert" aria-labelledby="orbit-blocked-title">
-      <h1 id="orbit-blocked-title">Обновление ожидает другую вкладку</h1>
-      <p>
-        Закройте или перезагрузите другую вкладку ORBIT, затем повторите попытку на этой странице.
-      </p>
-      <button type="button" onClick={retry}>
-        Повторить
-      </button>
-    </section>
-  );
-}
-
-function FailureState({
-  snapshot,
-  retry,
-}: {
-  readonly snapshot: FailedAppRuntimeSnapshot;
-  readonly retry: () => void;
-}) {
-  const message =
-    snapshot.reason === 'terminated'
-      ? 'Соединение с локальным хранилищем прервано. Повторите попытку.'
-      : 'Не удалось открыть локальное хранилище планов. Проверьте доступ к данным сайта в браузере и повторите попытку.';
-
+/*
+ * The blocked state is gone with IndexedDB: there is no version upgrade for
+ * another tab to hold open, and no connection for the browser to terminate.
+ * What remains is the one honest question — the server could not be reached —
+ * and the retry that asks again (002 FR-011, FR-015).
+ */
+function FailureState({ retry }: { readonly retry: () => void }) {
   return (
     <section
       className="orbit-runtime-state"
       role="alert"
       aria-labelledby="orbit-storage-error-title"
     >
-      <h1 id="orbit-storage-error-title">Локальные данные недоступны</h1>
-      <p>{message}</p>
+      <h1 id="orbit-storage-error-title">Данные недоступны</h1>
+      <p>Не удалось связаться с сервером ORBIT. Проверьте соединение и повторите попытку.</p>
       <button type="button" onClick={retry}>
         Повторить
       </button>
@@ -120,12 +70,7 @@ function ReadyRepositoryProviders({
   );
 }
 
-export function AppProviders({
-  runtime,
-  clock,
-  children,
-  reloadPage = reloadCurrentPage,
-}: AppProvidersProps) {
+export function AppProviders({ runtime, clock, children }: AppProvidersProps) {
   const snapshot = useSyncExternalStore(
     (listener) => runtime.subscribe(listener),
     () => runtime.getSnapshot(),
@@ -135,21 +80,9 @@ export function AppProviders({
   if (snapshot.status === 'initializing') {
     return <InitializingState />;
   }
-  if (snapshot.status === 'blocked') {
-    return (
-      <BlockedState
-        snapshot={snapshot}
-        retry={() => {
-          runtime.retry();
-        }}
-        reloadPage={reloadPage}
-      />
-    );
-  }
   if (snapshot.status === 'failure') {
     return (
       <FailureState
-        snapshot={snapshot}
         retry={() => {
           runtime.retry();
         }}
@@ -158,10 +91,8 @@ export function AppProviders({
   }
 
   return (
-    <PersistenceStatusContext.Provider value={snapshot.persistentStorage}>
-      <ReadyRepositoryProviders repository={snapshot.repository} clock={clock}>
-        {children}
-      </ReadyRepositoryProviders>
-    </PersistenceStatusContext.Provider>
+    <ReadyRepositoryProviders repository={snapshot.repository} clock={clock}>
+      {children}
+    </ReadyRepositoryProviders>
   );
 }

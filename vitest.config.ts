@@ -10,7 +10,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: { alias: { '@': alias } },
   test: {
-    exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
+    exclude: ['e2e/**', 'node_modules/**', 'dist/**', 'dist-server/**'],
     projects: [
       {
         extends: true,
@@ -31,11 +31,31 @@ export default defineConfig({
           setupFiles: [setupFile],
         },
       },
+      {
+        extends: true,
+        test: {
+          name: 'server',
+          environment: 'node',
+          include: ['server/**/*.test.ts'],
+        },
+      },
     ],
     coverage: {
       provider: 'v8',
-      include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/**/*.d.ts', 'src/**/*.test.{ts,tsx}', 'src/main.tsx', 'src/**/index.ts'],
+      include: ['src/**/*.{ts,tsx}', 'server/**/*.ts'],
+      exclude: [
+        'src/**/*.d.ts',
+        'src/**/*.test.{ts,tsx}',
+        'src/main.tsx',
+        'src/**/index.ts',
+        'server/**/*.test.ts',
+        // Entry points and test scaffolding: exercised by the E2E run and by
+        // the server suites themselves, not by unit coverage.
+        'server/main.ts',
+        'server/db/migrate.ts',
+        'server/test-support/**',
+        'server/planning/test-support/**',
+      ],
       reporter: ['text', 'html', 'json-summary'],
       thresholds: {
         functions: 80,

@@ -77,7 +77,7 @@ describe('useDayPage', () => {
   it.each(['prepare', 'query'] as const)('reports a %s failure', async (stage) => {
     const failure = {
       ok: false as const,
-      error: { code: 'StorageUnavailable' as const, message: 'offline' },
+      error: { code: 'ServerUnavailable' as const, message: 'offline' },
     };
     const repository = {
       ensureCalendarWeek: vi

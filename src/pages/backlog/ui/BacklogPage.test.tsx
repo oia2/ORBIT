@@ -58,7 +58,7 @@ describe('BacklogPage', () => {
       .fn()
       .mockResolvedValueOnce({
         ok: false,
-        error: { code: 'StorageUnavailable', message: 'offline' },
+        error: { code: 'UnexpectedServerFailure', message: 'offline' },
       })
       .mockResolvedValue({ ok: true, value: { tasks: [] } });
     const repository = { getBacklogView } as unknown as PlanningRepository;
@@ -73,11 +73,11 @@ describe('BacklogPage', () => {
     expect(getBacklogView).toHaveBeenCalledTimes(2);
   });
 
-  it('announces quota failure without claiming the write was saved', async () => {
+  it('announces an unreachable server without claiming the write was saved', async () => {
     const repository = {
       getBacklogView: vi.fn().mockResolvedValue({
         ok: false,
-        error: { code: 'QuotaExceeded', message: 'full' },
+        error: { code: 'ServerUnavailable', message: 'offline' },
       }),
     } as unknown as PlanningRepository;
     render(
@@ -85,7 +85,7 @@ describe('BacklogPage', () => {
         <BacklogPage />
       </PlanningRepositoryProvider>,
     );
-    expect(await screen.findByRole('alert')).toHaveTextContent(/переполнено.*не сохранены/i);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/сервер orbit недоступен/i);
     expect(screen.queryByText(/успешно|сохранено/i)).not.toBeInTheDocument();
   });
 

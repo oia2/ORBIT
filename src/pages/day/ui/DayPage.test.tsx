@@ -142,7 +142,7 @@ describe('DayPage', () => {
     const user = userEvent.setup();
     const ensureCalendarWeek = vi.fn().mockResolvedValue({
       ok: false,
-      error: { code: 'StorageUnavailable', message: 'offline' },
+      error: { code: 'ServerUnavailable', message: 'offline' },
     });
     const repository = { ensureCalendarWeek } as unknown as PlanningRepository;
     render(

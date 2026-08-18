@@ -3,8 +3,10 @@ export {
   usePlanningRepository,
   type PlanningRepositoryProviderProps,
 } from './api/repository-context';
-export { createIndexedDbPlanningRepository } from './api/indexeddb/indexeddb-planning-repository';
-export { openOrbitPlanningDatabase, type DatabaseVersionChange } from './api/indexeddb/database';
+export {
+  createHttpPlanningRepository,
+  type HttpPlanningRepositoryDependencies,
+} from './api/http/http-planning-repository';
 export type {
   CommandResult,
   DomainOrStorageError,

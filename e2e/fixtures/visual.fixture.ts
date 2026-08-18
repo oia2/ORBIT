@@ -4,7 +4,7 @@ import type { Day } from '../../src/entities/planning/model/day';
 import type { HabitOccurrence } from '../../src/entities/planning/model/habit';
 import type { TaskPlanEntry } from '../../src/entities/planning/model/task';
 import type { Week } from '../../src/entities/planning/model/week';
-import type { StoredTaskOccurrence } from '../../src/entities/planning/api/indexeddb/schema';
+import type { TaskOccurrence } from '../../src/entities/planning/model/task';
 import { revision } from '../../src/shared/lib/ids';
 import { instant } from '../../src/shared/lib/local-date/clock';
 import {
@@ -47,9 +47,7 @@ const MOTION_OVERRIDE_CSS = `
   }
 `;
 
-function completeSelectedTasks(
-  occurrences: readonly StoredTaskOccurrence[],
-): readonly StoredTaskOccurrence[] {
+function completeSelectedTasks(occurrences: readonly TaskOccurrence[]): readonly TaskOccurrence[] {
   return occurrences.map((occurrence) => {
     if (
       occurrence.state !== 'active' ||

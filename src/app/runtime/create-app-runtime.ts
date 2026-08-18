@@ -1,47 +1,13 @@
-import {
-  openOrbitPlanningDatabase,
-  type DatabaseVersionChange,
-  type PlanningRepository,
-} from '@/entities/planning';
-
-export interface AppRuntimeDatabaseLifecycleCallbacks {
-  readonly onBlocked?: (change: DatabaseVersionChange) => void;
-  readonly onVersionChange?: (change: DatabaseVersionChange) => void;
-  readonly onTerminated?: () => void;
-}
-
-export interface ClosableRuntimeDatabase {
-  close(): void;
-}
-
-export interface DisposablePlanningRepository extends PlanningRepository {
-  dispose(): void;
-}
-
-type RuntimeRepository = PlanningRepository & {
-  readonly dispose?: () => void;
-};
-
-export type PersistentStorageState = 'granted' | 'denied' | 'unsupported';
+import type { PlanningRepository } from '@/entities/planning';
 
 export interface InitializingAppRuntimeSnapshot {
   readonly status: 'initializing';
   readonly attempt: number;
 }
 
-export interface BlockedAppRuntimeSnapshot {
-  readonly status: 'blocked';
-  readonly attempt: number;
-  readonly currentVersion: number;
-  readonly requestedVersion: number | null;
-  /** Version changes close this connection and require a reload before retry. */
-  readonly requiresReload: boolean;
-}
-
 export interface FailedAppRuntimeSnapshot {
   readonly status: 'failure';
   readonly attempt: number;
-  readonly reason: 'storage-unavailable' | 'terminated';
   readonly message: string;
 }
 
@@ -49,14 +15,10 @@ export interface ReadyAppRuntimeSnapshot {
   readonly status: 'ready';
   readonly attempt: number;
   readonly repository: PlanningRepository;
-  readonly persistentStorage: PersistentStorageState;
 }
 
 export type AppRuntimeSnapshot =
-  | InitializingAppRuntimeSnapshot
-  | BlockedAppRuntimeSnapshot
-  | FailedAppRuntimeSnapshot
-  | ReadyAppRuntimeSnapshot;
+  InitializingAppRuntimeSnapshot | FailedAppRuntimeSnapshot | ReadyAppRuntimeSnapshot;
 
 export type AppRuntimeListener = () => void;
 
@@ -67,89 +29,39 @@ export interface AppRuntime {
   dispose(): void;
 }
 
-export interface AppRuntimeDependencies<
-  TDatabase extends ClosableRuntimeDatabase = ClosableRuntimeDatabase,
-> {
-  readonly openDatabase?: (callbacks: AppRuntimeDatabaseLifecycleCallbacks) => Promise<TDatabase>;
-  readonly createRepository: (database: TDatabase) => RuntimeRepository;
-  /** `undefined` means that the Storage API is unsupported. */
-  readonly requestPersistentStorage?: () => boolean | undefined | Promise<boolean | undefined>;
-}
-
-interface ActiveRuntimeResources<TDatabase extends ClosableRuntimeDatabase> {
-  readonly database: TDatabase;
-  readonly repository: RuntimeRepository;
+export interface AppRuntimeDependencies {
+  /** Resolves true when the server and its database are both reachable. */
+  readonly probeHealth: () => Promise<boolean>;
+  readonly createRepository: () => PlanningRepository;
 }
 
 interface AttemptControl {
   readonly generation: number;
-  stopped: boolean;
 }
 
-function errorMessage(error: unknown): string {
+const UNREACHABLE_MESSAGE = 'The ORBIT server is unavailable';
+
+function failureMessage(error: unknown): string {
   if (error instanceof Error && error.message.length > 0) {
     return error.message;
   }
 
-  return 'IndexedDB is unavailable';
-}
-
-async function requestBrowserPersistentStorage(): Promise<boolean | undefined> {
-  const browserNavigator =
-    typeof navigator === 'undefined'
-      ? undefined
-      : (navigator as { readonly storage?: { readonly persist?: () => Promise<boolean> } });
-  const storage = browserNavigator?.storage;
-  if (storage?.persist === undefined) {
-    return undefined;
-  }
-
-  return storage.persist();
-}
-
-function persistentStorageState(value: boolean | undefined): PersistentStorageState {
-  if (value === undefined) {
-    return 'unsupported';
-  }
-
-  return value ? 'granted' : 'denied';
-}
-
-function disposeResources<TDatabase extends ClosableRuntimeDatabase>(
-  resources: ActiveRuntimeResources<TDatabase>,
-): void {
-  const disposeRepository = resources.repository.dispose;
-  if (typeof disposeRepository === 'function') {
-    try {
-      disposeRepository.call(resources.repository);
-      return;
-    } catch {
-      // A failing adapter disposer must not leave the connection open.
-    }
-  }
-
-  try {
-    resources.database.close();
-  } catch {
-    // Disposal is best effort and must not mask the lifecycle state.
-  }
+  return UNREACHABLE_MESSAGE;
 }
 
 /**
  * Creates the application bootstrap resource synchronously and starts one
- * controlled database-open attempt. It deliberately has no React dependency.
+ * controlled health probe.
+ *
+ * Under feature 001 this owned an IndexedDB connection and every lifecycle
+ * hazard that came with it — blocked version upgrades, `versionchange`, forced
+ * termination, a persistent-storage grant. None of those exist once storage
+ * lives on the server, so bootstrap is now a single question: can the server
+ * and its database be reached? The answer is `ready` or `failure`, and `retry`
+ * asks again. It deliberately has no React dependency.
  */
-export function createAppRuntime<TDatabase extends ClosableRuntimeDatabase>(
-  dependencies: AppRuntimeDependencies<TDatabase>,
-): AppRuntime {
+export function createAppRuntime(dependencies: AppRuntimeDependencies): AppRuntime {
   const listeners = new Set<AppRuntimeListener>();
-  const openDatabase =
-    dependencies.openDatabase ??
-    (openOrbitPlanningDatabase as unknown as (
-      callbacks: AppRuntimeDatabaseLifecycleCallbacks,
-    ) => Promise<TDatabase>);
-  const requestPersistentStorage =
-    dependencies.requestPersistentStorage ?? requestBrowserPersistentStorage;
 
   let disposed = false;
   let generation = 0;
@@ -158,7 +70,6 @@ export function createAppRuntime<TDatabase extends ClosableRuntimeDatabase>(
     status: 'initializing',
     attempt: 1,
   });
-  let activeResources: ActiveRuntimeResources<TDatabase> | undefined;
 
   const publish = (nextSnapshot: AppRuntimeSnapshot): void => {
     if (disposed) {
@@ -171,115 +82,39 @@ export function createAppRuntime<TDatabase extends ClosableRuntimeDatabase>(
     }
   };
 
-  const disposeActiveResources = (): void => {
-    if (activeResources === undefined) {
-      return;
-    }
-
-    const resources = activeResources;
-    activeResources = undefined;
-    disposeResources(resources);
-  };
-
   const isCurrent = (control: AttemptControl): boolean =>
-    !disposed && !control.stopped && control.generation === generation;
+    !disposed && control.generation === generation;
 
   const beginAttempt = (): void => {
-    disposeActiveResources();
     generation += 1;
     attempt += 1;
     const currentAttempt = attempt;
-    const control: AttemptControl = { generation, stopped: false };
+    const control: AttemptControl = { generation };
 
     publish({ status: 'initializing', attempt: currentAttempt });
 
-    const persistencePromise = Promise.resolve()
-      .then(() => requestPersistentStorage())
-      .then(persistentStorageState)
-      .catch((): PersistentStorageState => 'denied');
-
-    const lifecycle: AppRuntimeDatabaseLifecycleCallbacks = {
-      onBlocked(change) {
-        if (!isCurrent(control)) {
-          return;
-        }
-
-        publish({
-          status: 'blocked',
-          attempt: currentAttempt,
-          currentVersion: change.currentVersion,
-          requestedVersion: change.requestedVersion,
-          requiresReload: false,
-        });
-      },
-      onVersionChange(change) {
-        if (!isCurrent(control)) {
-          return;
-        }
-
-        control.stopped = true;
-        disposeActiveResources();
-        publish({
-          status: 'blocked',
-          attempt: currentAttempt,
-          currentVersion: change.currentVersion,
-          requestedVersion: change.requestedVersion,
-          requiresReload: true,
-        });
-      },
-      onTerminated() {
-        if (!isCurrent(control)) {
-          return;
-        }
-
-        control.stopped = true;
-        disposeActiveResources();
-        publish({
-          status: 'failure',
-          attempt: currentAttempt,
-          reason: 'terminated',
-          message: 'The IndexedDB connection was terminated; retry to reopen it.',
-        });
-      },
-    };
-
     void (async () => {
-      let database: TDatabase | undefined;
       try {
-        database = await openDatabase(lifecycle);
+        const healthy = await dependencies.probeHealth();
         if (!isCurrent(control)) {
-          database.close();
           return;
         }
 
-        const repository = dependencies.createRepository(database);
-        const resources = { database, repository };
-        if (!isCurrent(control)) {
-          disposeResources(resources);
-          return;
-        }
-
-        activeResources = resources;
-        const persistentStorage = await persistencePromise;
-        if (!isCurrent(control)) {
+        if (!healthy) {
+          publish({
+            status: 'failure',
+            attempt: currentAttempt,
+            message: UNREACHABLE_MESSAGE,
+          });
           return;
         }
 
         publish({
           status: 'ready',
           attempt: currentAttempt,
-          repository,
-          persistentStorage,
+          repository: dependencies.createRepository(),
         });
       } catch (error) {
-        if (database !== undefined && activeResources?.database !== database) {
-          try {
-            database.close();
-          } catch {
-            // The open failure remains the actionable bootstrap failure.
-          }
-        }
-
         if (!isCurrent(control)) {
           return;
         }
@@ -287,8 +122,7 @@ export function createAppRuntime<TDatabase extends ClosableRuntimeDatabase>(
         publish({
           status: 'failure',
           attempt: currentAttempt,
-          reason: 'storage-unavailable',
-          message: errorMessage(error),
+          message: failureMessage(error),
         });
       }
     })();
@@ -322,8 +156,23 @@ export function createAppRuntime<TDatabase extends ClosableRuntimeDatabase>(
 
       disposed = true;
       generation += 1;
-      disposeActiveResources();
       listeners.clear();
     },
   });
+}
+
+export interface CreateHealthProbeOptions {
+  readonly baseUrl?: string;
+  readonly fetch?: typeof globalThis.fetch;
+}
+
+/** The single `GET /api/health` probe the client makes at bootstrap. */
+export function createHealthProbe(options: CreateHealthProbeOptions = {}): () => Promise<boolean> {
+  const baseUrl = options.baseUrl ?? '/api';
+  const performFetch = options.fetch ?? ((input: string) => globalThis.fetch(input));
+
+  return async (): Promise<boolean> => {
+    const response = await performFetch(`${baseUrl}/health`);
+    return response.ok;
+  };
 }

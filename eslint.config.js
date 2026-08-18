@@ -6,10 +6,67 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
+/**
+ * Shared code lives under `src/` but is consumed by both the browser and the
+ * Fastify server, so it must stay platform-neutral. These are the modules that
+ * rule applies to (plan.md "Structure Decision").
+ */
+const platformNeutralSources = ['src/shared/lib/**/*.ts', 'src/entities/planning/model/**/*.ts'];
+
+const nodeOnlyModules = [
+  'pg',
+  'kysely',
+  'fastify',
+  '@fastify/*',
+  'node:*',
+  'fs',
+  'path',
+  'crypto',
+  'os',
+  'http',
+  'https',
+  'net',
+  'stream',
+  'url',
+  'util',
+  'child_process',
+];
+
+const domOnlyGlobals = [
+  'window',
+  'document',
+  'indexedDB',
+  'localStorage',
+  'sessionStorage',
+  'navigator',
+  'location',
+  'IDBKeyRange',
+  'IDBFactory',
+  'DOMException',
+];
+
+/**
+ * The client must never reach into the server. The server may import the shared
+ * domain under `src/`, but never the reverse (plan.md "Structure Decision").
+ * Repeated in every layer override because `no-restricted-imports` replaces
+ * rather than merges its options.
+ */
+const noServerImports = {
+  group: ['**/server/**', '**/server'],
+  message: 'Client code must not import the server.',
+};
+
+const noPlatformDependencies = {
+  group: nodeOnlyModules,
+  message:
+    'This module is shared with the server and the browser; it must not depend on Node built-ins or database drivers.',
+};
+
 const generatedFiles = [
   'node_modules/**',
   'node_modules.incomplete/**',
   'dist/**',
+  'dist-server/**',
   'build/**',
   'coverage/**',
   'playwright-report/**',
@@ -59,34 +116,7 @@ export default tseslint.config(
               group: ['@/app/**'],
               message: 'Only the app layer may import the app layer.',
             },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    files: ['src/shared/**/*.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [{ group: ['@/app/**', '@/pages/**', '@/features/**', '@/entities/**'] }],
-        },
-      ],
-    },
-  },
-  {
-    files: ['src/entities/**/*.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            { group: ['@/app/**', '@/pages/**', '@/features/**'] },
-            {
-              group: ['@/entities/*/**'],
-              message: 'Import another entity slice through its public API.',
-            },
+            noServerImports,
           ],
         },
       ],
@@ -104,6 +134,7 @@ export default tseslint.config(
               group: ['@/features/*/**', '@/entities/*/**'],
               message: 'Use slice public APIs across slice boundaries.',
             },
+            noServerImports,
           ],
         },
       ],
@@ -121,8 +152,144 @@ export default tseslint.config(
               group: ['@/features/*/**', '@/entities/*/**'],
               message: 'Use slice public APIs across slice boundaries.',
             },
+            noServerImports,
           ],
         },
+      ],
+    },
+  },
+  {
+    files: ['src/shared/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: ['@/app/**', '@/pages/**', '@/features/**', '@/entities/**'] },
+            noServerImports,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/entities/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: ['@/app/**', '@/pages/**', '@/features/**'] },
+            {
+              group: ['@/entities/*/**'],
+              message: 'Import another entity slice through its public API.',
+            },
+            noServerImports,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/shared/lib/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: ['@/app/**', '@/pages/**', '@/features/**', '@/entities/**'] },
+            noServerImports,
+            noPlatformDependencies,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/entities/planning/model/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: ['@/app/**', '@/pages/**', '@/features/**'] },
+            {
+              group: ['@/entities/*/**'],
+              message: 'Import another entity slice through its public API.',
+            },
+            noServerImports,
+            noPlatformDependencies,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // `src/shared/lib/**` and the planning domain model are shared with the
+    // server, so they must not reach for the DOM.
+    files: platformNeutralSources,
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        ...domOnlyGlobals.map((name) => ({
+          name,
+          message:
+            'This module is shared with the server and the browser; it must not use DOM-only globals.',
+        })),
+      ],
+    },
+  },
+  {
+    files: ['server/**/*.ts'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.es2023 },
+    },
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '@/app/**',
+                '@/pages/**',
+                '@/features/**',
+                '@/entities/*/ui/**',
+                '@/entities/planning/api/**',
+              ],
+              message: 'The server may only use the shared domain, not client layers.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    /*
+     * The transport contract test is the one place the two sides meet on
+     * purpose: it drives the real client adapter against the real server to
+     * prove they agree. Production server code still may not reach into the
+     * client.
+     */
+    files: ['server/**/contract.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/app/**', '@/pages/**', '@/features/**', '@/entities/*/ui/**'],
+              message: 'The server may only use the shared domain, not client layers.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-globals': [
+        'error',
+        ...domOnlyGlobals.map((name) => ({
+          name,
+          message: 'The server has no DOM.',
+        })),
       ],
     },
   },
@@ -131,9 +298,16 @@ export default tseslint.config(
     extends: [tseslint.configs.disableTypeChecked],
   },
   {
+    /*
+     * E2E fixtures seed and reset PostgreSQL directly from Node, reusing the
+     * server's own schema and mappers. The alternative — test-only seeding
+     * routes — would add a production surface that exists only for tests, which
+     * the API contract explicitly excludes.
+     */
     files: ['e2e/**/*.{ts,tsx}', 'playwright.config.ts'],
     rules: {
       'react-hooks/rules-of-hooks': 'off',
+      'no-restricted-imports': ['error', { patterns: [] }],
     },
   },
 );

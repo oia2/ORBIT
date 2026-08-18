@@ -1,12 +1,27 @@
+import { fileURLToPath } from 'node:url';
+
 import { defineConfig, devices } from '@playwright/test';
+
+const E2E_PORT = 4173;
 
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.spec.ts',
   outputDir: 'test-results',
+  globalTeardown: fileURLToPath(new URL('./e2e/global-teardown.ts', import.meta.url)),
   snapshotPathTemplate: '{testDir}/visual/__screenshots__/{projectName}/{arg}{ext}',
   reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
   fullyParallel: false,
+  /*
+   * One worker, because there is now one database.
+   *
+   * Under IndexedDB every worker had its own browser profile and therefore its
+   * own storage, so Playwright could run test files in parallel safely. A
+   * server-backed deployment has a single database: two workers seeding and
+   * truncating it at once would each see the other's fixture, and the failures
+   * would look like flakiness rather than what they are.
+   */
+  workers: 1,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   expect: {
@@ -18,7 +33,7 @@ export default defineConfig({
     },
   },
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: `http://127.0.0.1:${String(E2E_PORT)}`,
     trace: 'retain-on-failure',
   },
   projects: [
@@ -54,9 +69,17 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run preview -- --host 127.0.0.1',
-    port: 4173,
+    /*
+     * The real server, serving the built client from one origin — not a static
+     * preview. E2E now exercises the same process a deployment runs, including
+     * the API the client depends on for every fact it shows.
+     */
+    command: 'node --import tsx e2e/e2e-server.ts',
+    port: E2E_PORT,
     reuseExistingServer: false,
     timeout: 120_000,
+    env: {
+      PORT: String(E2E_PORT),
+    },
   },
 });
