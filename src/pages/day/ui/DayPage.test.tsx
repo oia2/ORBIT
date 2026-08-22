@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router';
 import { PlanningRepositoryProvider, type PlanningRepository } from '@/entities/planning';
 import { TaskEditorDialog } from '@/features/manage-task';
 import { localDate } from '@/shared/lib/local-date/local-date';
-import { nonNegativeDurationMinutes } from '@/shared/lib/ids';
+import { durationMinutes, nonNegativeDurationMinutes } from '@/shared/lib/ids';
 import {
   buildHabitOccurrence,
   buildIncompleteTaskOccurrence,
@@ -24,15 +24,22 @@ describe('DayPage', () => {
   it('renders ready tasks and habits and opens both creation controls', async () => {
     const user = userEvent.setup();
     const date = localDate('2026-05-20');
-    const occurrence = buildIncompleteTaskOccurrence();
+    const occurrence = buildIncompleteTaskOccurrence({ notes: 'Одна и та же заметка' });
     const membership = buildPlannedTaskEntry();
     const day = buildOpenDay();
     const view = {
       day,
       tasks: [{ occurrence, membership, events: [] }],
-      habits: [buildHabitOccurrence()],
+      habits: [
+        buildHabitOccurrence({
+          definitionSnapshot: {
+            title: 'Прогулка после обеда',
+            durationMinutes: durationMinutes(30),
+          },
+        }),
+      ],
       score: buildScoreBreakdown(),
-      plannedLoadMinutes: nonNegativeDurationMinutes(45),
+      plannedLoadMinutes: nonNegativeDurationMinutes(75),
       unfinishedTaskIds: [occurrence.id],
     };
     const repository = {
@@ -52,7 +59,7 @@ describe('DayPage', () => {
               date,
               status: 'open',
               score: buildScoreBreakdown(),
-              plannedLoadMinutes: nonNegativeDurationMinutes(45),
+              plannedLoadMinutes: nonNegativeDurationMinutes(75),
             },
           ],
           progress: buildScoreBreakdown(),
@@ -73,11 +80,17 @@ describe('DayPage', () => {
     );
     expect(screen.getByText(/плановая нагрузка/i)).toBeVisible();
     expect(document.querySelector('[data-od-id="day-load"]')).toHaveTextContent(
-      /45 мин.*в запланированных задачах/is,
+      /1 ч 15 мин.*в задачах и привычках/is,
     );
     expect(document.querySelector('[data-od-id="day-layout"]')).toBeVisible();
     expect(document.querySelector('[data-od-id="day-score"]')).toBeVisible();
     expect(screen.getByRole('list', { name: 'Привычки' })).toBeVisible();
+    expect(screen.getByRole('list', { name: 'Привычки' })).toHaveTextContent('30 мин');
+    await user.click(screen.getByRole('button', { name: /заметка к задаче/i }));
+    expect(screen.getByRole('textbox', { name: /заметка к задаче/i })).toHaveValue(
+      'Одна и та же заметка',
+    );
+    await user.click(screen.getByRole('button', { name: 'Отмена' }));
     await user.click(screen.getByRole('button', { name: 'Добавить привычку' }));
     expect(screen.getByRole('dialog', { name: /новая привычка/i })).toBeVisible();
   });

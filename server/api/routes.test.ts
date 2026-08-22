@@ -49,8 +49,8 @@ describe('planning routes', () => {
     });
   }
 
-  it('exposes exactly the 32 PlanningRepository methods', () => {
-    expect(PLANNING_METHOD_NAMES).toHaveLength(32);
+  it('exposes exactly the 34 PlanningRepository methods', () => {
+    expect(PLANNING_METHOD_NAMES).toHaveLength(34);
   });
 
   it('routes every method name to a handler that answers with an envelope', async () => {

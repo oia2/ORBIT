@@ -23,7 +23,10 @@ export default defineConfig({
    */
   workers: 1,
   forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 2 : 0,
+  // A deterministic, database-backed suite should fail once with a retained
+  // trace. Automatic retries hid stale assertions and multiplied a one-minute
+  // run into several minutes without adding signal.
+  retries: 0,
   expect: {
     toHaveScreenshot: {
       animations: 'disabled',
@@ -44,12 +47,15 @@ export default defineConfig({
     },
     {
       name: 'tablet-webkit-touch',
-      testMatch: '**/journeys/**/*.spec.ts',
+      // Functional journeys already run against the same server contract on
+      // desktop. Touch projects keep the device-specific reflow/a11y smoke
+      // coverage without tripling every database-backed journey.
+      testMatch: '**/journeys/responsive-accessibility.spec.ts',
       use: { ...devices['iPad (gen 7)'], viewport: { width: 820, height: 1180 } },
     },
     {
       name: 'mobile-webkit-touch',
-      testMatch: '**/journeys/**/*.spec.ts',
+      testMatch: '**/journeys/responsive-accessibility.spec.ts',
       use: { ...devices['iPhone 13'], viewport: { width: 390, height: 844 } },
     },
     {

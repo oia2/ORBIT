@@ -92,14 +92,15 @@ describe('PostgreSQL planning repository — US5', () => {
         score: {
           task: { completed: 0, applicable: 1, rate: 0 },
           habit: { completed: 1, applicable: 1, rate: 1 },
-          value: 30,
+          // 1 of 2 items done. Under the old 70/30 split this read 30.
+          value: 50,
         },
         plannedLoadMinutes: 30,
       },
     });
     const week = await repository.getWeekView(MONDAY);
     expect(week.ok && week.value.days.find((summary) => summary.date === TUESDAY)).toMatchObject({
-      score: { value: 30 },
+      score: { value: 50 },
       plannedLoadMinutes: 30,
     });
 
@@ -111,7 +112,7 @@ describe('PostgreSQL planning repository — US5', () => {
       ok: true,
       value: {
         day: { state: { energy: 5, mood: 2, sleepDurationMinutes: 420 } },
-        score: { value: 30 },
+        score: { value: 50 },
         plannedLoadMinutes: 30,
       },
     });
@@ -163,5 +164,121 @@ describe('PostgreSQL planning repository — US5', () => {
         plannedLoadMinutes: 0,
       },
     });
+  });
+});
+
+/*
+ * 003 US6 (FR-030, FR-034). The rule that matters here is scope: a duration
+ * change reaches every open day and stops at the boundary of a closed one.
+ */
+describe('PostgreSQL planning repository — 003 US6 habit duration', () => {
+  let repository: RepositoryUnderTest['repository'];
+
+  beforeEach(async () => {
+    const harness = await createRepositoryUnderTest({
+      clock: createFixedClock({ instant: NOW, currentLocalDate: TUESDAY }),
+      generateUuid: uuidGenerator(),
+    });
+    repository = harness.repository;
+    await repository.ensureCalendarWeek({ date: MONDAY });
+  });
+
+  async function habitApplyingAllWeek(durationMinutes?: number) {
+    const created = await repository.createHabitDefinition({
+      title: 'Workout',
+      ...(durationMinutes === undefined ? {} : { durationMinutes: durationMinutes as never }),
+      recurrenceRule: { startDate: MONDAY, weekdays: [1, 2, 3, 4, 5, 6, 7] },
+    });
+    if (!created.ok) throw new Error(created.error.code);
+    return created.value;
+  }
+
+  async function loadOn(date: typeof TUESDAY) {
+    const view = await repository.getDayView(date);
+    if (!view.ok) throw new Error(view.error.code);
+    return Number(view.value.plannedLoadMinutes);
+  }
+
+  async function scoreOn(date: typeof TUESDAY) {
+    const view = await repository.getDayView(date);
+    if (!view.ok) throw new Error(view.error.code);
+    return view.value.score;
+  }
+
+  it('adds a habit duration to the planned load of every open day it applies to', async () => {
+    const definitionId = await habitApplyingAllWeek();
+    await repository.prepareOpenPeriod({ kind: 'week', weekStart: MONDAY });
+    expect(await loadOn(TUESDAY)).toBe(0);
+    const scoreBefore = await scoreOn(TUESDAY);
+
+    const definition = await repository.getDayView(TUESDAY);
+    if (!definition.ok) throw new Error(definition.error.code);
+
+    const updated = await repository.updateHabitDuration({
+      definitionId,
+      durationMinutes: 45 as never,
+      expectedRevision: 0 as never,
+    });
+    if (!updated.ok) throw new Error(updated.error.code);
+
+    expect(await loadOn(TUESDAY)).toBe(45);
+    // FR-033: load moved, the result did not.
+    expect(await scoreOn(TUESDAY)).toEqual(scoreBefore);
+  });
+
+  it('leaves a closed day frozen load untouched (FR-034)', async () => {
+    const definitionId = await habitApplyingAllWeek();
+    await repository.prepareOpenPeriod({ kind: 'week', weekStart: MONDAY });
+
+    // Monday is already past, so the date-boundary catch-up has resolved its
+    // habits; nothing is pending and the day can be closed as it stands.
+    const reread = await repository.getDayView(MONDAY);
+    if (!reread.ok) throw new Error(reread.error.code);
+    const closed = await repository.closeDay({
+      date: MONDAY,
+      expectedDayRevision: reread.value.day.revision,
+      dispositions: {},
+    });
+    if (!closed.ok) throw new Error(closed.error.code);
+    const frozenLoad = Number(closed.value.plannedLoadMinutes);
+
+    const updated = await repository.updateHabitDuration({
+      definitionId,
+      durationMinutes: 45 as never,
+      expectedRevision: 0 as never,
+    });
+    if (!updated.ok) throw new Error(updated.error.code);
+
+    // The closed day keeps what it froze; the open day picks the change up.
+    expect(await loadOn(MONDAY)).toBe(frozenLoad);
+    expect(await loadOn(TUESDAY)).toBe(45);
+    expect(updated.affectedDates).not.toContain(MONDAY);
+  });
+
+  it('clears a duration back to nothing', async () => {
+    const definitionId = await habitApplyingAllWeek(30);
+    await repository.prepareOpenPeriod({ kind: 'week', weekStart: MONDAY });
+    expect(await loadOn(TUESDAY)).toBe(30);
+
+    const cleared = await repository.updateHabitDuration({
+      definitionId,
+      durationMinutes: null,
+      expectedRevision: 0 as never,
+    });
+    if (!cleared.ok) throw new Error(cleared.error.code);
+
+    expect(await loadOn(TUESDAY)).toBe(0);
+  });
+
+  it('rejects a non-positive duration', async () => {
+    const definitionId = await habitApplyingAllWeek();
+
+    const refused = await repository.updateHabitDuration({
+      definitionId,
+      durationMinutes: 0 as never,
+      expectedRevision: 0 as never,
+    });
+
+    expect(refused).toMatchObject({ ok: false, error: { code: 'ValidationFailure' } });
   });
 });

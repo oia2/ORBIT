@@ -71,7 +71,6 @@ const SCORE: ScoreBreakdown = {
   task: { completed: 1, applicable: 2, rate: 0.5 },
   habit: { completed: 0, applicable: 0, rate: 'unavailable' },
   value: 35,
-  weightsApplied: { task: 70, habit: 30 },
 };
 
 const openWeek: Week = {

@@ -1,6 +1,8 @@
 import { Migrator, type Migration, type MigrationResultSet } from 'kysely/migration';
 
 import { initialSchema } from './001-initial-schema';
+import { singleWeightSnapshots } from './002-single-weight-snapshots';
+import { habitDuration } from './003-habit-duration';
 import type { AnyKysely } from './any-kysely';
 
 export type { AnyKysely };
@@ -12,6 +14,8 @@ export type { AnyKysely };
  */
 export const MIGRATIONS: Readonly<Record<string, Migration>> = Object.freeze({
   '001-initial-schema': initialSchema,
+  '002-single-weight-snapshots': singleWeightSnapshots,
+  '003-habit-duration': habitDuration,
 });
 
 export function createMigrator(db: AnyKysely): Migrator {

@@ -164,3 +164,18 @@ test('plans one fixed week consistently with keyboard and touch-ready controls',
   await expect(tuesday.locator(':scope > summary')).toContainText(/2 задачи.*1 ч 15 мин/i);
   await expect(page.getByRole('link', { name: /войти|регистрац|аккаунт/i })).toHaveCount(0);
 });
+
+/*
+ * 003 US8 (FR-040, SC-010): all seven planner days in one interaction.
+ */
+test('expands and collapses the whole week planner with one control', async ({ page }) => {
+  await page.goto(`/week/${WEEK_START}`);
+  const days = page.locator('details[data-od-id="week-planner-day"]');
+  await expect(days).toHaveCount(7);
+
+  await page.getByRole('button', { name: 'Раскрыть все дни' }).click();
+  await expect(days.filter({ has: page.locator(':scope[open]') })).toHaveCount(7);
+
+  await page.getByRole('button', { name: 'Свернуть все дни' }).click();
+  await expect(days.filter({ has: page.locator(':scope[open]') })).toHaveCount(0);
+});

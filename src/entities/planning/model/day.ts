@@ -34,19 +34,20 @@ export interface UnavailableCompletionCategory {
 export type CompletionCategoryBreakdown =
   AvailableCompletionCategory | UnavailableCompletionCategory;
 
-export interface AppliedScoreWeights {
-  /** Normalized percentage weight (0, 70, or 100). */
-  readonly task: 0 | 70 | 100;
-  /** Normalized percentage weight (0, 30, or 100). */
-  readonly habit: 0 | 30 | 100;
-}
-
-/** Shared serialized result for both Daily Score and Weekly Progress. */
+/**
+ * Shared serialized result for both Daily Score and Weekly Progress.
+ *
+ * 003 FR-016 replaced the fixed 70/30 task/habit split with one weight per
+ * item, so `weightsApplied` was removed rather than kept at a value that no
+ * longer describes anything: there is no weighting left to report, and the
+ * combined figure is already derivable from the two category breakdowns.
+ * Migration `002-single-weight-snapshots` strips the field from snapshots
+ * written before 003.
+ */
 export interface ScoreBreakdown {
   readonly task: CompletionCategoryBreakdown;
   readonly habit: CompletionCategoryBreakdown;
   readonly value: number | 'unavailable';
-  readonly weightsApplied: AppliedScoreWeights;
 }
 
 export interface DayClosureSnapshot {

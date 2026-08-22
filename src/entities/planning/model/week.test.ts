@@ -22,7 +22,6 @@ const unavailableScore: ScoreBreakdown = {
   task: { completed: 0, applicable: 0, rate: 'unavailable' },
   habit: { completed: 0, applicable: 0, rate: 'unavailable' },
   value: 'unavailable',
-  weightsApplied: { task: 0, habit: 0 },
 };
 
 const firstGoalId = entityId<'weekly-goal'>('123e4567-e89b-42d3-a456-426614174001');

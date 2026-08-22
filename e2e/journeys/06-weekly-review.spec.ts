@@ -4,8 +4,7 @@ const weekStart = '2026-08-10';
 const score = {
   task: { completed: 2, applicable: 3, rate: 2 / 3 },
   habit: { completed: 1, applicable: 2, rate: 1 / 2 },
-  value: 62,
-  weightsApplied: { task: 70, habit: 30 },
+  value: 60,
 };
 
 test('reviews and completes seven closed days with reflection and immutable reload', async ({
@@ -45,7 +44,7 @@ test('reviews and completes seven closed days with reflection and immutable relo
     },
   });
   await page.goto(`/week/${weekStart}`);
-  await expect(page.getByRole('region', { name: /прогресс недели/i })).toContainText(/62%/);
+  await expect(page.getByRole('region', { name: /прогресс недели/i })).toContainText(/60%/);
   const progressComposition = page.getByRole('region', { name: /состав прогресса недели/i });
   await expect(
     progressComposition.getByRole('progressbar', { name: /выполнение задач недели/i }),

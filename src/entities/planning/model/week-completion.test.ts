@@ -34,7 +34,6 @@ const UNAVAILABLE_SCORE: ScoreBreakdown = {
   task: { completed: 0, applicable: 0, rate: 'unavailable' },
   habit: { completed: 0, applicable: 0, rate: 'unavailable' },
   value: 'unavailable',
-  weightsApplied: { task: 0, habit: 0 },
 };
 
 function openWeek(overrides: Partial<OpenWeek> = {}): OpenWeek {
@@ -101,14 +100,6 @@ function score(
         ? { completed: 0, applicable: 0, rate: 'unavailable' }
         : { ...habit, rate: habit.completed / habit.applicable },
     value,
-    weightsApplied:
-      task.applicable > 0 && habit.applicable > 0
-        ? { task: 70, habit: 30 }
-        : task.applicable > 0
-          ? { task: 100, habit: 0 }
-          : habit.applicable > 0
-            ? { task: 0, habit: 100 }
-            : { task: 0, habit: 0 },
   };
 }
 
@@ -199,20 +190,19 @@ describe('weekly progress aggregation and completion snapshot', () => {
       task: { completed: 1, applicable: 10, rate: 0.1 },
       habit: { completed: 0, applicable: 0, rate: 'unavailable' },
       value: 10,
-      weightsApplied: { task: 100, habit: 0 },
     });
     expect(prepared.week.completionSnapshot.progress.value).not.toBe(50);
   });
 
   it.each([
     {
-      name: 'both categories use 70/30',
+      name: 'both categories carry the same per-item weight',
       source: score({ completed: 2, applicable: 4 }, { completed: 3, applicable: 4 }),
       expected: {
         task: { completed: 2, applicable: 4, rate: 0.5 },
         habit: { completed: 3, applicable: 4, rate: 0.75 },
-        value: 58,
-        weightsApplied: { task: 70, habit: 30 },
+        // 5 of 8 items done. Under the old 70/30 split this read 58.
+        value: 63,
       },
     },
     {
@@ -222,7 +212,6 @@ describe('weekly progress aggregation and completion snapshot', () => {
         task: { completed: 149, applicable: 200, rate: 149 / 200 },
         habit: { completed: 0, applicable: 0, rate: 'unavailable' },
         value: 75,
-        weightsApplied: { task: 100, habit: 0 },
       },
     },
     {
@@ -232,7 +221,6 @@ describe('weekly progress aggregation and completion snapshot', () => {
         task: { completed: 0, applicable: 0, rate: 'unavailable' },
         habit: { completed: 1, applicable: 2, rate: 0.5 },
         value: 50,
-        weightsApplied: { task: 0, habit: 100 },
       },
     },
     {

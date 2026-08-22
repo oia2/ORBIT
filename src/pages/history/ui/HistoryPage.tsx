@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router';
 
-import type { HistoricalDayFacts } from '@/entities/planning';
+import { TaskNoteAction, type HistoricalDayFacts } from '@/entities/planning';
 import type { ApplicationClock } from '@/shared/lib/local-date/clock';
 import {
   addDays,
@@ -387,7 +387,7 @@ function SelectedFacts({
           </div>
         </div>
         <p className={styles.formulaNote}>
-          Результат: задачи 70%, привычки 30%. Состояние не влияет.
+          Результат: каждая задача и привычка весят одинаково. Состояние не влияет.
         </p>
 
         {facts.tasks.length === 0 && facts.habits.length === 0 ? (
@@ -413,6 +413,12 @@ function SelectedFacts({
                         <strong>{task.explanation.planned.title}</strong>
                         <small>{taskOutcomeLabel(task.explanation.disposition.outcome)}</small>
                       </span>
+                      <TaskNoteAction
+                        title={task.occurrence.title}
+                        {...(task.occurrence.notes === undefined
+                          ? {}
+                          : { notes: task.occurrence.notes })}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -429,7 +435,12 @@ function SelectedFacts({
                       <span className={styles.factMarker} aria-hidden="true" />
                       <span>
                         <strong>{habit.definitionSnapshot.title}</strong>
-                        <small>{habitOutcomeLabel(habit.outcome)}</small>
+                        <small>
+                          {habitOutcomeLabel(habit.outcome)}
+                          {habit.definitionSnapshot.durationMinutes === undefined
+                            ? null
+                            : ` · ${formatDurationMinutes(habit.definitionSnapshot.durationMinutes)}`}
+                        </small>
                       </span>
                     </li>
                   ))}
@@ -476,12 +487,12 @@ function Dynamics({
   readonly points: readonly HistoryPoint[];
 }) {
   const scope = mode === 'week' ? 'последние 8 недель' : 'последние 6 месяцев';
-  const hasData = points.some(
-    (point) =>
-      point.taskRate !== 'unavailable' ||
-      point.habitRate !== 'unavailable' ||
-      point.score !== 'unavailable',
-  );
+  /*
+   * A period with no applicable items is drawn as a gap, not as a reason to
+   * hide the chart: the empty state belongs only to a range where *every*
+   * period is empty (003 FR-038, FR-039).
+   */
+  const hasData = points.some((point) => point.score !== 'unavailable');
   return (
     <section className={styles.dynamicsCard} data-od-id="history-dynamics" aria-label="Динамика">
       <header className={styles.dynamicsHeader}>
@@ -496,20 +507,21 @@ function Dynamics({
           <div className={styles.chartLegend} aria-hidden="true">
             <span data-series="tasks">Задачи</span>
             <span data-series="habits">Привычки</span>
-            <span data-series="score">Результат 70/30</span>
+            <span data-series="score">Результат</span>
           </div>
           <ol className={styles.dynamicsChart} aria-label={`Динамика — ${scope}`}>
             {points.map((item) => {
               const task = toPercent(item.taskRate);
               const habit = toPercent(item.habitRate);
               const score = item.score === 'unavailable' ? undefined : item.score;
+              const empty = score === undefined;
               const barStyle = {
                 '--task-height': `${String(task ?? 0)}%`,
                 '--habit-height': `${String(habit ?? 0)}%`,
                 '--score-height': `${String(score ?? 0)}%`,
               } as CSSProperties;
               return (
-                <li key={item.label} style={barStyle}>
+                <li key={item.label} style={barStyle} data-empty={empty ? 'true' : undefined}>
                   <span className={styles.chartValues}>
                     <span>{formatPercent(task)}</span>
                     <span>{formatPercent(habit)}</span>
@@ -522,8 +534,11 @@ function Dynamics({
                   </span>
                   <time dateTime={item.label}>{dynamicsLabel(item.label, mode)}</time>
                   <span className={styles.srOnly}>
-                    {item.label}: задачи {formatPercent(task)}; привычки {formatPercent(habit)};
-                    результат {formatPercent(score)}
+                    {empty
+                      ? `${item.label}: нет данных`
+                      : `${item.label}: задачи ${formatPercent(task)}; привычки ${formatPercent(
+                          habit,
+                        )}; результат ${formatPercent(score)}`}
                   </span>
                 </li>
               );

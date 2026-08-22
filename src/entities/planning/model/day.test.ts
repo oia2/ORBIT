@@ -33,7 +33,6 @@ function closedDay(): ClosedDay {
         task: { completed: 1, applicable: 2, rate: 0.5 },
         habit: { completed: 1, applicable: 1, rate: 1 },
         value: 65,
-        weightsApplied: { task: 70, habit: 30 },
       },
       plannedLoadMinutes: nonNegativeDurationMinutes(75),
     },

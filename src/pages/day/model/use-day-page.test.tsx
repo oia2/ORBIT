@@ -14,7 +14,6 @@ const unavailable = {
   task: { completed: 0, applicable: 0, rate: 'unavailable' as const },
   habit: { completed: 0, applicable: 0, rate: 'unavailable' as const },
   value: 'unavailable' as const,
-  weightsApplied: { task: 0, habit: 0 },
 };
 
 function wrapper(repository: PlanningRepository) {

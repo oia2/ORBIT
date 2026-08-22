@@ -162,8 +162,8 @@ export function buildScoreBreakdown(overrides: Partial<ScoreBreakdown> = {}): Sc
   return {
     task: { completed: 2, applicable: 3, rate: 2 / 3 },
     habit: { completed: 1, applicable: 2, rate: 1 / 2 },
-    value: 62,
-    weightsApplied: { task: 70, habit: 30 },
+    // 3 of 5 items done under the single-weight rule (003 FR-016).
+    value: 60,
     ...overrides,
   };
 }
@@ -173,7 +173,6 @@ export function buildUnavailableScoreBreakdown(): ScoreBreakdown {
     task: { completed: 0, applicable: 0, rate: 'unavailable' },
     habit: { completed: 0, applicable: 0, rate: 'unavailable' },
     value: 'unavailable',
-    weightsApplied: { task: 0, habit: 0 },
   };
 }
 

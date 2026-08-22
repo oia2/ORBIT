@@ -117,6 +117,9 @@ export const PLANNING_METHODS: Readonly<Record<string, MethodHandler>> = Object.
   updateHabitRule: handler(parse.parseUpdateHabitRule, (repository, value) =>
     repository.updateHabitRule(value),
   ),
+  updateHabitDuration: handler(parse.parseUpdateHabitDuration, (repository, value) =>
+    repository.updateHabitDuration(value),
+  ),
   stopHabitDefinition: handler(parse.parseStopHabitDefinition, (repository, value) =>
     repository.stopHabitDefinition(value),
   ),
@@ -141,6 +144,7 @@ export const PLANNING_METHODS: Readonly<Record<string, MethodHandler>> = Object.
     repository.saveDailyState(value),
   ),
   closeDay: handler(parse.parseCloseDay, (repository, value) => repository.closeDay(value)),
+  reopenDay: handler(parse.parseReopenDay, (repository, value) => repository.reopenDay(value)),
   completeWeek: handler(parse.parseCompleteWeek, (repository, value) =>
     repository.completeWeek(value),
   ),

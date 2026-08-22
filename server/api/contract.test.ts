@@ -243,7 +243,6 @@ describe('transport contract: HttpPlanningRepository against the real server', (
             task: { completed: 1, applicable: 2, rate: 0.5 },
             habit: { completed: 0, applicable: 0, rate: 'unavailable' },
             value: 50,
-            weightsApplied: { task: 100, habit: 0 },
           },
           plannedLoadMinutes: nonNegativeDurationMinutes(30),
         },

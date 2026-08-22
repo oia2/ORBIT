@@ -71,6 +71,7 @@ const generatedFiles = [
   'coverage/**',
   'playwright-report/**',
   'test-results/**',
+  '**/*.min.js',
   'specs/001-personal-planning-loop/visual-reference/**',
 ];
 
@@ -262,6 +263,12 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  {
+    files: ['scripts/**/*.{js,mjs,cjs}'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.es2023 },
     },
   },
   {

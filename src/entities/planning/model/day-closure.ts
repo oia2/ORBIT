@@ -14,8 +14,9 @@ import { err, ok, type Result } from '@/shared/lib/result';
 
 import type { ClosedDay } from './day';
 import { isHabitOccurrenceApplicable, type HabitOccurrence } from './habit';
+import { dayCompletionCounts } from './day-counts';
 import { calculatePlannedLoad } from './planned-load';
-import { calculateCompletionScore, type CompletionCounts } from './scoring';
+import { calculateCompletionScore } from './scoring';
 import {
   isDatedTaskOccurrence,
   type BackloggedTaskPlanEntry,
@@ -258,29 +259,6 @@ function eventBase(
     effectiveDate: sourceDate,
     occurredAt,
   } as const;
-}
-
-function taskCounts(entries: readonly TaskPlanEntry[]): CompletionCounts {
-  return {
-    completed: entries.reduce(
-      (completed, entry) => completed + (entry.outcome === 'completed' ? 1 : 0),
-      0,
-    ),
-    applicable: entries.length,
-  };
-}
-
-function habitCounts(occurrences: readonly HabitOccurrence[], date: LocalDate): CompletionCounts {
-  return occurrences.reduce<CompletionCounts>(
-    (counts, occurrence) =>
-      occurrence.date !== date || !isHabitOccurrenceApplicable(occurrence)
-        ? counts
-        : {
-            completed: counts.completed + (occurrence.outcome === 'completed' ? 1 : 0),
-            applicable: counts.applicable + 1,
-          },
-    { completed: 0, applicable: 0 },
-  );
 }
 
 function uniqueSortedDates(dates: readonly LocalDate[]): readonly LocalDate[] {
@@ -611,11 +589,14 @@ export function prepareDayClosure(
     return [{ ...entry, finalizedAt: occurredAt }];
   });
 
-  const score = calculateCompletionScore({
-    task: taskCounts(finalizedSourceEntries),
-    habit: habitCounts(input.habitOccurrences, sourceDate),
-  });
-  const plannedLoadMinutes = calculatePlannedLoad(input.taskOccurrences, sourceDate);
+  const score = calculateCompletionScore(
+    dayCompletionCounts(finalizedSourceEntries, input.habitOccurrences, sourceDate),
+  );
+  const plannedLoadMinutes = calculatePlannedLoad(
+    input.taskOccurrences,
+    sourceDate,
+    input.habitOccurrences,
+  );
   const day: ClosedDay = {
     ...input.sourcePeriod.day,
     status: 'closed',

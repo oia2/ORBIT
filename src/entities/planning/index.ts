@@ -14,7 +14,7 @@ export type {
   OpenPeriodRange,
   CloseDayDisposition,
 } from './model/planning-repository';
-export { TaskRow, type TaskRowProps } from './ui/TaskRow';
+export { TaskNoteAction, TaskRow, type TaskNoteActionProps, type TaskRowProps } from './ui/TaskRow';
 export { PeriodStatus, type PeriodStatusProps } from './ui/PeriodStatus';
 export { HabitRow, type HabitRowProps } from './ui/HabitRow';
 export { ScoreBreakdown, type ScoreBreakdownProps } from './ui/ScoreBreakdown';

@@ -7,7 +7,11 @@ import {
 } from '@/entities/planning';
 import { createFixedClock, instant } from '@/shared/lib/local-date/clock';
 import { localDate } from '@/shared/lib/local-date/local-date';
-import { buildOpenDay, buildScoreBreakdown } from '../../../../tests/fixtures/planning';
+import {
+  buildOpenDay,
+  buildScoreBreakdown,
+  buildUnavailableScoreBreakdown,
+} from '../../../../tests/fixtures/planning';
 import { useHistoryPage } from './use-history-page';
 
 afterEach(cleanup);
@@ -54,6 +58,8 @@ function setup() {
                 calendar: [],
                 selectedDay: dayView(query.selectedDate).facts,
                 completedWeeks: [],
+                // 003 FR-035: the month's own aggregate, not the selected day's.
+                progress: buildScoreBreakdown(),
               },
     }),
   );
@@ -176,5 +182,91 @@ describe('useHistoryPage', () => {
     await waitFor(() => {
       expect(first.result.current.state.status).toBe('error');
     });
+  });
+});
+
+/*
+ * 003 US7 (FR-035, FR-037). The reported bug: selecting an empty day inside a
+ * month that contains work blanked the whole dynamics chart, because a month
+ * point was read from `selectedDay.score` instead of the month's aggregate.
+ */
+describe('003 US7: dynamics reflects the period, not the selected day', () => {
+  const EMPTY = buildUnavailableScoreBreakdown();
+  const clock = createFixedClock({
+    instant: instant('2026-01-31T08:00:00.000Z'),
+    currentLocalDate: localDate('2026-01-31'),
+  });
+
+  function monthRepository(monthProgress: ReturnType<typeof buildScoreBreakdown>) {
+    const getHistoryView = vi.fn((query: Parameters<PlanningRepository['getHistoryView']>[0]) =>
+      Promise.resolve({
+        ok: true as const,
+        value: {
+          mode: 'month' as const,
+          anchorDate: query.anchorDate,
+          monthStart: query.anchorDate,
+          monthEnd: query.anchorDate,
+          selectedDate: 'selectedDate' in query ? query.selectedDate : query.anchorDate,
+          calendar: [],
+          // The selected day is deliberately empty while the month is not.
+          selectedDay: {
+            ...dayView(query.anchorDate).facts,
+            score: EMPTY,
+            plannedLoadMinutes: 0 as never,
+          },
+          completedWeeks: [],
+          progress: monthProgress,
+        },
+      }),
+    );
+    return {
+      getHistoryView,
+      prepareOpenPeriod: vi
+        .fn()
+        .mockResolvedValue({ ok: true, value: undefined, affectedDates: [], affectedWeeks: [] }),
+    } as unknown as PlanningRepository;
+  }
+
+  it('charts the month aggregate even when the selected day is empty', async () => {
+    const monthProgress = buildScoreBreakdown();
+    const { result } = renderHook(() => useHistoryPage(clock), {
+      wrapper: ({ children }) => (
+        <PlanningRepositoryProvider repository={monthRepository(monthProgress)}>
+          {children}
+        </PlanningRepositoryProvider>
+      ),
+    });
+
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('ready');
+    });
+    const state = result.current.state;
+    if (state.status !== 'ready') throw new Error('expected ready');
+
+    expect(state.dynamics).toHaveLength(6);
+    for (const point of state.dynamics) {
+      expect(point.score).toBe(monthProgress.value);
+      expect(point.score).not.toBe('unavailable');
+    }
+  });
+
+  it('reports a genuinely empty month as a no-data point rather than a zero', async () => {
+    const { result } = renderHook(() => useHistoryPage(clock), {
+      wrapper: ({ children }) => (
+        <PlanningRepositoryProvider repository={monthRepository(EMPTY)}>
+          {children}
+        </PlanningRepositoryProvider>
+      ),
+    });
+
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('ready');
+    });
+    const state = result.current.state;
+    if (state.status !== 'ready') throw new Error('expected ready');
+
+    for (const point of state.dynamics) {
+      expect(point.score).toBe('unavailable');
+    }
   });
 });

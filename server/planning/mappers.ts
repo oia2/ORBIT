@@ -450,6 +450,7 @@ export function toHabitDefinitionValues(definition: HabitDefinition): HabitDefin
   return {
     id: definition.id,
     title: definition.title,
+    duration_minutes: definition.durationMinutes ?? null,
     rule_versions: json(definition.ruleVersions),
     revision: definition.revision,
   };
@@ -459,6 +460,7 @@ export function fromHabitDefinitionRow(row: HabitDefinitionRow): HabitDefinition
   return {
     id: row.id,
     title: row.title,
+    ...(row.duration_minutes === null ? {} : { durationMinutes: row.duration_minutes }),
     ruleVersions: row.rule_versions,
     revision: row.revision,
   };

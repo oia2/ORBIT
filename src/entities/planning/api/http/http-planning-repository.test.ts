@@ -254,3 +254,66 @@ describe('HttpPlanningRepository — failures are reported honestly', () => {
     expect(fetchStub).toHaveBeenCalledTimes(1);
   });
 });
+
+/*
+ * 003 US1 (FR-004). The read paths above already prove the error mapping. What
+ * this feature needs pinned separately is the *write* path: a command that did
+ * not reach the database must never come back looking like saved work, and it
+ * must never carry the affected-period lists that drive a refresh.
+ */
+describe('003 US1: a failed write is never reported as saved', () => {
+  const failures: readonly [string, () => FetchLike][] = [
+    ['an unreachable server', () => vi.fn(() => Promise.reject(new Error('Failed to fetch')))],
+    ['a database that is down (503)', () => stubFetch({ ok: false, status: 503 }).fetchStub],
+    ['an unexpected server fault (500)', () => stubFetch({ ok: false, status: 500 }).fetchStub],
+  ];
+
+  it.each(failures)('reports %s as a failure when closing a day', async (_name, makeFetch) => {
+    const result = await createRepository(makeFetch()).closeDay({
+      date: TUESDAY,
+      expectedDayRevision: revision(3),
+      dispositions: {},
+    });
+
+    expect(result.ok).toBe(false);
+    // No value, and nothing that would make the client refresh as if it worked.
+    expect(result).not.toHaveProperty('value');
+    expect(result).not.toHaveProperty('affectedDates');
+    expect(result).not.toHaveProperty('affectedWeeks');
+  });
+
+  it.each(failures)('reports %s as a failure when reopening a day', async (_name, makeFetch) => {
+    const result = await createRepository(makeFetch()).reopenDay({
+      date: TUESDAY,
+      expectedDayRevision: revision(3),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result).not.toHaveProperty('affectedDates');
+  });
+
+  it.each(failures)('reports %s as a failure when saving a note', async (_name, makeFetch) => {
+    const result = await createRepository(makeFetch()).editTaskOccurrence({
+      occurrenceId: OCCURRENCE_ID,
+      notes: 'Work that must not be reported as saved',
+      expectedRevision: revision(1),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result).not.toHaveProperty('affectedDates');
+  });
+
+  it('surfaces a failure code the caller can act on, never a silent success', async () => {
+    const fetchStub: FetchLike = vi.fn(() => Promise.reject(new Error('offline')));
+
+    const result = await createRepository(fetchStub).saveDailyState({
+      date: TUESDAY,
+      energy: 4,
+      expectedDayRevision: revision(2),
+    });
+
+    if (result.ok) throw new Error('Expected a failure');
+    expect(['ServerUnavailable', 'UnexpectedServerFailure']).toContain(result.error.code);
+    expect(result.error).toHaveProperty('message');
+  });
+});

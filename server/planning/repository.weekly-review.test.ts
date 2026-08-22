@@ -57,7 +57,6 @@ function score(
             rate: habitCompleted / habitApplicable,
           },
     value,
-    weightsApplied: { task: taskWeight, habit: habitWeight },
   };
 }
 
@@ -124,8 +123,8 @@ describe('PostgreSQL planning repository — US6', () => {
         progress: {
           task: { completed: 1, applicable: 10, rate: 0.1 },
           habit: { completed: 1, applicable: 2, rate: 0.5 },
-          value: 22,
-          weightsApplied: { task: 70, habit: 30 },
+          // 2 of 12 items done. Under the old 70/30 split this read 22.
+          value: 17,
         },
       },
       affectedDates: [],
@@ -136,7 +135,7 @@ describe('PostgreSQL planning repository — US6', () => {
       reflection: 'Keep the morning block.',
       revision: revision(1),
       completedAt: NOW,
-      completionSnapshot: { progress: { value: 22 } },
+      completionSnapshot: { progress: { value: 17 } },
     });
 
     const reopened = await reopenRepositoryUnderTest({
@@ -149,7 +148,7 @@ describe('PostgreSQL planning repository — US6', () => {
       ok: true,
       value: {
         week: { status: 'completed', reflection: 'Keep the morning block.' },
-        progress: { value: 22 },
+        progress: { value: 17 },
       },
     });
     await expect(
@@ -167,7 +166,7 @@ describe('PostgreSQL planning repository — US6', () => {
       expectedRevision: revision(0),
     });
     expect(await database.getWeek(MONDAY)).toMatchObject({
-      completionSnapshot: { progress: { value: 22 } },
+      completionSnapshot: { progress: { value: 17 } },
       reflection: 'Keep the morning block.',
     });
   });

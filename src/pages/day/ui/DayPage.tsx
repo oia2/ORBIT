@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 
 import { HabitRow, TaskRow, type HabitOccurrence } from '@/entities/planning';
 import { CloseDayDialog, useCloseDay } from '@/features/close-day';
+import { ReopenDayDialog, useReopenDay } from '@/features/reopen-day';
 import {
   HabitOutcomeControl,
   HabitRecurrenceDialog,
@@ -70,10 +71,12 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
   const [habitEditorOpen, setHabitEditorOpen] = useState(false);
   const [habitSeriesEditor, setHabitSeriesEditor] = useState<HabitOccurrence>();
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const manageTask = useManageTask(reload);
   const manageHabit = useManageHabit(reload);
   const habitOutcome = useHabitOutcome(reload);
   const closeDay = useCloseDay(reload);
+  const reopenDay = useReopenDay(reload);
   const dailyState = useRecordDailyState(reload);
   const ready = state.status === 'ready' ? state.view : undefined;
   const availableMoveDates = state.status === 'ready' ? state.availableMoveDates : [];
@@ -175,7 +178,7 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
               <div className={styles.loadFacts}>
                 <div>
                   <strong>{formatDurationMinutes(load)}</strong>
-                  <span>в запланированных задачах</span>
+                  <span>в задачах и привычках</span>
                 </div>
                 <div>
                   <strong>{String(taskCount)}</strong>
@@ -217,6 +220,16 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
                     <TaskRow
                       key={task.occurrence.id}
                       task={task}
+                      {...(ready.day.status === 'open'
+                        ? {
+                            onSaveNote: (notes: string | null) =>
+                              manageTask.saveNote({
+                                occurrenceId: task.occurrence.id,
+                                notes,
+                                revision: task.occurrence.revision,
+                              }),
+                          }
+                        : {})}
                       actions={
                         <TaskExecution
                           task={task}
@@ -294,7 +307,8 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
                 </h2>
                 {ready.day.status === 'closed' ? (
                   <p className={styles.closeNote}>
-                    Результат и плановая нагрузка сохранены. Повторное открытие недоступно.
+                    Результат и плановая нагрузка зафиксированы. День можно открыть заново, если
+                    нужно что-то исправить.
                   </p>
                 ) : compareLocalDates(date, currentDate) > 0 ? (
                   <p className={styles.closeNote}>Будущий день пока нельзя закрыть.</p>
@@ -309,9 +323,25 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
                   Закрыть день
                 </Button>
               ) : null}
+              {ready.day.status === 'closed' ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    reopenDay.clearError();
+                    setReopenDialogOpen(true);
+                  }}
+                >
+                  Открыть день заново
+                </Button>
+              ) : null}
               {closeDay.error === undefined ? null : (
                 <p className={styles.cardError} role="alert">
                   {closeDay.error}
+                </p>
+              )}
+              {reopenDay.error === undefined ? null : (
+                <p className={styles.cardError} role="alert">
+                  {reopenDay.error}
                 </p>
               )}
             </section>
@@ -432,7 +462,13 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
           onClose={() => {
             setHabitEditorOpen(false);
           }}
-          onSubmit={({ title, rule }) => manageHabit.create({ title, rule })}
+          onSubmit={({ title, rule, durationMinutes }) =>
+            manageHabit.create({
+              title,
+              rule,
+              ...(durationMinutes === null ? {} : { durationMinutes }),
+            })
+          }
         />
       ) : null}
       {habitSeriesEditor === undefined ? null : (
@@ -441,6 +477,9 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
           mode="update"
           clock={clock}
           initialTitle={habitSeriesEditor.definitionSnapshot.title}
+          {...(habitSeriesEditor.definitionSnapshot.durationMinutes === undefined
+            ? {}
+            : { initialDurationMinutes: habitSeriesEditor.definitionSnapshot.durationMinutes })}
           initialRule={{
             startDate: habitSeriesEditor.date,
             weekdays: [isoWeekday(habitSeriesEditor.date)],
@@ -448,15 +487,38 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
           onClose={() => {
             setHabitSeriesEditor(undefined);
           }}
-          onSubmit={({ rule }) =>
-            manageHabit.update({
+          onSubmit={async ({ rule, durationMinutes }) => {
+            /*
+             * The duration goes first: it does not bump the definition
+             * revision, so the rule update that follows still holds a current
+             * one. The reverse order would conflict with itself.
+             */
+            if (
+              !(await manageHabit.setDuration({
+                definitionId: habitSeriesEditor.definitionId,
+                durationMinutes,
+                revision: habitSeriesEditor.ruleRevision,
+              }))
+            ) {
+              return false;
+            }
+            return manageHabit.update({
               definitionId: habitSeriesEditor.definitionId,
               rule,
               revision: habitSeriesEditor.ruleRevision,
-            })
-          }
+            });
+          }}
         />
       )}
+      {reopenDialogOpen && ready !== undefined ? (
+        <ReopenDayDialog
+          open
+          onClose={() => {
+            setReopenDialogOpen(false);
+          }}
+          onConfirm={() => reopenDay.reopen({ date, revision: ready.day.revision })}
+        />
+      ) : null}
       {closeDialogOpen && ready !== undefined ? (
         <CloseDayDialog
           open

@@ -22,6 +22,7 @@ import type {
   ClearHabitOutcomeInput,
   CloseDayDisposition,
   CloseDayInput,
+  ReopenDayInput,
   CompleteWeekInput,
   CorrectBoundaryMissInput,
   CreateHabitDefinitionInput,
@@ -45,6 +46,7 @@ import type {
   SetTaskCompletionInput,
   StopHabitDefinitionInput,
   StopTaskSeriesInput,
+  UpdateHabitDurationInput,
   UpdateHabitRuleInput,
   UpdateTaskSeriesRuleInput,
   ValidationIssue,
@@ -231,6 +233,18 @@ function readOptionalDuration(
   issues: Issues,
 ): DurationMinutes | undefined {
   if (body[field] === undefined) return undefined;
+  return readDuration(body, field, issues);
+}
+
+/** `undefined` leaves the value alone, explicit `null` clears it (003 FR-029). */
+function readClearableDuration(
+  body: Record<string, unknown>,
+  field: string,
+  issues: Issues,
+): DurationMinutes | null | undefined {
+  const value = body[field];
+  if (value === undefined) return undefined;
+  if (value === null) return null;
   return readDuration(body, field, issues);
 }
 
@@ -551,7 +565,8 @@ export function parseEditTaskOccurrence(input: unknown): ParseResult<EditTaskOcc
   const body = requireBody(input, issues);
   const occurrenceId = readEntityId<'task-occurrence'>(body, 'occurrenceId', issues);
   const title = readOptionalString(body, 'title', issues);
-  const notes = readOptionalString(body, 'notes', issues);
+  const hasNotes = Object.hasOwn(body, 'notes');
+  const notes = readClearableString(body, 'notes', issues);
   const hasStartTime = Object.hasOwn(body, 'startTime');
   const hasEndTime = Object.hasOwn(body, 'endTime');
   const startTime = readClearableString(body, 'startTime', issues);
@@ -562,7 +577,9 @@ export function parseEditTaskOccurrence(input: unknown): ParseResult<EditTaskOcc
   return result(issues, () => ({
     occurrenceId,
     ...(title === undefined ? {} : { title }),
-    ...(notes === undefined ? {} : { notes }),
+    // Same tri-state as the times below: absent leaves the note alone, an
+    // explicit null clears it (003 FR-024).
+    ...(hasNotes ? { notes: notes ?? null } : {}),
     // An absent key means "leave unchanged"; an explicit null means "clear".
     // Collapsing the two would silently drop a clear request.
     ...(hasStartTime ? { startTime: startTime ?? null } : {}),
@@ -658,8 +675,13 @@ export function parseCreateHabitDefinition(
   const issues = new Issues();
   const body = requireBody(input, issues);
   const title = readString(body, 'title', issues);
+  const durationMinutes = readOptionalDuration(body, 'durationMinutes', issues);
   const recurrenceRule = readRecurrenceRule(body, issues);
-  return result(issues, () => ({ title, recurrenceRule }));
+  return result(issues, () => ({
+    title,
+    ...(durationMinutes === undefined ? {} : { durationMinutes }),
+    recurrenceRule,
+  }));
 }
 
 export function parseUpdateHabitRule(input: unknown): ParseResult<UpdateHabitRuleInput> {
@@ -687,6 +709,23 @@ export function parseStopHabitDefinition(input: unknown): ParseResult<StopHabitD
   return result(issues, () => ({ definitionId, expectedRevision }));
 }
 
+export function parseUpdateHabitDuration(input: unknown): ParseResult<UpdateHabitDurationInput> {
+  const issues = new Issues();
+  const body = requireBody(input, issues);
+  const definitionId = readEntityId<'habit-definition'>(
+    body,
+    'definitionId',
+    issues,
+  ) as HabitDefinitionId;
+  const durationMinutes = readClearableDuration(body, 'durationMinutes', issues);
+  const expectedRevision = readRevision(body, 'expectedRevision', issues);
+  return result(issues, () => ({
+    definitionId,
+    durationMinutes: durationMinutes ?? null,
+    expectedRevision,
+  }));
+}
+
 export function parseEditHabitOccurrence(input: unknown): ParseResult<EditHabitOccurrenceInput> {
   const issues = new Issues();
   const body = requireBody(input, issues);
@@ -696,8 +735,15 @@ export function parseEditHabitOccurrence(input: unknown): ParseResult<EditHabitO
     issues,
   ) as HabitOccurrenceId;
   const title = readString(body, 'title', issues);
+  const hasDuration = Object.hasOwn(body, 'durationMinutes');
+  const durationMinutes = readClearableDuration(body, 'durationMinutes', issues);
   const expectedRevision = readRevision(body, 'expectedRevision', issues);
-  return result(issues, () => ({ occurrenceId, title, expectedRevision }));
+  return result(issues, () => ({
+    occurrenceId,
+    title,
+    ...(hasDuration ? { durationMinutes: durationMinutes ?? null } : {}),
+    expectedRevision,
+  }));
 }
 
 export function parseRecordHabitOutcome(input: unknown): ParseResult<RecordHabitOutcomeInput> {
@@ -771,6 +817,14 @@ export function parseCloseDay(input: unknown): ParseResult<CloseDayInput> {
   const expectedDayRevision = readRevision(body, 'expectedDayRevision', issues);
   const dispositions = readDispositions(body, issues);
   return result(issues, () => ({ date, expectedDayRevision, dispositions }));
+}
+
+export function parseReopenDay(input: unknown): ParseResult<ReopenDayInput> {
+  const issues = new Issues();
+  const body = requireBody(input, issues);
+  const date = readLocalDate(body, 'date', issues);
+  const expectedDayRevision = readRevision(body, 'expectedDayRevision', issues);
+  return result(issues, () => ({ date, expectedDayRevision }));
 }
 
 export function parseCompleteWeek(input: unknown): ParseResult<CompleteWeekInput> {

@@ -132,6 +132,8 @@ export interface TaskEventsTable {
 export interface HabitDefinitionsTable {
   readonly id: HabitDefinitionId;
   readonly title: string;
+  /** Optional; contributes to a day's planned load when set (003 FR-030). */
+  readonly duration_minutes: DurationMinutes | null;
   readonly rule_versions: Json<readonly RecurrenceRuleVersion[]>;
   readonly revision: Revision;
 }

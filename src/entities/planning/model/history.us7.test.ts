@@ -56,14 +56,12 @@ const UNAVAILABLE_SCORE: ScoreBreakdown = {
   task: { completed: 0, applicable: 0, rate: 'unavailable' },
   habit: { completed: 0, applicable: 0, rate: 'unavailable' },
   value: 'unavailable',
-  weightsApplied: { task: 0, habit: 0 },
 };
 
 const FROZEN_SCORE: ScoreBreakdown = {
   task: { completed: 2, applicable: 3, rate: 2 / 3 },
   habit: { completed: 1, applicable: 2, rate: 1 / 2 },
   value: 62,
-  weightsApplied: { task: 70, habit: 30 },
 };
 
 function id<TKind extends string>(suffix: string) {
@@ -419,8 +417,8 @@ describe('immutable Day History facts', () => {
     expect(view.facts.score).toEqual({
       task: { completed: 0, applicable: 1, rate: 0 },
       habit: { completed: 1, applicable: 1, rate: 1 },
-      value: 30,
-      weightsApplied: { task: 70, habit: 30 },
+      // 1 of 2 items done. Under the old 70/30 split this read 30.
+      value: 50,
     });
     expect(view.facts.plannedLoadMinutes).toBe(30);
   });

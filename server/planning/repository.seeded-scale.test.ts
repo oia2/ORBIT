@@ -24,8 +24,8 @@ const MAY_2026_DATES = Array.from({ length: 31 }, (_, index) =>
 const EXPECTED_COMPLETED_WEEK_PROGRESS = {
   task: { completed: 14, applicable: 14, rate: 1 },
   habit: { completed: 4, applicable: 7, rate: 4 / 7 },
-  value: 87,
-  weightsApplied: { task: 70, habit: 30 },
+  // 18 of 21 items done. Under the old 70/30 split this read 87.
+  value: 86,
 } as const;
 
 /** Tables whose row count grows with retained history. */

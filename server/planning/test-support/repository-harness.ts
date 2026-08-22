@@ -1,7 +1,14 @@
-import type { ApplicationClock } from '@/shared/lib/local-date/clock';
-import type { LocalDate } from '@/shared/lib/local-date/local-date';
+import type { ApplicationClock, Instant } from '@/shared/lib/local-date/clock';
+import { startOfWeek, type LocalDate } from '@/shared/lib/local-date/local-date';
 
-import type { Day } from '@/entities/planning/model/day';
+import { revision as makeRevision, type Revision } from '@/shared/lib/ids';
+
+import type {
+  DailyStateEntry,
+  Day,
+  ClosedDay,
+  DayClosureSnapshot,
+} from '@/entities/planning/model/day';
 import type { HabitDefinition, HabitOccurrence } from '@/entities/planning/model/habit';
 import type {
   TaskEvent,
@@ -393,6 +400,36 @@ function createTestStore(db: PlanningDatabase): TestPlanningStore {
           .execute();
       });
     },
+  };
+}
+
+export interface ClosedDayFixture {
+  readonly date: LocalDate;
+  readonly closureSnapshot: DayClosureSnapshot;
+  readonly closedAt: Instant;
+  readonly weekStart?: LocalDate;
+  readonly revision?: Revision;
+  readonly state?: DailyStateEntry;
+}
+
+/**
+ * Builds one `ClosedDay` with a caller-supplied frozen snapshot.
+ *
+ * Feature 003 needs closed days whose recorded counts are chosen by the test
+ * rather than produced by running a closure: the 003 US2 suites assert that a
+ * snapshot and the live derivation agree, and the 003 US3 suites reopen a day
+ * and compare against the snapshot it discarded. Driving a real closure to
+ * reach those states would make the assertion depend on the code under test.
+ */
+export function closedDayFixture(input: ClosedDayFixture): ClosedDay {
+  return {
+    date: input.date,
+    weekStart: input.weekStart ?? startOfWeek(input.date),
+    status: 'closed',
+    ...(input.state === undefined ? {} : { state: input.state }),
+    closureSnapshot: input.closureSnapshot,
+    closedAt: input.closedAt,
+    revision: input.revision ?? makeRevision(1),
   };
 }
 

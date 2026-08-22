@@ -574,6 +574,28 @@ export async function getHabitOccurrencesInRange(
   return rows.map(fromHabitOccurrenceRow);
 }
 
+/**
+ * A habit definition's occurrences that sit on an **open** day.
+ *
+ * Bounded by the join to `days.status`, so a duration change touches only what
+ * it is allowed to touch and never scans a full history (003 FR-034).
+ */
+export async function getOpenHabitOccurrencesByDefinition(
+  x: Executor,
+  definitionId: string,
+): Promise<readonly HabitOccurrence[]> {
+  const rows = await x
+    .selectFrom('habit_occurrences')
+    .innerJoin('days', 'days.date', 'habit_occurrences.date')
+    .selectAll('habit_occurrences')
+    .where('habit_occurrences.definition_id', '=', definitionId as never)
+    .where('days.status', '=', 'open')
+    .orderBy('habit_occurrences.date')
+    .execute();
+
+  return rows.map(fromHabitOccurrenceRow);
+}
+
 export async function insertHabitOccurrence(
   x: Executor,
   occurrence: HabitOccurrence,

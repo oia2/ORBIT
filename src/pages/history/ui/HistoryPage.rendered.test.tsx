@@ -1,15 +1,17 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { HistoricalDayFacts, HistoryView } from '@/entities/planning';
-import { nonNegativeDurationMinutes } from '@/shared/lib/ids';
+import { durationMinutes, nonNegativeDurationMinutes } from '@/shared/lib/ids';
 import { createFixedClock, instant } from '@/shared/lib/local-date/clock';
 import { localDate, startOfWeek, type LocalDate } from '@/shared/lib/local-date/local-date';
 import {
   buildClosedDay,
   buildDailyState,
   buildHabitOccurrence,
+  buildIncompleteTaskOccurrence,
   buildOpenDay,
   buildScoreBreakdown,
   buildUnavailableScoreBreakdown,
@@ -31,11 +33,19 @@ type HistoryController = ReturnType<typeof useHistoryPage>;
 function taskFact(
   ordinal: number,
   outcome: HistoricalDayFacts['tasks'][number]['explanation']['disposition']['outcome'],
+  notes?: string,
 ): HistoricalDayFacts['tasks'][number] {
+  const title = `Задача ${String(ordinal)}`;
   return {
+    occurrence: buildIncompleteTaskOccurrence({
+      id: deterministicEntityId<'task-occurrence'>(300 + ordinal),
+      title,
+      ...(notes === undefined ? {} : { notes }),
+    }),
     membership: { id: deterministicEntityId<'task-plan-entry'>(100 + ordinal) },
+    events: [],
     explanation: {
-      planned: { title: `Задача ${String(ordinal)}` },
+      planned: { title },
       disposition: { outcome },
     },
   } as unknown as HistoricalDayFacts['tasks'][number];
@@ -89,7 +99,8 @@ afterEach(() => {
 });
 
 describe('HistoryPage rendered period compositions', () => {
-  it('renders populated Month facts, every calendar tone, and data-bearing dynamics', () => {
+  it('renders populated Month facts, every calendar tone, and data-bearing dynamics', async () => {
+    const user = userEvent.setup();
     const selectedDate = localDate('2026-05-20');
     const score = buildScoreBreakdown({
       task: { completed: 4, applicable: 5, rate: 0.8 },
@@ -103,7 +114,7 @@ describe('HistoryPage rendered period compositions', () => {
         state: buildDailyState({ sleepDurationMinutes: nonNegativeDurationMinutes(455) }),
       }),
       tasks: [
-        taskFact(1, 'planned'),
+        taskFact(1, 'planned', 'Одна и та же заметка'),
         taskFact(2, 'completed'),
         taskFact(3, 'moved'),
         taskFact(4, 'backlogged'),
@@ -117,7 +128,13 @@ describe('HistoryPage rendered period compositions', () => {
             id: deterministicEntityId<'habit-occurrence'>(200 + index),
             date: selectedDate,
             weekStart: startOfWeek(selectedDate),
-            definitionSnapshot: { title: `Привычка ${String(index + 1)}` },
+            definitionSnapshot:
+              index === 0
+                ? {
+                    title: `Привычка ${String(index + 1)}`,
+                    durationMinutes: durationMinutes(30),
+                  }
+                : { title: `Привычка ${String(index + 1)}` },
             outcome,
           }),
       ),
@@ -155,6 +172,8 @@ describe('HistoryPage rendered period compositions', () => {
       ],
       selectedDay: selectedFacts,
       completedWeeks: [],
+      // 003 FR-035: a month view carries its own aggregate.
+      progress: score,
     };
     const state = readyController('month', selectedDate, view, [
       { label: localDate('2026-01-01'), taskRate: 0.5, habitRate: 1, score: 65 },
@@ -175,9 +194,18 @@ describe('HistoryPage rendered period compositions', () => {
     expect(container.querySelectorAll('[data-score-tone="none"]')).toHaveLength(2);
     expect(screen.getByText('Задача 7')).toBeVisible();
     expect(screen.getByText('Привычка 4')).toBeVisible();
+    expect(screen.getByText('Привычка 1').closest('li')).toHaveTextContent('30 мин');
     expect(screen.getByText('2 ч 15 мин')).toBeVisible();
     expect(screen.getByText('86%')).toBeVisible();
     expect(container.querySelector('[data-od-id="history-dynamics"]')).toBeVisible();
+
+    const firstTask = screen.getByText('Задача 1').closest('li');
+    if (firstTask === null) throw new Error('Expected historical task row');
+    await user.click(within(firstTask).getByRole('button', { name: /заметка к задаче/i }));
+    expect(screen.getByRole('dialog', { name: 'Заметка' })).toHaveTextContent(
+      'Одна и та же заметка',
+    );
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /21 мая 2026/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Предыдущий период' }));
@@ -200,6 +228,7 @@ describe('HistoryPage rendered period compositions', () => {
       calendar: [],
       selectedDay: facts(selectedDate),
       completedWeeks: [],
+      progress: buildUnavailableScoreBreakdown(),
     };
     renderHistory(
       readyController('month', selectedDate, view, [
@@ -320,5 +349,84 @@ describe('HistoryPage rendered period compositions', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Тестовая ошибка хранилища');
     fireEvent.click(screen.getByRole('button', { name: 'Повторить' }));
     expect(reload).toHaveBeenCalledOnce();
+  });
+});
+
+/*
+ * 003 US7 (FR-038, FR-039). A period with nothing in it is a gap in the chart,
+ * not a reason to hide the chart. The whole-range empty state survives only for
+ * a range where every period is empty.
+ */
+describe('003 US7: dynamics empty handling', () => {
+  const selectedDate = localDate('2026-05-20');
+
+  function monthView(): Extract<HistoryView, { mode: 'month' }> {
+    return {
+      mode: 'month',
+      anchorDate: selectedDate,
+      monthStart: localDate('2026-05-01'),
+      monthEnd: localDate('2026-05-31'),
+      selectedDate,
+      calendar: [],
+      selectedDay: {
+        day: buildOpenDay({ date: selectedDate }),
+        tasks: [],
+        habits: [],
+        score: buildUnavailableScoreBreakdown(),
+        plannedLoadMinutes: nonNegativeDurationMinutes(0),
+      },
+      completedWeeks: [],
+      progress: buildUnavailableScoreBreakdown(),
+    };
+  }
+
+  function point(label: LocalDate, score: number | 'unavailable'): HistoryPoint {
+    return {
+      label,
+      taskRate: score === 'unavailable' ? 'unavailable' : 1,
+      habitRate: score === 'unavailable' ? 'unavailable' : 1,
+      score,
+    };
+  }
+
+  it('draws the chart when only some periods are empty (FR-038)', () => {
+    const { container } = renderHistory(
+      readyController('month', selectedDate, monthView(), [
+        point(localDate('2026-03-01'), 'unavailable'),
+        point(localDate('2026-04-01'), 80),
+        point(localDate('2026-05-01'), 'unavailable'),
+      ]).controller,
+    );
+
+    const chart = container.querySelector('[data-od-id="history-dynamics"]');
+    expect(chart).toBeVisible();
+    expect(chart?.textContent).not.toContain('Данных для динамики пока нет');
+    // Every period is still drawn; the empty ones are marked as gaps.
+    expect(container.querySelectorAll('ol li')).toHaveLength(3);
+    expect(container.querySelectorAll('ol li[data-empty="true"]')).toHaveLength(2);
+  });
+
+  it('shows the empty state only when every period is empty (FR-039)', () => {
+    const { container } = renderHistory(
+      readyController('month', selectedDate, monthView(), [
+        point(localDate('2026-04-01'), 'unavailable'),
+        point(localDate('2026-05-01'), 'unavailable'),
+      ]).controller,
+    );
+
+    expect(container.querySelector('[data-od-id="history-dynamics"]')?.textContent).toContain(
+      'Данных для динамики пока нет',
+    );
+  });
+
+  it('names the series without encoding the formula (FR-020)', () => {
+    const { container } = renderHistory(
+      readyController('month', selectedDate, monthView(), [point(localDate('2026-05-01'), 80)])
+        .controller,
+    );
+
+    const chart = container.querySelector('[data-od-id="history-dynamics"]');
+    expect(chart?.textContent).toContain('Результат');
+    expect(chart?.textContent).not.toContain('70/30');
   });
 });

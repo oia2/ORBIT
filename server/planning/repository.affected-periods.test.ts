@@ -373,7 +373,6 @@ describe('command receipts name every period they change', () => {
             task: { completed: 0, applicable: 0, rate: 'unavailable' },
             habit: { completed: 0, applicable: 0, rate: 'unavailable' },
             value: 'unavailable',
-            weightsApplied: { task: 0, habit: 0 },
           },
           plannedLoadMinutes: nonNegativeDurationMinutes(0),
         },

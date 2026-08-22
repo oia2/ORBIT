@@ -25,14 +25,24 @@ export interface HabitRecurrenceDialogProps {
   readonly clock: ApplicationClock;
   readonly initialTitle?: string;
   readonly initialRule?: RecurrenceRule;
+  /** Minutes the habit takes, or absent when it carries no duration. */
+  readonly initialDurationMinutes?: number;
   readonly onClose: () => void;
-  readonly onSubmit: (input: { title: string; rule: RecurrenceRule }) => Promise<boolean>;
+  readonly onSubmit: (input: {
+    title: string;
+    rule: RecurrenceRule;
+    /** `null` clears the duration; `undefined` means it was left empty. */
+    durationMinutes: number | null;
+  }) => Promise<boolean>;
 }
 
 export function HabitRecurrenceDialog(props: HabitRecurrenceDialogProps) {
   const [title, setTitle] = useState(props.initialTitle ?? '');
   const [weekdays, setWeekdays] = useState<readonly IsoWeekday[]>(
     props.initialRule?.weekdays ?? [],
+  );
+  const [duration, setDuration] = useState(
+    props.initialDurationMinutes === undefined ? '' : String(props.initialDurationMinutes),
   );
   const [reviewDate, setReviewDate] = useState<LocalDate>(props.clock.currentLocalDate());
   const [error, setError] = useState<string>();
@@ -63,6 +73,14 @@ export function HabitRecurrenceDialog(props: HabitRecurrenceDialogProps) {
       setError('Заполните название и выберите хотя бы один день недели.');
       return;
     }
+    // Empty means "no duration", which is a valid state (003 FR-029); a filled
+    // field has to be a positive whole number of minutes.
+    const trimmedDuration = duration.trim();
+    const durationMinutes = trimmedDuration.length === 0 ? null : Number(trimmedDuration);
+    if (durationMinutes !== null && (!Number.isInteger(durationMinutes) || durationMinutes <= 0)) {
+      setError('Длительность должна быть целым числом больше нуля.');
+      return;
+    }
     // Existing habits keep their originally recorded start date; only a brand-new habit
     // gets today's date. `applyRecurrenceRuleChange` always makes updates effective from
     // tomorrow regardless of this value, so preserving it here never rewrites past history.
@@ -74,7 +92,7 @@ export function HabitRecurrenceDialog(props: HabitRecurrenceDialogProps) {
       startDate,
       weekdays: [...weekdays].sort(),
     };
-    if (await props.onSubmit({ title, rule })) props.onClose();
+    if (await props.onSubmit({ title, rule, durationMinutes })) props.onClose();
   };
   return (
     <Dialog
@@ -87,6 +105,22 @@ export function HabitRecurrenceDialog(props: HabitRecurrenceDialogProps) {
           value={title}
           onChange={(event) => {
             setTitle(event.target.value);
+          }}
+        />
+      </FormField>
+      <FormField
+        id="habit-duration"
+        label="Длительность, мин (необязательно)"
+        hint="Войдёт в плановую нагрузку дня. На результат не влияет."
+      >
+        <input
+          type="number"
+          min="1"
+          step="1"
+          inputMode="numeric"
+          value={duration}
+          onChange={(event) => {
+            setDuration(event.target.value);
           }}
         />
       </FormField>

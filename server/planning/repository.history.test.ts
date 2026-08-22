@@ -59,21 +59,18 @@ const UNAVAILABLE_SCORE: ScoreBreakdown = {
   task: { completed: 0, applicable: 0, rate: 'unavailable' },
   habit: { completed: 0, applicable: 0, rate: 'unavailable' },
   value: 'unavailable',
-  weightsApplied: { task: 0, habit: 0 },
 };
 
 const CLOSED_DAY_SCORE: ScoreBreakdown = {
   task: { completed: 0, applicable: 1, rate: 0 },
   habit: { completed: 0, applicable: 0, rate: 'unavailable' },
   value: 0,
-  weightsApplied: { task: 100, habit: 0 },
 };
 
 const COMPLETED_WEEK_PROGRESS: ScoreBreakdown = {
   task: { completed: 1, applicable: 2, rate: 1 / 2 },
   habit: { completed: 1, applicable: 1, rate: 1 },
   value: 65,
-  weightsApplied: { task: 70, habit: 30 },
 };
 
 function uuidGenerator(): () => string {

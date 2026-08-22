@@ -143,6 +143,15 @@ export interface HistoryMonthView {
   readonly calendar: readonly HistoryMonthCalendarCell[];
   readonly selectedDay: HistoricalDayFacts;
   readonly completedWeeks: readonly HistoricalWeekFacts[];
+  /**
+   * The whole month's aggregated result (003 FR-035).
+   *
+   * The dynamics chart used to read `selectedDay.score` for a month point, so
+   * selecting an empty day inside a month full of work blanked the chart. The
+   * aggregate belongs in the domain next to the week rule rather than being
+   * recomputed in the page.
+   */
+  readonly progress: ScoreBreakdown;
 }
 
 export type HistoryView = HistoryDayView | HistoryWeekView | HistoryMonthView;

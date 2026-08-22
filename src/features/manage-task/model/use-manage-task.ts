@@ -115,6 +115,33 @@ export function useManageTask(onCommitted: () => void | Promise<void>) {
     return true;
   };
 
+  /**
+   * Saves only the note, leaving every other field alone (003 FR-024).
+   *
+   * `null` clears it. This is separate from `edit` because the note is edited
+   * in place on the task row rather than through the editor dialog, and sending
+   * the whole snapshot from there would overwrite fields the row never showed.
+   */
+  const saveNote = async (input: {
+    occurrenceId: TaskOccurrenceId;
+    notes: string | null;
+    revision: Parameters<PlanningRepository['editTaskOccurrence']>[0]['expectedRevision'];
+  }) => {
+    const result = await repository.editTaskOccurrence({
+      occurrenceId: input.occurrenceId,
+      notes: input.notes,
+      expectedRevision: input.revision,
+    });
+    if (!result.ok) {
+      await recoverConflict(result.error);
+      setError('Не удалось сохранить заметку.');
+      return false;
+    }
+    setError(undefined);
+    await onCommitted();
+    return true;
+  };
+
   const edit = async (input: {
     occurrenceId: TaskOccurrenceId;
     title: string;
@@ -308,6 +335,7 @@ export function useManageTask(onCommitted: () => void | Promise<void>) {
     reorderDated,
     toggleCompletion,
     edit,
+    saveNote,
     remove,
     moveToBacklog,
     moveToDate,
