@@ -356,6 +356,28 @@ export interface PrepareTaskEditInput {
   readonly occurredAt: Instant;
 }
 
+/**
+ * `after` is a complete value snapshot, so it is authoritative for the note:
+ * an absent or blank note in `after` means the edit removed it.
+ *
+ * Both edit branches spread `occurrenceCommon` first, which carries the
+ * previous note forward. Without stripping it, `{...common, ...(after.notes ===
+ * undefined ? {} : {notes})}` can only ever *set* a note, never clear one
+ * (003 FR-024).
+ */
+function withoutNotes<TValue extends { readonly notes?: string }>(
+  value: TValue,
+): Omit<TValue, 'notes'> {
+  const { notes, ...rest } = value;
+  void notes;
+  return rest;
+}
+
+function editedNotes(after: TaskValueSnapshot): { readonly notes?: string } {
+  const trimmed = after.notes?.trim();
+  return trimmed === undefined || trimmed.length === 0 ? {} : { notes: trimmed };
+}
+
 export function prepareTaskEdit(
   input: PrepareTaskEditInput,
 ): Result<PreparedTaskEdit, TaskLifecycleError> {
@@ -383,9 +405,9 @@ export function prepareTaskEdit(
       return err(validationFailure('durationMinutes', 'Dated tasks require a positive duration'));
     }
     const common = {
-      ...occurrenceCommon(input.occurrence),
+      ...withoutNotes(occurrenceCommon(input.occurrence)),
       title: input.after.title,
-      ...(input.after.notes === undefined ? {} : { notes: input.after.notes }),
+      ...editedNotes(input.after),
       state: 'active' as const,
       placement: input.occurrence.placement,
       plannedDurationMinutes: input.after.plannedDurationMinutes,
@@ -420,9 +442,9 @@ export function prepareTaskEdit(
     return err(validationFailure('effectiveDate', 'Backlog edit effective date is required'));
   }
   const occurrence: BacklogTaskOccurrence = {
-    ...occurrenceCommon(input.occurrence),
+    ...withoutNotes(occurrenceCommon(input.occurrence)),
     title: input.after.title,
-    ...(input.after.notes === undefined ? {} : { notes: input.after.notes }),
+    ...editedNotes(input.after),
     state: 'active',
     placement: { kind: 'backlog' },
     ...(input.after.plannedDurationMinutes === undefined

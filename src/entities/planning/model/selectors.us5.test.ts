@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { createOpenDay, type ClosedDay, type OpenDay } from './day';
-import { habitCompletionCounts, type HabitOccurrence } from './habit';
+import { habitCompletionCounts } from './day-counts';
+import type { HabitOccurrence } from './habit';
 import { selectDaySignals, selectOpenDayPlanningView, selectWeekSignals } from './selectors';
 import type {
   BacklogTaskOccurrence,
@@ -152,7 +153,6 @@ function frozenDay(): ClosedDay {
         task: { completed: 2, applicable: 3, rate: 2 / 3 },
         habit: { completed: 1, applicable: 2, rate: 1 / 2 },
         value: 62,
-        weightsApplied: { task: 70, habit: 30 },
       },
       plannedLoadMinutes: nonNegativeDurationMinutes(90),
     },
@@ -198,7 +198,6 @@ describe('live Day score and factual load projection', () => {
       task: { completed: 1, applicable: 3, rate: 1 / 3 },
       habit: { completed: 1, applicable: 3, rate: 1 / 3 },
       value: 33,
-      weightsApplied: { task: 70, habit: 30 },
     });
     expect(signals.plannedLoadMinutes).toBe(75);
     expect(habitCompletionCounts(facts.habits, DATE)).toEqual({ completed: 1, applicable: 3 });
@@ -237,7 +236,6 @@ describe('live Day score and factual load projection', () => {
       task: { completed: 0, applicable: 0, rate: 'unavailable' },
       habit: { completed: 0, applicable: 0, rate: 'unavailable' },
       value: 'unavailable',
-      weightsApplied: { task: 0, habit: 0 },
     });
     expect(signals.plannedLoadMinutes).toBe(0);
   });

@@ -1,0 +1,14 @@
+# Keep the working tree LF on every platform, so Prettier's endOfLine: "lf"
+# check behaves the same on Windows as it does in CI (core.autocrlf must not
+# rewrite checkouts to CRLF).
+* text=auto eol=lf
+
+# Binary assets git must never touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.dump binary

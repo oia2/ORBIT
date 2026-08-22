@@ -94,7 +94,6 @@ describe('planning database type parsers', () => {
             task: { completed: 0, applicable: 0, rate: 'unavailable' },
             habit: { completed: 0, applicable: 0, rate: 'unavailable' },
             value: 'unavailable',
-            weightsApplied: { task: 0, habit: 0 },
           },
         }),
         completed_at: value,

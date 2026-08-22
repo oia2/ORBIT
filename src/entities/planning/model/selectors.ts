@@ -2,7 +2,8 @@ import { compareLocalDates, weekDates, type LocalDate } from '@/shared/lib/local
 import { INITIAL_REVISION, type NonNegativeDurationMinutes } from '@/shared/lib/ids';
 
 import { createOpenDay, type ClosedDay, type Day, type OpenDay, type ScoreBreakdown } from './day';
-import { habitCompletionCounts, type HabitOccurrence } from './habit';
+import type { HabitOccurrence } from './habit';
+import { addCompletionCounts, dayCompletionCounts } from './day-counts';
 import {
   deriveHistoryDateRange,
   explainTaskMembership,
@@ -23,7 +24,7 @@ import {
   type WeekView,
 } from './history';
 import { calculatePlannedLoad } from './planned-load';
-import { calculateCompletionScore, type CompletionCounts } from './scoring';
+import { calculateCompletionScore } from './scoring';
 import {
   isDatedTaskOccurrence,
   sortDatedTaskOccurrences,
@@ -40,7 +41,6 @@ const unavailableScore: ScoreBreakdown = {
   task: { completed: 0, applicable: 0, rate: 'unavailable' },
   habit: { completed: 0, applicable: 0, rate: 'unavailable' },
   value: 'unavailable',
-  weightsApplied: { task: 0, habit: 0 },
 };
 
 export interface PlanningTaskProjection extends ProjectedTaskMembership {
@@ -205,19 +205,6 @@ function taskProjectionsForDate(
   });
 }
 
-function taskCompletionCounts(
-  planEntries: readonly TaskPlanEntry[],
-  date: LocalDate,
-): CompletionCounts {
-  const applicable = planEntries.filter(
-    (entry) => entry.date === date && entry.outcome !== 'deleted',
-  );
-  return {
-    completed: applicable.filter((entry) => entry.outcome === 'completed').length,
-    applicable: applicable.length,
-  };
-}
-
 function exactWeekDays(week: Week, days: readonly Day[]): readonly Day[] {
   const expectedDates = weekDates(week.startDate);
   const daysByDate = new Map<LocalDate, Day>();
@@ -261,11 +248,10 @@ export function selectDaySignals(input: SelectDaySignalsInput): DaySignalProject
   return {
     day: input.day,
     calculation: 'live',
-    score: calculateCompletionScore({
-      task: taskCompletionCounts(input.planEntries, input.day.date),
-      habit: habitCompletionCounts(input.habits ?? [], input.day.date),
-    }),
-    plannedLoadMinutes: calculatePlannedLoad(input.occurrences, input.day.date),
+    score: calculateCompletionScore(
+      dayCompletionCounts(input.planEntries, input.habits ?? [], input.day.date),
+    ),
+    plannedLoadMinutes: calculatePlannedLoad(input.occurrences, input.day.date, input.habits ?? []),
   };
 }
 
@@ -532,13 +518,6 @@ function historicalDayFacts(
   };
 }
 
-function addCompletionCounts(left: CompletionCounts, right: CompletionCounts): CompletionCounts {
-  return {
-    completed: left.completed + right.completed,
-    applicable: left.applicable + right.applicable,
-  };
-}
-
 function aggregateHistoricalProgress(days: readonly HistoricalDayFacts[]): ScoreBreakdown {
   const counts = days.reduce(
     (total, facts) => ({
@@ -606,19 +585,19 @@ export function selectHistoryView(input: SelectHistoryViewInput): HistoryView {
     };
   }
 
-  const calendar: readonly HistoryMonthCalendarCell[] = range.dates.map((date) => {
-    const day = uniqueDayForDate(input.days, date);
-    if (day === undefined) {
-      return { date, belongsToMonth: true };
-    }
-    const facts = historicalDayFacts(input, date, occurrencesById);
-    return {
-      date,
-      belongsToMonth: true,
-      dayStatus: day.status,
-      score: facts.score,
-    };
-  });
+  const monthDays = range.dates.map((date) => ({
+    date,
+    day: uniqueDayForDate(input.days, date),
+    facts: historicalDayFacts(input, date, occurrencesById),
+  }));
+  const calendar: readonly HistoryMonthCalendarCell[] = monthDays.map(({ date, day, facts }) =>
+    day === undefined
+      ? { date, belongsToMonth: true }
+      : { date, belongsToMonth: true, dayStatus: day.status, score: facts.score },
+  );
+  // The month's own result, aggregated from its days by the same rule the week
+  // uses — so a chart point describes the period rather than one day in it.
+  const progress = aggregateHistoricalProgress(monthDays.map(({ facts }) => facts));
   const completedWeeks = input.weeks
     .filter(
       (week): week is CompletedWeek =>
@@ -639,5 +618,6 @@ export function selectHistoryView(input: SelectHistoryViewInput): HistoryView {
     calendar,
     selectedDay: historicalDayFacts(input, range.selectedDate, occurrencesById),
     completedWeeks,
+    progress,
   };
 }

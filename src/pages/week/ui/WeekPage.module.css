@@ -349,6 +349,14 @@
   white-space: nowrap;
 }
 
+.habitDuration {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-regular);
+  white-space: nowrap;
+}
+
 /* Fixed seven-column track so every row's marks line up under the day legend. */
 /* Legend and every habit row share this track definition so the weekday
    headings sit exactly above their dots. */
@@ -426,6 +434,13 @@
 .goals {
   min-width: 0;
   margin-top: 18px;
+}
+
+.plannerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .contextButton {

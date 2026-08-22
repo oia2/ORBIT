@@ -207,7 +207,6 @@ describe('PostgreSQL planning repository — US2', () => {
           task: { completed: 0, applicable: 0, rate: 'unavailable' },
           habit: { completed: 0, applicable: 0, rate: 'unavailable' },
           value: 'unavailable',
-          weightsApplied: { task: 0, habit: 0 },
         },
         plannedLoadMinutes: nonNegativeDurationMinutes(0),
       },
@@ -246,7 +245,6 @@ describe('PostgreSQL planning repository — US2', () => {
           task: { completed: 0, applicable: 1, rate: 0 },
           habit: { completed: 0, applicable: 0, rate: 'unavailable' },
           value: 0,
-          weightsApplied: { task: 100, habit: 0 },
         },
         plannedLoadMinutes: nonNegativeDurationMinutes(30),
       },
@@ -274,5 +272,115 @@ describe('PostgreSQL planning repository — US2', () => {
       'deleted',
     );
     expect(history.value.events.at(-1)?.type).toBe('delete');
+  });
+});
+
+/*
+ * 003 US5 (FR-024). The note already travelled end to end through the domain
+ * and the database before 003; what did not exist was a way to remove one.
+ */
+describe('PostgreSQL planning repository — 003 US5 task notes', () => {
+  let repository: RepositoryUnderTest['repository'];
+
+  beforeEach(async () => {
+    const harness = await createRepositoryUnderTest({
+      clock: createFixedClock({ instant: NOW, currentLocalDate: TUESDAY }),
+      generateUuid: uuidGenerator(),
+    });
+    repository = harness.repository;
+    await repository.ensureCalendarWeek({ date: MONDAY });
+  });
+
+  async function taskWithNote(notes?: string) {
+    const created = await repository.createTask({
+      title: 'Task',
+      placement: { kind: 'day', date: TUESDAY },
+      durationMinutes: durationMinutes(30),
+      dayPosition: dayPosition(0),
+      ...(notes === undefined ? {} : { notes }),
+    });
+    if (!created.ok) throw new Error(created.error.code);
+    return created.value;
+  }
+
+  async function readNote(occurrenceId: string) {
+    const view = await repository.getDayView(TUESDAY);
+    if (!view.ok) throw new Error(view.error.code);
+    const found = view.value.tasks.find((task) => task.occurrence.id === occurrenceId);
+    if (found === undefined) throw new Error(`Task ${occurrenceId} is not on ${TUESDAY}`);
+    return { notes: found.occurrence.notes, revision: found.occurrence.revision };
+  }
+
+  it('writes, replaces, and clears a note', async () => {
+    const occurrenceId = await taskWithNote();
+    expect((await readNote(occurrenceId)).notes).toBeUndefined();
+
+    const written = await repository.editTaskOccurrence({
+      occurrenceId,
+      notes: 'Ask about the invoice',
+      expectedRevision: (await readNote(occurrenceId)).revision,
+    });
+    expect(written.ok).toBe(true);
+    expect((await readNote(occurrenceId)).notes).toBe('Ask about the invoice');
+
+    const replaced = await repository.editTaskOccurrence({
+      occurrenceId,
+      notes: 'Rewritten',
+      expectedRevision: (await readNote(occurrenceId)).revision,
+    });
+    expect(replaced.ok).toBe(true);
+    expect((await readNote(occurrenceId)).notes).toBe('Rewritten');
+
+    // This is the case that was impossible before 003.
+    const cleared = await repository.editTaskOccurrence({
+      occurrenceId,
+      notes: null,
+      expectedRevision: (await readNote(occurrenceId)).revision,
+    });
+    expect(cleared.ok).toBe(true);
+    expect((await readNote(occurrenceId)).notes).toBeUndefined();
+  });
+
+  it('leaves the note alone when the field is omitted', async () => {
+    const occurrenceId = await taskWithNote('Keep me');
+
+    const edited = await repository.editTaskOccurrence({
+      occurrenceId,
+      title: 'Renamed',
+      expectedRevision: (await readNote(occurrenceId)).revision,
+    });
+    expect(edited.ok).toBe(true);
+    expect((await readNote(occurrenceId)).notes).toBe('Keep me');
+  });
+
+  it('treats a whitespace-only note as cleared', async () => {
+    const occurrenceId = await taskWithNote('Something');
+
+    await repository.editTaskOccurrence({
+      occurrenceId,
+      notes: '   ',
+      expectedRevision: (await readNote(occurrenceId)).revision,
+    });
+
+    expect((await readNote(occurrenceId)).notes).toBeUndefined();
+  });
+
+  it('keeps a note through day closure so History still shows it', async () => {
+    const occurrenceId = await taskWithNote('Survives closure');
+    const view = await repository.getDayView(TUESDAY);
+    if (!view.ok) throw new Error(view.error.code);
+
+    const closed = await repository.closeDay({
+      date: TUESDAY,
+      expectedDayRevision: view.value.day.revision,
+      dispositions: { [occurrenceId]: { kind: 'keep-unfinished' } },
+    });
+    expect(closed.ok).toBe(true);
+
+    const history = await repository.getHistoryView({ mode: 'day', anchorDate: TUESDAY });
+    if (!history.ok) throw new Error(history.error.code);
+    if (history.value.mode !== 'day') throw new Error('expected a day history view');
+
+    expect(history.value.facts.tasks[0]?.occurrence.notes).toBe('Survives closure');
   });
 });

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import type { BacklogTaskOccurrence } from '@/entities/planning';
+import { TaskNoteAction, type BacklogTaskOccurrence } from '@/entities/planning';
 import { TaskEditorDialog, TaskMoveDialog, useManageTask } from '@/features/manage-task';
 import { Button } from '@/shared/ui/button';
 import { Icon } from '@/shared/ui/icon';
@@ -62,7 +62,13 @@ export function BacklogPage({ currentDate }: BacklogPageProps) {
                     <strong>{backlogOccurrence.title}</strong>
                     <small>Без даты</small>
                   </span>
-                  <span className={styles.actions}>
+                  <div className={styles.actions}>
+                    <TaskNoteAction
+                      title={backlogOccurrence.title}
+                      {...(backlogOccurrence.notes === undefined
+                        ? {}
+                        : { notes: backlogOccurrence.notes })}
+                    />
                     <Button
                       className="orbit-icon-button"
                       variant="quiet"
@@ -96,7 +102,7 @@ export function BacklogPage({ currentDate }: BacklogPageProps) {
                     >
                       <Icon name="trash" aria-hidden="true" />
                     </Button>
-                  </span>
+                  </div>
                 </li>
               );
             })}

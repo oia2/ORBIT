@@ -14,6 +14,7 @@ import { localDate, startOfWeek, type LocalDate } from '@/shared/lib/local-date/
 import type { Result } from '@/shared/lib/result';
 
 import { createOpenDay, type ClosedDay, type Day } from './day';
+import { selectDaySignals } from './selectors';
 import * as dayClosure from './day-closure';
 import {
   prepareDayClosure,
@@ -132,7 +133,6 @@ function closedDay(date: LocalDate): ClosedDay {
         task: { completed: 0, applicable: 0, rate: 'unavailable' },
         habit: { completed: 0, applicable: 0, rate: 'unavailable' },
         value: 'unavailable',
-        weightsApplied: { task: 0, habit: 0 },
       },
       plannedLoadMinutes: 0 as never,
     },
@@ -160,7 +160,6 @@ function completedWeek(date: LocalDate): Week {
         task: { completed: 0, applicable: 0, rate: 'unavailable' },
         habit: { completed: 0, applicable: 0, rate: 'unavailable' },
         value: 'unavailable',
-        weightsApplied: { task: 0, habit: 0 },
       },
     },
     completedAt: NOW,
@@ -394,7 +393,6 @@ describe('exact explicit closure dispositions', () => {
         task: { completed: 1, applicable: 5, rate: 1 / 5 },
         habit: { completed: 1, applicable: 2, rate: 1 / 2 },
         value: 29,
-        weightsApplied: { task: 70, habit: 30 },
       },
     });
 
@@ -855,5 +853,147 @@ describe('rollback-friendly preparation', () => {
       applicable: 1,
       rate: 0,
     });
+  });
+});
+
+/*
+ * 003 US2 (FR-006, FR-007, FR-008). Before 003 the frozen counts and the live
+ * counts were produced by two separate implementations that agreed only by
+ * coincidence. They now share one derivation, and these tests are what keeps
+ * them from drifting apart again.
+ */
+describe('003 US2: the closure snapshot reports what the day actually was', () => {
+  const completedOne = completedTask('a001');
+  const completedTwo = completedTask('a002');
+  const completedThree = completedTask('a003');
+  const unfinishedKept = incompleteTask('a004');
+  const unfinishedMoved = incompleteTask('a005');
+
+  const occurrences = [completedOne, completedTwo, completedThree, unfinishedKept, unfinishedMoved];
+  const entries = [
+    completedMembership(completedOne),
+    completedMembership(completedTwo),
+    completedMembership(completedThree),
+    plannedMembership(unfinishedKept),
+    plannedMembership(unfinishedMoved),
+  ];
+  const habits = [habitOccurrence('b001', 'completed'), habitOccurrence('b002', 'not-completed')];
+
+  function closeMixedDay() {
+    return requireOk(
+      prepareDayClosure(
+        closureInput({
+          dispositions: {
+            [unfinishedKept.id]: { kind: 'keep-unfinished' },
+            [unfinishedMoved.id]: {
+              kind: 'move-to-date',
+              destinationDate: DESTINATION_DATE,
+              durationMinutes: durationMinutes(30),
+              dayPosition: dayPosition(0),
+            },
+          },
+          taskOccurrences: occurrences,
+          taskPlanEntries: entries,
+          habitOccurrences: habits,
+          destinationPeriods: [period(DESTINATION_DATE)],
+          destinationPlanEntryIds: { [unfinishedMoved.id]: id<'task-plan-entry'>('9999') },
+        }),
+      ),
+    );
+  }
+
+  it('records the completed tasks it had, never zero (FR-006)', () => {
+    const { score } = closeMixedDay().effects.day.closureSnapshot;
+
+    expect(score.task).toEqual({ completed: 3, applicable: 5, rate: 3 / 5 });
+    expect(score.habit).toEqual({ completed: 1, applicable: 2, rate: 1 / 2 });
+  });
+
+  it('freezes exactly the counts the open day was showing a moment earlier (FR-008)', () => {
+    const live = selectDaySignals({
+      day: createOpenDay(SOURCE_DATE),
+      occurrences,
+      planEntries: entries,
+      habits,
+    });
+    const frozen = closeMixedDay().effects.day.closureSnapshot.score;
+
+    expect(frozen.task).toEqual(live.score.task);
+    expect(frozen.habit).toEqual(live.score.habit);
+    expect(frozen.value).toEqual(live.score.value);
+  });
+
+  it('keeps a task moved at closure in the denominator, uncompleted (D3, FR-007)', () => {
+    const { score } = closeMixedDay().effects.day.closureSnapshot;
+
+    // The moved task was planned for this day and was not done here, so it
+    // lowers the day's result rather than disappearing from it.
+    expect(score.task.applicable).toBe(5);
+    expect(score.task.completed).toBe(3);
+  });
+
+  it('keeps a task cancelled at closure in the denominator, uncompleted (D3, FR-007)', () => {
+    const cancelled = incompleteTask('a006');
+    const prepared = requireOk(
+      prepareDayClosure(
+        closureInput({
+          dispositions: { [cancelled.id]: { kind: 'cancel' } },
+          taskOccurrences: [completedOne, cancelled],
+          taskPlanEntries: [completedMembership(completedOne), plannedMembership(cancelled)],
+        }),
+      ),
+    );
+
+    expect(prepared.effects.day.closureSnapshot.score.task).toEqual({
+      completed: 1,
+      applicable: 2,
+      rate: 1 / 2,
+    });
+  });
+
+  it('keeps a task sent to the backlog at closure in the denominator (D3, FR-007)', () => {
+    const backlogged = incompleteTask('a007');
+    const prepared = requireOk(
+      prepareDayClosure(
+        closureInput({
+          dispositions: { [backlogged.id]: { kind: 'move-to-backlog' } },
+          taskOccurrences: [completedOne, backlogged],
+          taskPlanEntries: [completedMembership(completedOne), plannedMembership(backlogged)],
+        }),
+      ),
+    );
+
+    expect(prepared.effects.day.closureSnapshot.score.task).toEqual({
+      completed: 1,
+      applicable: 2,
+      rate: 1 / 2,
+    });
+  });
+
+  it('excludes a deleted membership from both counts', () => {
+    const deleted = incompleteTask('a008');
+    const prepared = requireOk(
+      prepareDayClosure(
+        closureInput({
+          taskOccurrences: [completedOne],
+          taskPlanEntries: [
+            completedMembership(completedOne),
+            {
+              ...plannedMembership(deleted),
+              outcome: 'deleted',
+              finalizedAt: ENTERED_AT,
+            } as const satisfies DeletedTaskPlanEntry,
+          ],
+          habitOccurrences: [habitOccurrence('b003', 'deleted')],
+        }),
+      ),
+    );
+
+    expect(prepared.effects.day.closureSnapshot.score.task).toEqual({
+      completed: 1,
+      applicable: 1,
+      rate: 1,
+    });
+    expect(prepared.effects.day.closureSnapshot.score.habit.applicable).toBe(0);
   });
 });

@@ -24,7 +24,9 @@ describe('ScoreBreakdown', () => {
     const region = screen.getByRole('region', { name: /дневной результат/i });
     expect(region).toHaveAttribute('data-score-tone', tone);
     expect(region).toHaveTextContent(`${String(value)}%`);
-    expect(region).toHaveTextContent(/задачи 70%.*привычки 30%/i);
+    // 003 FR-020: the explainer describes one weight per item, never a 70/30 split.
+    expect(region).toHaveTextContent(/весят одинаково/i);
+    expect(region).not.toHaveTextContent(/70%|30%/);
   });
 
   it('keeps weekly and unavailable scores neutral with explicit missing data', () => {

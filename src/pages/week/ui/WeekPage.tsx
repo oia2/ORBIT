@@ -8,7 +8,6 @@ import {
   type HabitOccurrence,
   type HabitOutcome,
   type ProjectedTaskMembership,
-  calculateCompletionScore,
 } from '@/entities/planning';
 import { CompleteWeekDialog, useCompleteWeek } from '@/features/complete-week';
 import { HabitRecurrenceDialog, useManageHabit } from '@/features/manage-habit';
@@ -140,27 +139,6 @@ function dailyScoreClass(value: number | 'unavailable'): string {
   return styles.scoreLow ?? '';
 }
 
-function calculateOpenWeeklyProgress(dayViews: readonly DayView[]) {
-  const counts = dayViews.reduce(
-    (total, dayView) => ({
-      task: {
-        completed: total.task.completed + dayView.score.task.completed,
-        applicable: total.task.applicable + dayView.score.task.applicable,
-      },
-      habit: {
-        completed: total.habit.completed + dayView.score.habit.completed,
-        applicable: total.habit.applicable + dayView.score.habit.applicable,
-      },
-    }),
-    {
-      task: { completed: 0, applicable: 0 },
-      habit: { completed: 0, applicable: 0 },
-    },
-  );
-
-  return calculateCompletionScore(counts);
-}
-
 export interface WeekPageProps {
   readonly weekStart: LocalDate;
   readonly clock?: ApplicationClock;
@@ -183,12 +161,13 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
 
   const ready = state.status === 'ready' ? state : undefined;
   const week = ready?.view.week;
-  const reviewProgress =
-    ready === undefined || week === undefined
-      ? undefined
-      : week.status === 'completed'
-        ? week.completionSnapshot.progress
-        : calculateOpenWeeklyProgress(ready.dayViews);
+  /*
+   * The server owns this figure for both period states (003 FR-008). It used to
+   * be recomputed here for an open week because `getWeekView` returned a
+   * fabricated empty aggregate; that defect is fixed, so the page reads the one
+   * answer instead of producing a second one.
+   */
+  const reviewProgress = ready?.view.progress;
   const manageWeek = useManageWeek({
     weekStart,
     revision: week?.revision ?? revision(0),
@@ -217,6 +196,9 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
   const taskRate = reviewProgress === undefined ? undefined : percent(reviewProgress.task.rate);
   const habitRows = buildHabitRows(ready?.dayViews ?? []);
   const dates = weekDates(weekStart);
+  // Individual `<details>` toggling keeps writing to the same set, so per-day
+  // expansion still works independently afterwards (003 FR-042).
+  const allPlannerDaysExpanded = dates.every((date) => expandedPlannerDays.has(date));
   const dayViewsByDate = new Map(ready?.dayViews.map((dayView) => [dayView.day.date, dayView]));
   const todayInWeek = dates.includes(today);
 
@@ -583,7 +565,18 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
                     </div>
                     {habitRows.map((habit) => (
                       <div className={styles.habitLine} key={habit.id} data-od-id="week-habit-row">
-                        <strong>{habit.title}</strong>
+                        <strong>
+                          {habit.title}
+                          {habit.occurrence.definitionSnapshot.durationMinutes ===
+                          undefined ? null : (
+                            <span className={styles.habitDuration}>
+                              {' · '}
+                              {formatDurationMinutes(
+                                habit.occurrence.definitionSnapshot.durationMinutes,
+                              )}
+                            </span>
+                          )}
+                        </strong>
                         <div
                           className={styles.habitDots}
                           aria-label={`Привычка «${habit.title}» по дням`}
@@ -653,16 +646,31 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
                   длительность без лимитов и классификаций
                 </p>
               </div>
-              <Button
-                className={styles.contextButton}
-                variant="quiet"
-                disabled={week.status !== 'open'}
-                onClick={() => {
-                  setRecurrenceEditor({ mode: 'create' });
-                }}
-              >
-                Добавить повтор задачи
-              </Button>
+              <div className={styles.plannerActions}>
+                {/*
+                 * 003 FR-040: seven days, one interaction. The label states what
+                 * the control will do next (FR-041) rather than what it is.
+                 */}
+                <Button
+                  className={styles.contextButton}
+                  variant="quiet"
+                  onClick={() => {
+                    setExpandedPlannerDays(allPlannerDaysExpanded ? new Set() : new Set(dates));
+                  }}
+                >
+                  {allPlannerDaysExpanded ? 'Свернуть все дни' : 'Раскрыть все дни'}
+                </Button>
+                <Button
+                  className={styles.contextButton}
+                  variant="quiet"
+                  disabled={week.status !== 'open'}
+                  onClick={() => {
+                    setRecurrenceEditor({ mode: 'create' });
+                  }}
+                >
+                  Добавить повтор задачи
+                </Button>
+              </div>
             </header>
             <div className={styles.plannerDays}>
               {ready.dayViews.map((dayView) => (
@@ -706,6 +714,16 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
                           <TaskRow
                             key={task.occurrence.id}
                             task={task}
+                            {...(dayView.day.status === 'open'
+                              ? {
+                                  onSaveNote: (notes: string | null) =>
+                                    manageTask.saveNote({
+                                      occurrenceId: task.occurrence.id,
+                                      notes,
+                                      revision: task.occurrence.revision,
+                                    }),
+                                }
+                              : {})}
                             actions={
                               <TaskExecution
                                 task={task}
@@ -815,7 +833,13 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
           onClose={() => {
             setHabitEditorOpen(false);
           }}
-          onSubmit={({ title, rule }) => manageHabit.create({ title, rule })}
+          onSubmit={({ title, rule, durationMinutes }) =>
+            manageHabit.create({
+              title,
+              rule,
+              ...(durationMinutes === null ? {} : { durationMinutes }),
+            })
+          }
         />
       ) : null}
       {habitSeriesEditor === undefined ? null : (
@@ -824,6 +848,9 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
           mode="update"
           clock={clock}
           initialTitle={habitSeriesEditor.definitionSnapshot.title}
+          {...(habitSeriesEditor.definitionSnapshot.durationMinutes === undefined
+            ? {}
+            : { initialDurationMinutes: habitSeriesEditor.definitionSnapshot.durationMinutes })}
           initialRule={{
             startDate: habitSeriesEditor.date,
             weekdays: [isoWeekday(habitSeriesEditor.date)],
@@ -831,13 +858,27 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
           onClose={() => {
             setHabitSeriesEditor(undefined);
           }}
-          onSubmit={({ rule }) =>
-            manageHabit.update({
+          onSubmit={async ({ rule, durationMinutes }) => {
+            /*
+             * The duration goes first: it does not bump the definition
+             * revision, so the rule update that follows still holds a current
+             * one. The reverse order would conflict with itself.
+             */
+            if (
+              !(await manageHabit.setDuration({
+                definitionId: habitSeriesEditor.definitionId,
+                durationMinutes,
+                revision: habitSeriesEditor.ruleRevision,
+              }))
+            ) {
+              return false;
+            }
+            return manageHabit.update({
               definitionId: habitSeriesEditor.definitionId,
               rule,
               revision: habitSeriesEditor.ruleRevision,
-            })
-          }
+            });
+          }}
         />
       )}
       {goalEditor === undefined ? null : (
@@ -916,7 +957,7 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
         <CompleteWeekDialog
           open
           goals={week.goals.map((goal) => goal.statement)}
-          progress={reviewProgress ?? ready.view.progress}
+          progress={ready.view.progress}
           onClose={() => {
             setCompletionOpen(false);
           }}

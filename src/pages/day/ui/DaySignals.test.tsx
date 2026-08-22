@@ -10,15 +10,16 @@ import { DaySignals } from './DaySignals';
 afterEach(cleanup);
 
 describe('DaySignals', () => {
-  it('shows the primary score with transparent 70/30 counts and separate state context', () => {
+  it('shows the primary score with transparent per-category counts and separate state context', () => {
     render(<DaySignals day={buildOpenDay()} score={buildScoreBreakdown()} onSave={vi.fn()} />);
     const region = screen.getByRole('region', { name: /дневной результат/i });
-    expect(region).toHaveTextContent(/62%/);
+    expect(region).toHaveTextContent(/60%/);
     expect(region).toHaveTextContent(/задачи/i);
     expect(region).toHaveTextContent(/2 из 3/);
     expect(region).toHaveTextContent(/привычки/i);
     expect(region).toHaveTextContent(/1 из 2/);
-    expect(region).toHaveTextContent(/70%.*30%/is);
+    // 003 FR-019 keeps both category breakdowns visible; FR-020 removed the 70/30 wording.
+    expect(region).toHaveTextContent(/весят одинаково/i);
     expect(screen.getByRole('heading', { name: /состояние дня/i })).toBeVisible();
     expect(screen.getByRole('group', { name: /энергия/i })).toBeVisible();
     expect(screen.getByRole('group', { name: /настроение/i })).toBeVisible();

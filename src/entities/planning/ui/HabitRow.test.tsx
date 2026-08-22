@@ -2,7 +2,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { entityId, revision } from '@/shared/lib/ids';
+import { durationMinutes, entityId, revision } from '@/shared/lib/ids';
 import { instant } from '@/shared/lib/local-date/clock';
 import { localDate } from '@/shared/lib/local-date/local-date';
 
@@ -54,5 +54,37 @@ describe('HabitRow', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(screen.getByText('Выполнено')).toBeVisible();
     expect(document.querySelector('[data-outcome="completed"]')).not.toBeNull();
+  });
+});
+
+/*
+ * 003 US6 (FR-032). The duration is presented like a task's, because it is the
+ * same kind of fact and feeds the same planned load.
+ */
+describe('003 US6: habit duration display', () => {
+  function occurrence(
+    snapshot: HabitOccurrence['definitionSnapshot'] extends infer T ? Partial<T> : never = {},
+  ): HabitOccurrence {
+    return { ...pending, definitionSnapshot: { title: 'Прогулка', ...snapshot } };
+  }
+
+  it('shows the duration when the occurrence carries one', () => {
+    render(
+      <ul>
+        <HabitRow occurrence={occurrence({ durationMinutes: durationMinutes(45) })} />
+      </ul>,
+    );
+
+    expect(screen.getByText(/45 мин/)).toBeVisible();
+  });
+
+  it('shows nothing extra when the habit has no duration', () => {
+    render(
+      <ul>
+        <HabitRow occurrence={occurrence()} />
+      </ul>,
+    );
+
+    expect(screen.queryByText(/мин/)).toBeNull();
   });
 });

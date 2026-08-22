@@ -13,7 +13,6 @@ const score = {
   task: { completed: 0, applicable: 0, rate: 'unavailable' as const },
   habit: { completed: 0, applicable: 0, rate: 'unavailable' as const },
   value: 'unavailable' as const,
-  weightsApplied: { task: 0, habit: 0 },
 };
 const dates = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
 const command = { ok: true as const, value: undefined, affectedDates: [], affectedWeeks: [] };

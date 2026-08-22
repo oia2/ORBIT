@@ -15,10 +15,11 @@ import { BacklogPage } from './BacklogPage';
 
 afterEach(cleanup);
 
-function backlogTask(sequence: number, title: string) {
+function backlogTask(sequence: number, title: string, notes?: string) {
   const result = createOneOffTask({
     id: entityId<'task-occurrence'>(`123e4567-e89b-42d3-a456-42661417400${String(sequence)}`),
     title,
+    ...(notes === undefined ? {} : { notes }),
     placement: { kind: 'backlog' },
     createdSequence: creationSequence(sequence),
     createdAt: instant('2026-05-20T08:00:00.000Z'),
@@ -50,6 +51,28 @@ describe('BacklogPage', () => {
     expect(
       screen.queryByRole('button', { name: /сортировать|фильтр|отменить/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it('opens an existing task note read-only from the backlog row (FR-028)', async () => {
+    const user = userEvent.setup();
+    const repository = {
+      getBacklogView: vi.fn().mockResolvedValue({
+        ok: true,
+        value: { tasks: [backlogTask(1, 'Сверить счета', 'Одна и та же заметка')] },
+      }),
+    } as unknown as PlanningRepository;
+    render(
+      <PlanningRepositoryProvider repository={repository}>
+        <BacklogPage />
+      </PlanningRepositoryProvider>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: /заметка к задаче/i }));
+    expect(screen.getByRole('dialog', { name: 'Заметка' })).toHaveTextContent(
+      'Одна и та же заметка',
+    );
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /сохранить заметку/i })).not.toBeInTheDocument();
   });
 
   it('shows first-use empty and recoverable storage states', async () => {

@@ -1,4 +1,11 @@
-import { nextRevision, revision, type HabitDefinitionId, type Revision } from '@/shared/lib/ids';
+import {
+  nextRevision,
+  revision,
+  type DurationMinutes,
+  type HabitDefinitionId,
+  type Revision,
+} from '@/shared/lib/ids';
+import type { LocalDate } from '@/shared/lib/local-date/local-date';
 
 import type { Day, OpenDay } from '@/entities/planning/model/day';
 import {
@@ -17,6 +24,7 @@ import type {
   EditHabitOccurrenceInput,
   RecordHabitOutcomeInput,
   StopHabitDefinitionInput,
+  UpdateHabitDurationInput,
   UpdateHabitRuleInput,
 } from '@/entities/planning/model/planning-repository';
 import {
@@ -28,6 +36,7 @@ import {
 import type { OpenWeek } from '@/entities/planning/model/week';
 
 import { requireOpenDay, requireOpenWeek, type RepositoryContext } from './context';
+import { isPositiveDuration } from './audit';
 import {
   canonicalRequiredText,
   DomainFailure,
@@ -39,6 +48,7 @@ import {
   getDay,
   getHabitDefinition,
   getHabitOccurrence,
+  getOpenHabitOccurrencesByDefinition,
   getWeek,
   insertHabitDefinition,
   putDay,
@@ -61,15 +71,118 @@ export async function createHabitDefinition(
   const initialVersion = createInitialRecurrenceVersion(input.recurrenceRule, initialRevision);
   if (!initialVersion.ok) throw recurrenceValidationFailure(initialVersion.error);
 
+  if (input.durationMinutes !== undefined && !isPositiveDuration(input.durationMinutes)) {
+    throw new DomainFailure({
+      code: 'ValidationFailure',
+      issues: [{ field: 'durationMinutes', message: 'Duration must be positive' }],
+    });
+  }
+
   const definition: HabitDefinition = {
     id: ctx.nextId<'habit-definition'>(),
     title,
+    ...(input.durationMinutes === undefined ? {} : { durationMinutes: input.durationMinutes }),
     ruleVersions: [initialVersion.value],
     revision: initialRevision,
   };
   await insertHabitDefinition(trx, definition);
 
   return { value: definition.id, affectedDates: [], affectedWeeks: [] };
+}
+
+/**
+ * Sets or clears a habit's duration (003 FR-029, FR-030).
+ *
+ * The definition is the owner's setting; each occurrence's snapshot is what
+ * planned load actually reads. So the new value is propagated to the
+ * occurrences of every **open** day and to no others — a closed day keeps the
+ * load it froze at closure (003 FR-034).
+ *
+ * It deliberately does not touch `ruleVersions`: a duration is not a recurrence
+ * change, and versioning it would fork the habit's rule history on every edit.
+ */
+export async function updateHabitDuration(
+  ctx: RepositoryContext,
+  trx: PlanningTransaction,
+  input: UpdateHabitDurationInput,
+): Promise<CommandReceipt<undefined>> {
+  if (input.durationMinutes !== null && !isPositiveDuration(input.durationMinutes)) {
+    throw new DomainFailure({
+      code: 'ValidationFailure',
+      issues: [{ field: 'durationMinutes', message: 'Duration must be positive' }],
+    });
+  }
+
+  const definition = await getHabitDefinition(trx, input.definitionId);
+  if (definition === undefined) {
+    throw new DomainFailure({
+      code: 'NotFound',
+      entity: 'HabitDefinition',
+      id: input.definitionId,
+    });
+  }
+  const guard = revisionGuard(definition.revision, input.expectedRevision);
+  if (guard !== undefined) throw new DomainFailure(guard);
+
+  const durationMinutes = input.durationMinutes ?? undefined;
+  // `exactOptionalPropertyTypes` forbids an explicit `undefined`, so a cleared
+  // duration removes the key rather than setting it to undefined.
+  const withoutDuration: HabitDefinition = { ...definition };
+  delete (withoutDuration as { durationMinutes?: DurationMinutes }).durationMinutes;
+
+  /*
+   * The revision is deliberately **not** bumped. Every habit occurrence carries
+   * a `ruleRevision` that materialization sets from the definition's revision,
+   * and `updateHabitRule` guards against exactly that value. Advancing the
+   * revision here — for a change that creates no rule version — would leave
+   * every existing occurrence pointing at a revision that no longer matches,
+   * and the next recurrence edit from the UI would fail with a conflict it
+   * could never clear.
+   *
+   * The optimistic guard above still does its job: the caller had to hold a
+   * current revision to get here.
+   */
+  await putHabitDefinition(
+    trx,
+    {
+      ...withoutDuration,
+      ...(durationMinutes === undefined ? {} : { durationMinutes }),
+    },
+    definition.revision,
+  );
+
+  const occurredAt = ctx.clock.now();
+  const affectedDates: LocalDate[] = [];
+  const affectedWeeks = new Map<LocalDate, OpenWeek>();
+
+  for (const occurrence of await getOpenHabitOccurrencesByDefinition(trx, input.definitionId)) {
+    // An occurrence the owner edited by hand is an exception and keeps its own
+    // duration, exactly as it keeps its own title.
+    if (occurrence.isException) continue;
+
+    await putHabitOccurrence(trx, {
+      ...occurrence,
+      definitionSnapshot: {
+        title: occurrence.definitionSnapshot.title,
+        ...(durationMinutes === undefined ? {} : { durationMinutes }),
+      },
+      updatedAt: occurredAt,
+    });
+
+    const day = await getDay(trx, occurrence.date);
+    if (day?.status !== 'open') continue;
+    const week = await getWeek(trx, day.weekStart);
+    if (week?.status !== 'open') continue;
+    await bumpHabitAggregates(trx, day, week);
+    affectedDates.push(day.date);
+    affectedWeeks.set(week.startDate, week);
+  }
+
+  return {
+    value: undefined,
+    affectedDates: [...new Set(affectedDates)].sort(),
+    affectedWeeks: [...affectedWeeks.keys()].sort(),
+  };
 }
 
 export async function updateHabitRule(
@@ -197,9 +310,28 @@ export async function editHabitOccurrence(
     });
   }
 
+  if (
+    input.durationMinutes !== undefined &&
+    input.durationMinutes !== null &&
+    !isPositiveDuration(input.durationMinutes)
+  ) {
+    throw new DomainFailure({
+      code: 'ValidationFailure',
+      issues: [{ field: 'durationMinutes', message: 'Duration must be positive' }],
+    });
+  }
+  // Absent leaves the duration alone; null clears it (003 FR-029).
+  const durationMinutes =
+    input.durationMinutes === undefined
+      ? occurrence.definitionSnapshot.durationMinutes
+      : (input.durationMinutes ?? undefined);
+
   await putHabitOccurrence(trx, {
     ...occurrence,
-    definitionSnapshot: { title },
+    definitionSnapshot: {
+      title,
+      ...(durationMinutes === undefined ? {} : { durationMinutes }),
+    },
     isException: true,
     updatedAt: ctx.clock.now(),
   });

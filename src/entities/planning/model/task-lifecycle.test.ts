@@ -58,7 +58,6 @@ function period(
               task: { completed: 0, applicable: 1, rate: 0 },
               habit: { completed: 0, applicable: 0, rate: 'unavailable' },
               value: 0,
-              weightsApplied: { task: 100, habit: 0 },
             },
             plannedLoadMinutes: nonNegativeDurationMinutes(30),
           },
@@ -77,7 +76,6 @@ function period(
               task: { completed: 0, applicable: 1, rate: 0 },
               habit: { completed: 0, applicable: 0, rate: 'unavailable' },
               value: 0,
-              weightsApplied: { task: 100, habit: 0 },
             },
           },
         } satisfies Week)
@@ -108,6 +106,13 @@ function incomplete(
     revision: revision(0),
     ...overrides,
   };
+}
+
+/** `exactOptionalPropertyTypes` forbids `{notes: undefined}`, so remove the key. */
+function withoutNote(occurrence: IncompleteDatedTaskOccurrence): IncompleteDatedTaskOccurrence {
+  const { notes, ...rest } = occurrence;
+  void notes;
+  return rest;
 }
 
 function completed(
@@ -958,5 +963,131 @@ describe('task lifecycle malformed-record and boundary guards', () => {
         occurredAt: OCCURRED_AT,
       }),
     ).toMatchObject({ ok: false, error: { code: 'PeriodImmutable' } });
+  });
+});
+
+/*
+ * 003 US5 (FR-024). `after` is a complete value snapshot, so it is
+ * authoritative for the note. Before 003 the previous note was spread in from
+ * the occurrence and survived every edit, which made a note writable but never
+ * removable.
+ */
+describe('003 US5: task notes are editable and clearable', () => {
+  it('sets a note on a task that had none', () => {
+    const edited = requireOk(
+      prepareTaskEdit({
+        occurrence: withoutNote(incomplete()),
+        period: period(DATE_A),
+        after: {
+          title: 'Original plan',
+          notes: 'Ask about the invoice first',
+          plannedDurationMinutes: durationMinutes(30),
+        },
+        occurredAt: LATER,
+      }),
+    );
+
+    expect(edited.occurrence.notes).toBe('Ask about the invoice first');
+  });
+
+  it('replaces an existing note', () => {
+    const edited = requireOk(
+      prepareTaskEdit({
+        occurrence: incomplete(),
+        period: period(DATE_A),
+        after: {
+          title: 'Original plan',
+          notes: 'Rewritten',
+          plannedDurationMinutes: durationMinutes(30),
+        },
+        occurredAt: LATER,
+      }),
+    );
+
+    expect(edited.occurrence.notes).toBe('Rewritten');
+  });
+
+  it('clears the note when the edited snapshot carries none', () => {
+    const edited = requireOk(
+      prepareTaskEdit({
+        occurrence: incomplete(),
+        period: period(DATE_A),
+        after: { title: 'Original plan', plannedDurationMinutes: durationMinutes(30) },
+        occurredAt: LATER,
+      }),
+    );
+
+    expect(edited.occurrence).not.toHaveProperty('notes');
+  });
+
+  it('treats a whitespace-only note as cleared', () => {
+    const edited = requireOk(
+      prepareTaskEdit({
+        occurrence: incomplete(),
+        period: period(DATE_A),
+        after: {
+          title: 'Original plan',
+          notes: '   \n  ',
+          plannedDurationMinutes: durationMinutes(30),
+        },
+        occurredAt: LATER,
+      }),
+    );
+
+    expect(edited.occurrence).not.toHaveProperty('notes');
+  });
+
+  it('trims a note before storing it', () => {
+    const edited = requireOk(
+      prepareTaskEdit({
+        occurrence: incomplete(),
+        period: period(DATE_A),
+        after: {
+          title: 'Original plan',
+          notes: '  padded  ',
+          plannedDurationMinutes: durationMinutes(30),
+        },
+        occurredAt: LATER,
+      }),
+    );
+
+    expect(edited.occurrence.notes).toBe('padded');
+  });
+
+  it('clears the note on a backlog task too', () => {
+    const edited = requireOk(
+      prepareTaskEdit({
+        occurrence: {
+          ...incomplete(),
+          state: 'active',
+          placement: { kind: 'backlog' },
+        } as never,
+        after: { title: 'Original plan' },
+        effectiveDate: DATE_A,
+        occurredAt: LATER,
+      }),
+    );
+
+    expect(edited.occurrence).not.toHaveProperty('notes');
+  });
+
+  it('records the note change in the edit event payload', () => {
+    const edited = requireOk(
+      prepareTaskEdit({
+        occurrence: incomplete(),
+        period: period(DATE_A),
+        after: {
+          title: 'Original plan',
+          notes: 'Rewritten',
+          plannedDurationMinutes: durationMinutes(30),
+        },
+        occurredAt: LATER,
+      }),
+    );
+
+    expect(edited.event.payload).toMatchObject({
+      before: { notes: 'Initial notes' },
+      after: { notes: 'Rewritten' },
+    });
   });
 });

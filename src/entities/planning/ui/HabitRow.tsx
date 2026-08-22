@@ -1,3 +1,4 @@
+import { formatDurationMinutes } from '@/shared/lib/duration';
 import type { ReactNode } from 'react';
 
 import type { HabitOccurrence } from '../model/habit';
@@ -21,10 +22,18 @@ const LABELS = {
 export function HabitRow({ occurrence, onToggle, actions }: HabitRowProps) {
   const title = occurrence.definitionSnapshot.title;
   const completed = occurrence.outcome === 'completed';
+  // Presented like a task's duration: it is the same fact about the same day
+  // and it feeds the same planned load (003 FR-032).
+  const duration = occurrence.definitionSnapshot.durationMinutes;
   const copy = (
     <>
       <strong className="orbit-habit-row__title">{title}</strong>
-      <span className="orbit-habit-row__status">{LABELS[occurrence.outcome]}</span>
+      <span className="orbit-habit-row__status">
+        {LABELS[occurrence.outcome]}
+        {duration === undefined ? null : (
+          <span className="orbit-habit-row__duration"> · {formatDurationMinutes(duration)}</span>
+        )}
+      </span>
     </>
   );
 

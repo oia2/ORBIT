@@ -141,6 +141,7 @@ export function createHttpPlanningRepository(
 
     createHabitDefinition: (input) => command('createHabitDefinition', input),
     updateHabitRule: (input) => command('updateHabitRule', input),
+    updateHabitDuration: (input) => command('updateHabitDuration', input),
     stopHabitDefinition: (input) => command('stopHabitDefinition', input),
     editHabitOccurrence: (input) => command('editHabitOccurrence', input),
     recordHabitOutcome: (input) => command('recordHabitOutcome', input),
@@ -150,6 +151,7 @@ export function createHttpPlanningRepository(
 
     saveDailyState: (input) => command('saveDailyState', input),
     closeDay: (input) => command('closeDay', input),
+    reopenDay: (input) => command('reopenDay', input),
     completeWeek: (input) => command('completeWeek', input),
   };
 }

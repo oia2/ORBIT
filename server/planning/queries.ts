@@ -9,6 +9,8 @@ import type {
   TaskHistoryView,
   WeekView,
 } from '@/entities/planning/model/history';
+import { aggregateCompletionCounts } from '@/entities/planning/model/day-counts';
+import { calculateCompletionScore, type CompletionCounts } from '@/entities/planning/model/scoring';
 import { selectDaySignals } from '@/entities/planning/model/selectors';
 
 import { DomainFailure } from './errors';
@@ -30,8 +32,15 @@ export function unavailableScore(): ScoreBreakdown {
     task: { completed: 0, applicable: 0, rate: 'unavailable' },
     habit: { completed: 0, applicable: 0, rate: 'unavailable' },
     value: 'unavailable',
-    weightsApplied: { task: 0, habit: 0 },
   };
+}
+
+/** Strips the derived `rate` so a category can be re-aggregated by count. */
+function countsOf(category: {
+  readonly completed: number;
+  readonly applicable: number;
+}): CompletionCounts {
+  return { completed: category.completed, applicable: category.applicable };
 }
 
 /**
@@ -125,7 +134,25 @@ export async function getWeekView(
   return {
     week,
     days: summaries,
-    progress: week.status === 'completed' ? week.completionSnapshot.progress : unavailableScore(),
+    /*
+     * An open week reports the real aggregate of its days. Before 003 this
+     * returned a fabricated `unavailableScore()` — the server answering "no
+     * data" for a week that had data — and it was masked only because the Week
+     * page recomputed the same figure client-side. 003 FR-008 requires every
+     * surface to agree, so the answer is derived here, once, from the same
+     * per-day counts the Day and History views use.
+     */
+    progress:
+      week.status === 'completed'
+        ? week.completionSnapshot.progress
+        : calculateCompletionScore(
+            aggregateCompletionCounts(
+              summaries.map((summary) => ({
+                task: countsOf(summary.score.task),
+                habit: countsOf(summary.score.habit),
+              })),
+            ),
+          ),
   };
 }
 

@@ -256,9 +256,25 @@ ORBIT is one responsive product, not a scaled desktop screenshot.
 
 - Use one dominant metric area and compact supporting analytics.
 - Show the specification-defined task/habit counts or rates beside aggregate
-  scores. Current ORBIT formula: tasks 70%, habits 30%; state is context only and
-  does not contribute.
+  scores. Current ORBIT formula (feature 003): **one weight per item** — every
+  applicable task and every applicable habit counts once, so the result is the
+  share of a period's items that were completed. State is context only and does
+  not contribute. This supersedes the previous tasks 70% / habits 30% split; the
+  two category breakdowns stay visible, only the way they combine changed.
 - Values must match between weekly and daily screens. A current-day update must propagate to the weekly chart.
+- A closed period states that its result is frozen **and** offers the way back.
+  The day card no longer reads "Повторное открытие недоступно": feature 003 made
+  a closed day reopenable, and a confirmation step spells out what reopening
+  does not undo (tasks closure moved elsewhere stay there). A refusal — a day
+  inside a completed week — is explained in place, never a control that silently
+  does nothing.
+- Chart legends name the series, not the formula. The History dynamics legend
+  reads "Результат", not "Результат 70/30": a legend that encodes a formula goes
+  stale the moment the formula changes (feature 003).
+- Task rows keep written detail behind a compact note action beside the completion
+  control. The action carries a visible dot when text exists and opens the shared
+  accessible modal; note content does not expand below the row or shift the list
+  vertically (feature 003 owner refinement, 2026-08-22).
 - Use percentage for a normalized 0–100 result. Do not display both `%` and “из 100”.
 - Use visible fills for magnitude. Bare outlined charts are not allowed.
 - Always label period, unit, and category. Do not make the user infer what a number means.

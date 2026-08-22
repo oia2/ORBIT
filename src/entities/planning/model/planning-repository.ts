@@ -157,7 +157,12 @@ export interface CreateTaskInput {
 export interface EditTaskOccurrenceInput {
   readonly occurrenceId: TaskOccurrenceId;
   readonly title?: string;
-  readonly notes?: string;
+  /**
+   * `undefined` leaves the note unchanged; `null` clears it (003 FR-024).
+   * Before 003 only `string | undefined` was representable, so a note could be
+   * written but never removed.
+   */
+  readonly notes?: string | null;
   /** `undefined` leaves the field unchanged; `null` explicitly clears it. */
   readonly startTime?: string | null;
   readonly endTime?: string | null;
@@ -214,7 +219,16 @@ export interface StopTaskSeriesInput {
 
 export interface CreateHabitDefinitionInput {
   readonly title: string;
+  /** Optional; contributes to planned load when set (003 FR-029, FR-030). */
+  readonly durationMinutes?: DurationMinutes;
   readonly recurrenceRule: RecurrenceRule;
+}
+
+export interface UpdateHabitDurationInput {
+  readonly definitionId: HabitDefinitionId;
+  /** `null` clears the duration. */
+  readonly durationMinutes: DurationMinutes | null;
+  readonly expectedRevision: Revision;
 }
 
 export interface UpdateHabitRuleInput {
@@ -231,6 +245,8 @@ export interface StopHabitDefinitionInput {
 export interface EditHabitOccurrenceInput {
   readonly occurrenceId: HabitOccurrenceId;
   readonly title: string;
+  /** `undefined` leaves it unchanged; `null` clears it (003 FR-029). */
+  readonly durationMinutes?: DurationMinutes | null;
   readonly expectedRevision: Revision;
 }
 
@@ -280,6 +296,11 @@ export interface CloseDayInput {
   readonly dispositions: Readonly<Record<string, CloseDayDisposition>>;
 }
 
+export interface ReopenDayInput {
+  readonly date: LocalDate;
+  readonly expectedDayRevision: Revision;
+}
+
 export interface CompleteWeekInput {
   readonly weekStart: LocalDate;
   readonly reflection?: string;
@@ -322,6 +343,13 @@ export interface PlanningRepository {
     input: CreateHabitDefinitionInput,
   ): Promise<CommandResult<HabitDefinitionId>>;
   updateHabitRule(input: UpdateHabitRuleInput): Promise<CommandResult>;
+  /**
+   * Sets or clears a habit's duration and propagates it to the occurrences of
+   * every **open** day, leaving closed days' frozen load untouched
+   * (003 FR-030, FR-034). Separate from `updateHabitRule` because a duration is
+   * not a recurrence change and must not fork the habit's rule history.
+   */
+  updateHabitDuration(input: UpdateHabitDurationInput): Promise<CommandResult>;
   stopHabitDefinition(input: StopHabitDefinitionInput): Promise<CommandResult>;
   editHabitOccurrence(input: EditHabitOccurrenceInput): Promise<CommandResult>;
   recordHabitOutcome(input: RecordHabitOutcomeInput): Promise<CommandResult>;
@@ -331,5 +359,11 @@ export interface PlanningRepository {
 
   saveDailyState(input: SaveDailyStateInput): Promise<CommandResult>;
   closeDay(input: CloseDayInput): Promise<CommandResult<DayClosureSnapshot>>;
+  /**
+   * Returns a closed Day to the open state (003 FR-009). It does not undo the
+   * task relocations closure applied (owner decision D1) — see
+   * `prepareDayReopening`.
+   */
+  reopenDay(input: ReopenDayInput): Promise<CommandResult>;
   completeWeek(input: CompleteWeekInput): Promise<CommandResult<WeekCompletionSnapshot>>;
 }

@@ -21,7 +21,7 @@ describe('CompleteWeekDialog', () => {
     );
     expect(screen.getByText('Подготовить обзор')).toBeVisible();
     expect(screen.getByRole('region', { name: /прогресс недели/i })).toHaveTextContent(
-      /62%.*2 из 3.*1 из 2/is,
+      /60%.*2 из 3.*1 из 2/is,
     );
     await user.type(screen.getByLabelText(/рефлексия/i), 'Что помогло');
     await user.click(screen.getByRole('button', { name: /завершить неделю/i }));

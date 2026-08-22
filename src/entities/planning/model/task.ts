@@ -182,7 +182,9 @@ export type TaskEventType =
   | 'occurrence-exception'
   | 'closure-keep'
   | 'closure-move'
-  | 'closure-cancel';
+  | 'closure-cancel'
+  /** A closed day was reopened and this occurrence returned to it (003 FR-011). */
+  | 'closure-reopen';
 
 export interface TaskValueSnapshot {
   readonly title: string;
@@ -227,6 +229,7 @@ export interface TaskEventPayloadByType {
     readonly destination: DayTaskPlacement | BacklogTaskPlacement;
   };
   readonly 'closure-cancel': { readonly date: LocalDate };
+  readonly 'closure-reopen': { readonly date: LocalDate };
 }
 
 interface TaskEventBase {

@@ -101,10 +101,55 @@ test('closes an eligible day atomically with an explicit disposition for every t
     testInfo.project.name,
   );
   await expect(dialog).toBeHidden();
-  await expect(page.getByText(/день закрыт.*повторное открытие недоступно/i)).toBeVisible();
+  await expect(page.getByText(/результат и плановая нагрузка зафиксированы/i)).toBeVisible();
   await expect(page.getByRole('button', { name: /^закрыть день$/i })).toHaveCount(0);
   await page.reload();
-  await expect(page.getByText(/день закрыт.*повторное открытие недоступно/i)).toBeVisible();
+  await expect(page.getByText(/результат и плановая нагрузка зафиксированы/i)).toBeVisible();
+
+  /*
+   * 003 US3: a closed day is no longer a dead end. Reopen it, confirm it is
+   * genuinely editable again and survives a reload, then close it a second
+   * time — the round trip is the whole point of the story.
+   */
+  await activate(
+    page,
+    page.getByRole('button', { name: 'Открыть день заново' }),
+    testInfo.project.name,
+  );
+  const reopenDialog = page.getByRole('dialog', { name: /открыть день заново/i });
+  // D1: the owner is told what reopening will not claw back before committing.
+  await expect(reopenDialog).toContainText(/останутся там же/i);
+  await activate(
+    page,
+    reopenDialog.getByRole('button', { name: /^открыть день$/i }),
+    testInfo.project.name,
+  );
+  await expect(reopenDialog).toBeHidden();
+
+  await expect(page.getByRole('button', { name: /^закрыть день$/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Открыть день заново' })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('button', { name: /^закрыть день$/i })).toBeVisible();
+  await expect(page.getByText(/результат и плановая нагрузка зафиксированы/i)).toHaveCount(0);
+
+  // Correct one restored outcome, then explicitly dispose the other restored
+  // unfinished task. Reopening makes both live again; closure never guesses.
+  const restoredKeptTask = page
+    .getByRole('listitem')
+    .filter({ hasText: 'Оставить' })
+    .getByRole('checkbox', { name: /выполнено/i });
+  await restoredKeptTask.click();
+  await expect(restoredKeptTask).toBeChecked();
+  await activate(page, page.getByRole('button', { name: 'Закрыть день' }), testInfo.project.name);
+  const secondClosure = page.getByRole('dialog', { name: /закрыть день/i });
+  await secondClosure.getByLabel(/^Действие для Отменить/i).selectOption('cancel');
+  await activate(
+    page,
+    secondClosure.getByRole('button', { name: /^закрыть день$/i }),
+    testInfo.project.name,
+  );
+  await expect(secondClosure).toBeHidden();
+  await expect(page.getByText(/результат и плановая нагрузка зафиксированы/i)).toBeVisible();
 
   await page.goto(`/day/${shiftedLocalISO(-1)}`);
   await expect(page.getByRole('button', { name: /^закрыть день$/i })).toBeVisible();

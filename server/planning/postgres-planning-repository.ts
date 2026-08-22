@@ -7,6 +7,7 @@ import type { PlanningDatabase } from '../db/client';
 import { createRepositoryContext, type RepositoryDependencies } from './context';
 import { deriveHistoryRange, getHistoryView } from './history-queries';
 import * as closure from './closure';
+import * as reopening from './reopening';
 import * as dailyState from './daily-state';
 import * as habits from './habits';
 import * as materialization from './materialization';
@@ -107,6 +108,8 @@ export function createPostgresPlanningRepository(
 
     createHabitDefinition: (input) =>
       runCommand(db, (trx) => habits.createHabitDefinition(ctx, trx, input)),
+    updateHabitDuration: (input) =>
+      runCommand(db, (trx) => habits.updateHabitDuration(ctx, trx, input)),
     updateHabitRule: (input) => runCommand(db, (trx) => habits.updateHabitRule(ctx, trx, input)),
     stopHabitDefinition: (input) =>
       runCommand(db, (trx) => habits.stopHabitDefinition(ctx, trx, input)),
@@ -125,6 +128,7 @@ export function createPostgresPlanningRepository(
 
     saveDailyState: (input) => runCommand(db, (trx) => dailyState.saveDailyState(ctx, trx, input)),
     closeDay: (input) => runCommand(db, (trx) => closure.closeDay(ctx, trx, input)),
+    reopenDay: (input) => runCommand(db, (trx) => reopening.reopenDay(ctx, trx, input)),
     completeWeek: (input) => runCommand(db, (trx) => weekCompletion.completeWeek(ctx, trx, input)),
 
     auditContext: (): RepositoryAuditContext => ({

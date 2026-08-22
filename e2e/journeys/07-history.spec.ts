@@ -10,7 +10,6 @@ test('navigates immutable Day Week Month history with exact dynamics scopes', as
     task: { completed: 2, applicable: 3, rate: 2 / 3 },
     habit: { completed: 1, applicable: 2, rate: 1 / 2 },
     value: 62,
-    weightsApplied: { task: 70, habit: 30 },
   };
   await orbitDatabase.seed({
     version: 1,

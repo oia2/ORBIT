@@ -31,6 +31,8 @@ describe('HabitRecurrenceDialog', () => {
     await user.click(screen.getByRole('button', { name: /сохранить/i }));
     expect(onSubmit).toHaveBeenCalledWith({
       title: 'Прогулка',
+      // 003 FR-029: the duration is optional, and an empty field means none.
+      durationMinutes: null,
       rule: { startDate: localDate('2026-05-20'), weekdays: [3] },
     });
   });
@@ -77,5 +79,91 @@ describe('HabitRecurrenceDialog', () => {
     expect(screen.getByText(/21 мая 2026/i)).toBeInTheDocument();
     // Stopping a recurrence now lives in the habit row's menu, not this dialog.
     expect(screen.queryByRole('button', { name: /остановить повтор/i })).not.toBeInTheDocument();
+  });
+});
+
+/*
+ * 003 US6 (FR-029). The duration is optional and lives beside the recurrence,
+ * because that is where the owner already goes to describe the habit.
+ */
+describe('003 US6: optional habit duration', () => {
+  const clock = createFixedClock({
+    instant: instant('2026-05-20T08:00:00.000Z'),
+    currentLocalDate: localDate('2026-05-20'),
+  });
+
+  it('submits a duration when one is entered', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(true);
+    render(<HabitRecurrenceDialog open clock={clock} onClose={vi.fn()} onSubmit={onSubmit} />);
+
+    await user.type(screen.getByLabelText(/название привычки/i), 'Тренировка');
+    await user.type(screen.getByLabelText(/длительность/i), '45');
+    await user.click(screen.getByLabelText('Среда'));
+    await user.click(screen.getByRole('button', { name: /сохранить/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Тренировка', durationMinutes: 45 }),
+    );
+  });
+
+  it('pre-fills an existing duration', () => {
+    render(
+      <HabitRecurrenceDialog
+        open
+        mode="update"
+        clock={clock}
+        initialTitle="Тренировка"
+        initialDurationMinutes={30}
+        initialRule={{ startDate: localDate('2026-05-20'), weekdays: [3] }}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText(/длительность/i)).toHaveValue(30);
+  });
+
+  it('clears the duration when the field is emptied', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(true);
+    render(
+      <HabitRecurrenceDialog
+        open
+        mode="update"
+        clock={clock}
+        initialTitle="Тренировка"
+        initialDurationMinutes={30}
+        initialRule={{ startDate: localDate('2026-05-20'), weekdays: [3] }}
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.clear(screen.getByLabelText(/длительность/i));
+    await user.click(screen.getByRole('button', { name: /сохранить/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ durationMinutes: null }));
+  });
+
+  it('rejects a non-positive duration without submitting', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<HabitRecurrenceDialog open clock={clock} onClose={vi.fn()} onSubmit={onSubmit} />);
+
+    await user.type(screen.getByLabelText(/название привычки/i), 'Тренировка');
+    await user.type(screen.getByLabelText(/длительность/i), '0');
+    await user.click(screen.getByLabelText('Среда'));
+    await user.click(screen.getByRole('button', { name: /сохранить/i }));
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByText(/больше нуля/i)).toBeVisible();
+  });
+
+  it('says the duration affects load and not the result', () => {
+    render(<HabitRecurrenceDialog open clock={clock} onClose={vi.fn()} onSubmit={vi.fn()} />);
+
+    expect(screen.getByText(/плановую нагрузку/i)).toBeVisible();
+    expect(screen.getByText(/на результат не влияет/i)).toBeVisible();
   });
 });

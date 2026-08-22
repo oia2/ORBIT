@@ -1,6 +1,7 @@
 import type { Revision } from '@/shared/lib/ids';
 import type { LocalDate } from '@/shared/lib/local-date/local-date';
 
+import type { DayReopeningError } from '@/entities/planning/model/day-reopening';
 import type { DayClosureError } from '@/entities/planning/model/day-closure';
 import type { HabitTransitionError } from '@/entities/planning/model/habit';
 import type { DomainOrStorageError } from '@/entities/planning/model/planning-repository';
@@ -164,6 +165,24 @@ export function dayClosureFailure(error: DayClosureError): DomainFailure {
             ? error.message
             : `Destination membership ID missing for ${error.occurrenceId}`,
       });
+  }
+}
+
+export function dayReopeningFailure(error: DayReopeningError): DomainFailure {
+  switch (error.code) {
+    case 'PeriodImmutable':
+      // Carries `weekStart` so the client can say which week is blocking the
+      // reopening rather than failing silently (003 FR-014).
+      return new DomainFailure(error);
+    case 'InvalidTransition':
+      return new DomainFailure({
+        code: 'InvalidTransition',
+        entity: 'Day',
+        currentState: error.currentStatus,
+        attemptedTransition: 'reopen',
+      });
+    case 'ReopeningDataInvariant':
+      return new DomainFailure({ code: 'UnexpectedServerFailure', message: error.message });
   }
 }
 

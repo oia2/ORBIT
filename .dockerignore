@@ -5,6 +5,8 @@ dist
 dist-server
 .git
 .gitignore
+Dockerfile*
+.dockerignore
 coverage
 playwright-report
 test-results

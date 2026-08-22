@@ -83,7 +83,6 @@ describe('PostgreSQL planning repository — US4', () => {
           task: { applicable: 0, rate: 'unavailable' },
           habit: { completed: 0, applicable: 1, rate: 0 },
           value: 0,
-          weightsApplied: { task: 0, habit: 100 },
         },
         plannedLoadMinutes: 0,
       },
@@ -167,8 +166,8 @@ describe('PostgreSQL planning repository — US4', () => {
         score: {
           task: { completed: 1, applicable: 5, rate: 0.2 },
           habit: { completed: 1, applicable: 1, rate: 1 },
-          value: 44,
-          weightsApplied: { task: 70, habit: 30 },
+          // 2 of 6 items done. Under the old 70/30 split this read 44.
+          value: 33,
         },
         plannedLoadMinutes: 150,
       },
@@ -294,7 +293,6 @@ describe('PostgreSQL planning repository — US4', () => {
           task: { completed: 0, applicable: 0, rate: 'unavailable' },
           habit: { completed: 0, applicable: 0, rate: 'unavailable' },
           value: 'unavailable',
-          weightsApplied: { task: 0, habit: 0 },
         },
         plannedLoadMinutes: nonNegativeDurationMinutes(0),
       },
@@ -318,5 +316,110 @@ describe('PostgreSQL planning repository — US4', () => {
     expect(
       (await database.getAllTaskEvents()).some((event) => event.type.startsWith('closure-')),
     ).toBe(false);
+  });
+});
+
+/*
+ * 003 US2 (FR-008). The Day, Week, and History surfaces used to reach the same
+ * numbers through three separate implementations, and `getWeekView` reached a
+ * different one entirely: it returned a fabricated empty aggregate for any open
+ * week. This suite is the invariant that keeps all three honest.
+ */
+describe('003 US2: every surface reports the same counts for the same day', () => {
+  let repository: RepositoryUnderTest['repository'];
+
+  beforeEach(async () => {
+    const harness = await createRepositoryUnderTest({
+      clock: createFixedClock({ instant: NOW, currentLocalDate: TUESDAY }),
+      generateUuid: uuidGenerator(),
+    });
+    repository = harness.repository;
+    await repository.ensureCalendarWeek({ date: MONDAY });
+  });
+
+  async function addTask(title: string, position: number) {
+    const created = await repository.createTask({
+      title,
+      placement: { kind: 'day', date: TUESDAY },
+      durationMinutes: durationMinutes(30),
+      dayPosition: dayPosition(position),
+    });
+    if (!created.ok) throw new Error(created.error.code);
+    return created.value;
+  }
+
+  async function completeTask(occurrenceId: Awaited<ReturnType<typeof addTask>>) {
+    const done = await repository.setTaskCompletion({
+      occurrenceId,
+      date: TUESDAY,
+      completed: true,
+      expectedRevision: revision(0),
+    });
+    if (!done.ok) throw new Error(done.error.code);
+  }
+
+  it('agrees across getDayView, getWeekView, and getHistoryView for a closed day', async () => {
+    const first = await addTask('Done one', 0);
+    const second = await addTask('Done two', 1);
+    const third = await addTask('Left open', 2);
+    await completeTask(first);
+    await completeTask(second);
+
+    const dayBefore = await repository.getDayView(TUESDAY);
+    if (!dayBefore.ok) throw new Error(dayBefore.error.code);
+    const liveScore = dayBefore.value.score;
+    expect(liveScore.task).toEqual({ completed: 2, applicable: 3, rate: 2 / 3 });
+
+    const closed = await repository.closeDay({
+      date: TUESDAY,
+      expectedDayRevision: dayBefore.value.day.revision,
+      dispositions: { [third]: { kind: 'keep-unfinished' } },
+    });
+    if (!closed.ok) throw new Error(closed.error.code);
+
+    // FR-006: the frozen counts are the counts the open day was showing.
+    expect(closed.value.score.task).toEqual(liveScore.task);
+
+    const dayAfter = await repository.getDayView(TUESDAY);
+    const weekAfter = await repository.getWeekView(TUESDAY);
+    const historyAfter = await repository.getHistoryView({ mode: 'day', anchorDate: TUESDAY });
+    if (!dayAfter.ok || !weekAfter.ok || !historyAfter.ok) throw new Error('projection failed');
+
+    const fromWeek = weekAfter.value.days.find((day) => day.date === TUESDAY);
+    expect(fromWeek).toBeDefined();
+    if (historyAfter.value.mode !== 'day') throw new Error('expected a day history view');
+
+    expect(dayAfter.value.score).toEqual(closed.value.score);
+    expect(fromWeek?.score).toEqual(closed.value.score);
+    expect(historyAfter.value.facts.score).toEqual(closed.value.score);
+
+    // Completed tasks are never reported as zero anywhere (FR-006).
+    for (const score of [dayAfter.value.score, fromWeek?.score, historyAfter.value.facts.score]) {
+      expect(score?.task.completed).toBe(2);
+      expect(score?.task.applicable).toBe(3);
+    }
+  });
+
+  it('reports the real aggregate for an open week instead of a fabricated empty one', async () => {
+    const first = await addTask('Done', 0);
+    await addTask('Not done', 1);
+    await completeTask(first);
+
+    const week = await repository.getWeekView(TUESDAY);
+    if (!week.ok) throw new Error(week.error.code);
+
+    expect(week.value.week.status).toBe('open');
+    // Before 003 this was `{completed: 0, applicable: 0, rate: 'unavailable'}`
+    // regardless of what the week contained.
+    expect(week.value.progress.task).toEqual({ completed: 1, applicable: 2, rate: 1 / 2 });
+    expect(week.value.progress.value).not.toBe('unavailable');
+  });
+
+  it('reports an open week with nothing planned as having no data', async () => {
+    const week = await repository.getWeekView(TUESDAY);
+    if (!week.ok) throw new Error(week.error.code);
+
+    expect(week.value.progress.value).toBe('unavailable');
+    expect(week.value.progress.task.applicable).toBe(0);
   });
 });

@@ -8,7 +8,7 @@ test('records daily state and explains score and factual load without capacity s
     name: /результат, привычки и состояние/i,
   });
   await expect(signals.getByRole('region', { name: /дневной результат/i })).toContainText(
-    /задачи.*привычки.*70%.*30%/is,
+    /каждая задача.*каждая привычка.*весят одинаково/is,
   );
   const energyFour = signals.getByRole('button', { name: /^энергия 4$/i });
   const moodThree = signals.getByRole('button', { name: /^настроение 3$/i });

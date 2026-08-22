@@ -258,6 +258,11 @@ export async function editTaskOccurrence(
     });
   }
 
+  // A blank note is a cleared note: whitespace is not content.
+  const trimmedNote = typeof input.notes === 'string' ? input.notes.trim() : input.notes;
+  const nextNotes = trimmedNote === null || trimmedNote === '' ? undefined : trimmedNote;
+  const notes = input.notes === undefined ? occurrence.notes : nextNotes;
+
   const nextStartTime = input.startTime === null ? undefined : input.startTime;
   const nextEndTime = input.endTime === null ? undefined : input.endTime;
   const startTime = input.startTime === undefined ? occurrence.startTime : nextStartTime;
@@ -270,10 +275,13 @@ export async function editTaskOccurrence(
     });
   }
 
+  const cleared = { ...occurrence };
+  if (notes === undefined) delete (cleared as { notes?: string }).notes;
+
   const updated = {
-    ...occurrence,
+    ...cleared,
     title,
-    ...(input.notes === undefined ? {} : { notes: input.notes }),
+    ...(notes === undefined ? {} : { notes }),
     ...(duration === undefined ? {} : { plannedDurationMinutes: duration }),
     startTime: timeValidation.value.startTime,
     endTime: timeValidation.value.endTime,

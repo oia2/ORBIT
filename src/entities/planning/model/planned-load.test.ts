@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { instant } from '@/shared/lib/local-date/clock';
-import { localDate } from '@/shared/lib/local-date/local-date';
-import { creationSequence, durationMinutes, entityId } from '@/shared/lib/ids';
+import { localDate, startOfWeek } from '@/shared/lib/local-date/local-date';
+import { creationSequence, durationMinutes, entityId, revision } from '@/shared/lib/ids';
 
+import { dayCompletionCounts } from './day-counts';
+import type { HabitOccurrence } from './habit';
 import { calculatePlannedLoad } from './planned-load';
 import {
   selectOpenBacklogView,
@@ -195,5 +197,104 @@ describe('open planning selectors', () => {
     expect(view.tasks.map((task) => task.title)).toEqual(['Older', 'Newer']);
     expect(view).not.toHaveProperty('sort');
     expect(view).not.toHaveProperty('order');
+  });
+});
+
+/*
+ * 003 US6 (FR-030, FR-031, FR-033, FR-034). Planned load is a fact about how
+ * much time the day is spending, so a habit that takes 45 minutes belongs in it
+ * exactly as a task of the same length does — and nowhere near the result.
+ */
+describe('003 US6: habit durations in planned load', () => {
+  const DATE = localDate('2026-08-11');
+
+  function habit(
+    suffix: string,
+    minutes?: number,
+    overrides: Partial<HabitOccurrence> = {},
+  ): HabitOccurrence {
+    return {
+      id: id<'habit-occurrence'>(suffix),
+      definitionId: id<'habit-definition'>(`7${suffix.slice(-3)}`),
+      date: DATE,
+      weekStart: startOfWeek(DATE),
+      definitionSnapshot: {
+        title: `Habit ${suffix}`,
+        ...(minutes === undefined ? {} : { durationMinutes: durationMinutes(minutes) }),
+      },
+      ruleRevision: revision(0),
+      isException: false,
+      outcome: 'pending',
+      outcomeEvents: [],
+      updatedAt: createdAt,
+      ...overrides,
+    };
+  }
+
+  it('adds a habit duration to the day load (FR-030)', () => {
+    expect(calculatePlannedLoad([], DATE, [habit('b001', 45)])).toBe(45);
+  });
+
+  it('sums habit and task durations together', () => {
+    const task = requireCreated(
+      createOneOffTask({
+        id: id<'task-occurrence'>('a001'),
+        planEntryId: id<'task-plan-entry'>('c001'),
+        title: 'Task',
+        placement: { kind: 'day', date: DATE },
+        plannedDurationMinutes: 30,
+        dayPosition: 0,
+        createdSequence: creationSequence(1),
+        createdAt,
+      }),
+    );
+
+    expect(calculatePlannedLoad([task.occurrence], DATE, [habit('b001', 45)])).toBe(75);
+  });
+
+  it('contributes nothing for a habit with no duration (FR-031)', () => {
+    expect(calculatePlannedLoad([], DATE, [habit('b001'), habit('b002')])).toBe(0);
+  });
+
+  it('reports the same load as before 003 when no habit carries a duration (FR-031)', () => {
+    const task = requireCreated(
+      createOneOffTask({
+        id: id<'task-occurrence'>('a002'),
+        planEntryId: id<'task-plan-entry'>('c002'),
+        title: 'Task',
+        placement: { kind: 'day', date: DATE },
+        plannedDurationMinutes: 30,
+        dayPosition: 0,
+        createdSequence: creationSequence(1),
+        createdAt,
+      }),
+    );
+
+    expect(calculatePlannedLoad([task.occurrence], DATE, [habit('b001')])).toBe(
+      calculatePlannedLoad([task.occurrence], DATE),
+    );
+  });
+
+  it('ignores a habit belonging to another date', () => {
+    expect(
+      calculatePlannedLoad([], DATE, [habit('b001', 45, { date: localDate('2026-08-12') })]),
+    ).toBe(0);
+  });
+
+  it('ignores a deleted habit occurrence', () => {
+    expect(calculatePlannedLoad([], DATE, [habit('b001', 45, { outcome: 'deleted' })])).toBe(0);
+  });
+
+  it('counts a habit duration regardless of whether the habit was completed (FR-033)', () => {
+    // Load is what was planned, not what happened.
+    for (const outcome of ['pending', 'completed', 'not-completed'] as const) {
+      expect(calculatePlannedLoad([], DATE, [habit('b001', 45, { outcome })])).toBe(45);
+    }
+  });
+
+  it('does not change any completion count', () => {
+    // Duration is load only: the score reads counts, which this cannot touch.
+    const counted = dayCompletionCounts([], [habit('b001', 45)], DATE);
+    expect(counted.habit).toEqual({ completed: 0, applicable: 1 });
   });
 });

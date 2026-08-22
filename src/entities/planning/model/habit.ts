@@ -1,20 +1,37 @@
 import type { ApplicationClock, Instant } from '@/shared/lib/local-date/clock';
 import { compareLocalDates, type LocalDate } from '@/shared/lib/local-date/local-date';
 import { err, ok, type Result } from '@/shared/lib/result';
-import type { HabitDefinitionId, HabitOccurrenceId, Revision } from '@/shared/lib/ids';
+import type {
+  DurationMinutes,
+  HabitDefinitionId,
+  HabitOccurrenceId,
+  Revision,
+} from '@/shared/lib/ids';
 
 import type { RecurrenceRuleVersion } from './recurrence';
-import type { CompletionCounts } from './scoring';
 
 export interface HabitDefinition {
   readonly id: HabitDefinitionId;
   readonly title: string;
+  /**
+   * Optional. When set it counts toward the planned load of each day the habit
+   * applies to, exactly like a task's duration (003 FR-030). It never affects
+   * the result: under one weight per item a habit already counts once however
+   * long it takes (003 FR-033).
+   */
+  readonly durationMinutes?: DurationMinutes;
   readonly ruleVersions: readonly RecurrenceRuleVersion[];
   readonly revision: Revision;
 }
 
 export interface HabitDefinitionSnapshot {
   readonly title: string;
+  /**
+   * The duration in effect for this occurrence's date. Planned load reads the
+   * snapshot rather than the definition, which is what keeps a closed day's
+   * frozen load from moving when the definition is edited later (003 FR-034).
+   */
+  readonly durationMinutes?: DurationMinutes;
 }
 
 export type HabitOutcome = 'pending' | 'completed' | 'not-completed' | 'deleted';
@@ -260,18 +277,4 @@ export function deleteHabitOccurrence(
 
 export function isHabitOccurrenceApplicable(occurrence: HabitOccurrence): boolean {
   return occurrence.outcome !== 'deleted';
-}
-
-/** Equal-weight applicable habit facts for one local date. */
-export function habitCompletionCounts(
-  occurrences: readonly HabitOccurrence[],
-  date: LocalDate,
-): CompletionCounts {
-  const applicable = occurrences.filter(
-    (occurrence) => occurrence.date === date && isHabitOccurrenceApplicable(occurrence),
-  );
-  return {
-    completed: applicable.filter((occurrence) => occurrence.outcome === 'completed').length,
-    applicable: applicable.length,
-  };
 }

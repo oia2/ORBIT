@@ -978,6 +978,59 @@ p {
   font-size: var(--text-caption);
 }
 
+/* Task notes (003 US5): the compact trigger stays beside completion controls;
+   editing happens in a modal so the row height never jumps. */
+.orbit-task-row__note-trigger {
+  position: relative;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.orbit-task-row__note-trigger:hover,
+.orbit-task-row__note-trigger:focus-visible {
+  border-color: var(--border);
+  background: var(--surface-raised);
+  color: var(--fg);
+}
+
+.orbit-task-row__note-mark {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.orbit-task-note-dialog__text {
+  margin: 0;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.orbit-task-note-dialog__textarea {
+  width: 100%;
+  min-height: 160px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
 .orbit-task-row__actions,
 .orbit-task-execution,
 .orbit-habit-controls {

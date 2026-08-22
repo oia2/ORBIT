@@ -9,6 +9,10 @@ coverage/
 playwright-report/
 test-results/
 
+# Database backups taken before an upgrade (quickstart.md §0)
+backups/
+*.dump
+
 # Logs and local environment
 *.log
 .env*

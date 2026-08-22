@@ -104,3 +104,91 @@ test('stores no planning records in the browser', async ({ page }) => {
   expect(browserStorage.localStorageKeys).toEqual([]);
   expect(browserStorage.sessionStorageKeys).toEqual([]);
 });
+
+/*
+ * 003 US1 (FR-001, FR-002, FR-003).
+ *
+ * Phase 0 showed the owner's store has lost nothing since it was created; what
+ * this feature owes is proof that the guarantee holds under the conditions the
+ * loss was attributed to — a browser that goes away, a date that rolls over,
+ * and a rebuild that reapplies migrations.
+ */
+test('keeps a full day of records when the browser is discarded entirely', async ({
+  page,
+  browser,
+}) => {
+  await page.goto(DAY_PATH);
+  await addTask(page, 'Пережить закрытие браузера');
+
+  // A note, a habit mark, and daily state — the records the owner said vanished.
+  const taskRow = page.getByRole('list', { name: 'Задачи' }).getByRole('listitem').first();
+  await taskRow.getByRole('button', { name: /заметка к задаче/i }).click();
+  const noteDialog = page.getByRole('dialog', { name: 'Заметка' });
+  await noteDialog.getByRole('textbox', { name: /заметка к задаче/i }).fill('Текст заметки');
+  await noteDialog.getByRole('button', { name: 'Сохранить заметку' }).click();
+  await expect(noteDialog).toBeHidden();
+
+  await page.getByRole('button', { name: /^энергия 4$/i }).click();
+  await page.getByRole('button', { name: /сохранить состояние/i }).click();
+
+  // Throw the whole browser context away: no cookies, no storage, no session.
+  const fresh = await browser.newContext();
+  try {
+    const freshPage = await fresh.newPage();
+    await freshPage.goto(DAY_PATH);
+
+    const restored = freshPage.getByRole('list', { name: 'Задачи' });
+    await expect(restored.getByText('Пережить закрытие браузера', { exact: true })).toBeVisible();
+
+    const restoredRow = restored.getByRole('listitem').first();
+    await expect(restoredRow.getByLabel('есть заметка')).toBeVisible();
+    await restoredRow.getByRole('button', { name: /заметка к задаче/i }).click();
+    await expect(
+      freshPage
+        .getByRole('dialog', { name: 'Заметка' })
+        .getByRole('textbox', { name: /заметка к задаче/i }),
+    ).toHaveValue('Текст заметки');
+  } finally {
+    await fresh.close();
+  }
+});
+
+/**
+ * FR-001: the local date boundary is the moment the owner described. Navigating
+ * to the following day and back is the closest a journey gets to living through
+ * it, and it exercises the same `prepareOpenPeriod` catch-up path.
+ */
+test('keeps a previous day intact after moving past it', async ({ page }) => {
+  await page.goto(DAY_PATH);
+  await addTask(page, 'Вчерашняя запись');
+
+  await page.goto('/day/2026-08-14');
+  await page.goto('/day/2026-08-15');
+  await page.goto(DAY_PATH);
+
+  await expect(
+    page.getByRole('list', { name: 'Задачи' }).getByText('Вчерашняя запись', { exact: true }),
+  ).toBeVisible();
+  // The day is still open with its work on it, not silently discarded.
+  await expect(page.getByRole('button', { name: /^закрыть день$/i })).toBeVisible();
+});
+
+/**
+ * FR-002, FR-003: the server applies migrations at startup, so every record a
+ * journey can see has already survived migration `002-single-weight-snapshots`
+ * and `003-habit-duration` running against the database that holds it.
+ */
+test('serves records through a schema that has already been migrated', async ({ page }) => {
+  await page.goto(DAY_PATH);
+  await addTask(page, 'После миграций');
+
+  await page.reload();
+  await expect(
+    page.getByRole('list', { name: 'Задачи' }).getByText('После миграций', { exact: true }),
+  ).toBeVisible();
+
+  // The rescaled result shape: counts are visible, the old weighting is gone.
+  const score = page.getByRole('region', { name: 'Дневной результат' });
+  await expect(score).toContainText(/Задачи/);
+  await expect(score).not.toContainText('70/30');
+});

@@ -8,6 +8,7 @@ export type IconName =
   | 'close'
   | 'plus'
   | 'edit'
+  | 'note'
   | 'calendar'
   | 'trash'
   | 'more'
@@ -38,6 +39,8 @@ function IconPath({ name }: { readonly name: IconName }) {
       return <path d="M12 5v14M5 12h14" />;
     case 'edit':
       return <path d="M4 20h4L19 9l-4-4L4 16v4ZM13 7l4 4" />;
+    case 'note':
+      return <path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" />;
     case 'calendar':
       return <path d="M4 6h16v14H4zM8 3v6M16 3v6M4 10h16" />;
     case 'trash':

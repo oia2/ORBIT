@@ -27,6 +27,49 @@ test('executes, moves, backlogs, and reschedules a task without ordinary cancell
 
   await exposeDetails(page, tuesday, testInfo.project.name);
   const taskItem = tuesday.getByRole('listitem').filter({ hasText: 'Проверить отчёт' });
+
+  /* 003 US5: the row action opens a modal; the note survives reload and clears. */
+  await activate(
+    page,
+    taskItem.getByRole('button', { name: /заметка к задаче/i }),
+    testInfo.project.name,
+  );
+  let noteDialog = page.getByRole('dialog', { name: 'Заметка' });
+  const noteField = noteDialog.getByRole('textbox', { name: /заметка к задаче/i });
+  await noteField.fill('Уточнить цифры у бухгалтерии');
+  await activate(
+    page,
+    noteDialog.getByRole('button', { name: 'Сохранить заметку' }),
+    testInfo.project.name,
+  );
+  await expect(noteDialog).toBeHidden();
+
+  await page.reload();
+  await exposeDetails(page, tuesday, testInfo.project.name);
+  const reloadedTask = tuesday.getByRole('listitem').filter({ hasText: 'Проверить отчёт' });
+  await expect(reloadedTask.getByLabel('есть заметка')).toBeVisible();
+  await activate(
+    page,
+    reloadedTask.getByRole('button', { name: /заметка к задаче/i }),
+    testInfo.project.name,
+  );
+  noteDialog = page.getByRole('dialog', { name: 'Заметка' });
+  await expect(noteDialog.getByRole('textbox', { name: /заметка к задаче/i })).toHaveValue(
+    'Уточнить цифры у бухгалтерии',
+  );
+
+  await noteDialog.getByRole('textbox', { name: /заметка к задаче/i }).fill('');
+  await activate(
+    page,
+    noteDialog.getByRole('button', { name: 'Сохранить заметку' }),
+    testInfo.project.name,
+  );
+  await page.reload();
+  await exposeDetails(page, tuesday, testInfo.project.name);
+  await expect(
+    tuesday.getByRole('listitem').filter({ hasText: 'Проверить отчёт' }).getByLabel('есть заметка'),
+  ).toHaveCount(0);
+
   const checkbox = taskItem.getByRole('checkbox', { name: /выполнено/i });
   await checkbox.click();
   await expect(taskItem.getByRole('checkbox', { name: /выполнено/i })).toBeChecked();
@@ -139,7 +182,6 @@ test('preserves a closed membership after mixed deletion and exposes no finalize
     task: { completed: 0, applicable: 0, rate: 'unavailable' },
     habit: { completed: 0, applicable: 0, rate: 'unavailable' },
     value: 'unavailable',
-    weightsApplied: { task: 0, habit: 0 },
   };
   const occurrenceId = '123e4567-e89b-42d3-a456-426614174101';
   await orbitDatabase.seed({

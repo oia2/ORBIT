@@ -12,6 +12,7 @@ import {
   type TestDatabase,
 } from '../../test-support/database';
 import { DATABASE_TABLE_NAMES } from '../schema';
+import { singleWeightSnapshots } from './002-single-weight-snapshots';
 import { createMigrator, MIGRATIONS, runMigrations } from './index';
 
 const MONDAY = localDate('2026-08-10');
@@ -524,5 +525,154 @@ describe('schema constraints', () => {
         .values({ ...event, sequence: 2 as never })
         .execute(),
     ).rejects.toThrow(/task_events_id_key/);
+  });
+});
+
+/*
+ * 003 US4 (FR-021, FR-022). The snapshot rescale runs against the owner's live
+ * database, so the properties that matter are not only "the new value is right"
+ * but "nothing else moved". These tests seed 70/30-era snapshots whose value
+ * genuinely changes, then assert both halves.
+ */
+describe('003 migration: single-weight snapshot rescale', () => {
+  let scratch: ScratchDatabase;
+
+  const LEGACY_DAY_SCORE = {
+    task: { completed: 9, applicable: 9, rate: 1 },
+    habit: { completed: 0, applicable: 1, rate: 0 },
+    value: 70, // what the 70/30 split produced
+    weightsApplied: { task: 70, habit: 30 },
+  };
+
+  const LEGACY_EMPTY_SCORE = {
+    task: { completed: 0, applicable: 0, rate: 'unavailable' },
+    habit: { completed: 0, applicable: 0, rate: 'unavailable' },
+    value: 'unavailable',
+    weightsApplied: { task: 0, habit: 0 },
+  };
+
+  const LEGACY_WEEK_PROGRESS = {
+    task: { completed: 1, applicable: 10, rate: 0.1 },
+    habit: { completed: 1, applicable: 2, rate: 0.5 },
+    value: 22, // what the 70/30 split produced
+    weightsApplied: { task: 70, habit: 30 },
+  };
+
+  beforeAll(async () => {
+    scratch = await createScratchDatabase('migrations_003');
+    // Bring the schema up to 001 only, then seed legacy rows, then run the rest.
+    await createMigrator(scratch.db).migrateTo('001-initial-schema');
+
+    await sql`
+      INSERT INTO weeks (start_date, status, goals, reflection, completion_snapshot, completed_at, revision)
+      VALUES
+        (${MONDAY}, 'completed', '[]'::jsonb, NULL,
+         ${JSON.stringify({ progress: LEGACY_WEEK_PROGRESS })}::jsonb,
+         ${NOW}::timestamptz, 3)
+    `.execute(scratch.db);
+
+    await sql`
+      INSERT INTO days (date, week_start, status, state, closure_snapshot, closed_at, revision)
+      VALUES
+        (${MONDAY}, ${MONDAY}, 'closed', NULL,
+         ${JSON.stringify({ score: LEGACY_DAY_SCORE, plannedLoadMinutes: 185 })}::jsonb,
+         ${NOW}::timestamptz, 7),
+        (${TUESDAY}, ${MONDAY}, 'closed', NULL,
+         ${JSON.stringify({ score: LEGACY_EMPTY_SCORE, plannedLoadMinutes: 0 })}::jsonb,
+         ${NOW}::timestamptz, 2)
+    `.execute(scratch.db);
+
+    await runMigrations(scratch.db);
+  });
+
+  afterAll(async () => {
+    await scratch.destroy();
+  });
+
+  async function daySnapshot(date: string) {
+    const { rows } = await sql<{ readonly closure_snapshot: Record<string, unknown> }>`
+      SELECT closure_snapshot FROM days WHERE date = ${date}
+    `.execute(scratch.db);
+    return rows[0]?.closure_snapshot as {
+      readonly score: Record<string, unknown>;
+      readonly plannedLoadMinutes: number;
+    };
+  }
+
+  it('recomputes a day value under the single-weight rule (FR-021)', async () => {
+    // 9 of 10 items done: 90, not the 70 the old split recorded.
+    expect((await daySnapshot(MONDAY)).score.value).toBe(90);
+  });
+
+  it('leaves a snapshot with no applicable items unavailable, not zero (FR-018)', async () => {
+    expect((await daySnapshot(TUESDAY)).score.value).toBe('unavailable');
+  });
+
+  it('removes weightsApplied everywhere (FR-020)', async () => {
+    const { rows } = await sql<{ readonly leftover: string }>`
+      SELECT count(*)::text AS leftover FROM days
+      WHERE closure_snapshot -> 'score' ? 'weightsApplied'
+    `.execute(scratch.db);
+    const weeks = await sql<{ readonly leftover: string }>`
+      SELECT count(*)::text AS leftover FROM weeks
+      WHERE completion_snapshot -> 'progress' ? 'weightsApplied'
+    `.execute(scratch.db);
+
+    expect(rows[0]?.leftover).toBe('0');
+    expect(weeks.rows[0]?.leftover).toBe('0');
+  });
+
+  it('preserves every recorded count, rate, and planned load byte for byte (FR-002)', async () => {
+    const monday = await daySnapshot(MONDAY);
+
+    expect(monday.score.task).toEqual(LEGACY_DAY_SCORE.task);
+    expect(monday.score.habit).toEqual(LEGACY_DAY_SCORE.habit);
+    expect(monday.plannedLoadMinutes).toBe(185);
+
+    const { rows } = await sql<{
+      readonly closed_at: Date;
+      readonly revision: number;
+      readonly status: string;
+    }>`SELECT closed_at, revision, status FROM days WHERE date = ${MONDAY}`.execute(scratch.db);
+
+    // No period was reopened and no revision was bumped by the migration.
+    expect(rows[0]?.status).toBe('closed');
+    expect(rows[0]?.revision).toBe(7);
+    expect(rows[0]?.closed_at).not.toBeNull();
+  });
+
+  it('recomputes a completed week progress the same way (FR-021)', async () => {
+    const { rows } = await sql<{ readonly completion_snapshot: Record<string, unknown> }>`
+      SELECT completion_snapshot FROM weeks WHERE start_date = ${MONDAY}
+    `.execute(scratch.db);
+    const progress = (
+      rows[0]?.completion_snapshot as { readonly progress: Record<string, unknown> }
+    ).progress;
+
+    // 2 of 12 items done: 17, not the 22 the old split recorded.
+    expect(progress.value).toBe(17);
+    expect(progress.task).toEqual(LEGACY_WEEK_PROGRESS.task);
+    expect(progress.habit).toEqual(LEGACY_WEEK_PROGRESS.habit);
+  });
+
+  it('is idempotent: re-running changes nothing (FR-022)', async () => {
+    const before = await daySnapshot(MONDAY);
+    await singleWeightSnapshots.up(scratch.db);
+    const after = await daySnapshot(MONDAY);
+
+    expect(after).toEqual(before);
+  });
+
+  it('adds habit duration as a nullable column with no backfill (FR-029, FR-031)', async () => {
+    const { rows } = await sql<{
+      readonly is_nullable: string;
+      readonly column_default: string | null;
+    }>`
+      SELECT is_nullable, column_default FROM information_schema.columns
+      WHERE table_name = 'habit_definitions' AND column_name = 'duration_minutes'
+    `.execute(scratch.db);
+
+    expect(rows[0]?.is_nullable).toBe('YES');
+    expect(rows[0]?.column_default).toBeNull();
   });
 });

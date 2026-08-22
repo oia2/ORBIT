@@ -10,7 +10,7 @@ import type {
 import { dayPosition } from '@/shared/lib/ids';
 import { compareLocalDates, startOfWeek, type LocalDate } from '@/shared/lib/local-date/local-date';
 
-import type { HabitDefinition, HabitOccurrence } from './habit';
+import type { HabitDefinition, HabitDefinitionSnapshot, HabitOccurrence } from './habit';
 import {
   effectiveRecurrenceVersionOn,
   isRecurrenceDateApplicable,
@@ -72,7 +72,7 @@ export interface GeneratedHabitOccurrenceEffect {
   readonly date: LocalDate;
   readonly weekStart: LocalDate;
   readonly ruleRevision: Revision;
-  readonly definitionSnapshot: { readonly title: string };
+  readonly definitionSnapshot: HabitDefinitionSnapshot;
   readonly isException: false;
   readonly outcome: 'pending';
   readonly outcomeEvents: readonly [];
@@ -207,7 +207,14 @@ function createHabitEffect(
     date,
     weekStart: startOfWeek(date),
     ruleRevision,
-    definitionSnapshot: { title: definition.title },
+    definitionSnapshot: {
+      title: definition.title,
+      // Captured per occurrence, like the title: a later change to the
+      // definition must not move a closed day's load (003 FR-034).
+      ...(definition.durationMinutes === undefined
+        ? {}
+        : { durationMinutes: definition.durationMinutes }),
+    },
     isException: false,
     outcome: 'pending',
     outcomeEvents: [],
