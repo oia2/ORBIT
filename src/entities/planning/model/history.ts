@@ -11,12 +11,13 @@ import {
 import type { NonNegativeDurationMinutes, TaskOccurrenceId } from '@/shared/lib/ids';
 
 import type { Day, ScoreBreakdown } from './day';
-import type { HabitOccurrence } from './habit';
+import type { HabitDefinition, HabitOccurrence } from './habit';
 import {
   isDatedTaskOccurrence,
   type TaskEvent,
   type TaskOccurrence,
   type TaskPlanEntry,
+  type TaskSeries,
 } from './task';
 import type { Week } from './week';
 
@@ -49,6 +50,19 @@ export interface WeekView {
 
 export interface DayView extends DayPlanningFacts {
   readonly unfinishedTaskIds: readonly TaskOccurrenceId[];
+  /**
+   * The definitions behind `habits`. An occurrence carries only the
+   * `ruleRevision` it was materialized from, which is neither the habit's
+   * current schedule nor the revision its commands guard against, so a
+   * recurrence editor cannot be driven from occurrences alone.
+   */
+  readonly habitDefinitions: readonly HabitDefinition[];
+  /**
+   * The series behind the day's recurring tasks, for the same reason as
+   * `habitDefinitions`: an occurrence's `ruleRevision` is the one it was
+   * materialized from, not the one the series' own commands guard against.
+   */
+  readonly taskSeries: readonly TaskSeries[];
 }
 
 export interface BacklogView {

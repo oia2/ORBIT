@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { IsoWeekday, RecurrenceRule } from '@/entities/planning';
 import type { ApplicationClock } from '@/shared/lib/local-date/clock';
-import { addDays, formatLocalDate, type LocalDate } from '@/shared/lib/local-date/local-date';
+import { formatLocalDate, type LocalDate } from '@/shared/lib/local-date/local-date';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
 import { FormField } from '@/shared/ui/form-field';
@@ -82,8 +82,8 @@ export function HabitRecurrenceDialog(props: HabitRecurrenceDialogProps) {
       return;
     }
     // Existing habits keep their originally recorded start date; only a brand-new habit
-    // gets today's date. `applyRecurrenceRuleChange` always makes updates effective from
-    // tomorrow regardless of this value, so preserving it here never rewrites past history.
+    // gets today's date. `applyRecurrenceRuleChange` decides the effective boundary itself
+    // and never reaches back past it, so preserving this value cannot rewrite history.
     const startDate =
       mode === 'update' && props.initialRule !== undefined
         ? props.initialRule.startDate
@@ -154,13 +154,14 @@ export function HabitRecurrenceDialog(props: HabitRecurrenceDialogProps) {
       </fieldset>
       {mode === 'update' ? (
         <p className="orbit-page-note">
-          Изменение или остановка вступит в силу{' '}
-          {formatLocalDate(addDays(reviewDate, 1), 'ru-RU', {
+          Изменение вступит в силу сразу, с{' '}
+          {formatLocalDate(reviewDate, 'ru-RU', {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
           })}
-          . Сегодняшнее вхождение не изменится.
+          : добавленный день недели появится уже сегодня. Сегодняшняя отметка, если она уже есть, не
+          изменится.
         </p>
       ) : null}
       <footer className="orbit-dialog__actions">

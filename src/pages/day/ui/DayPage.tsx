@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 
-import { HabitRow, TaskRow, type HabitOccurrence } from '@/entities/planning';
+import { HabitRow, latestRecurrenceRule, TaskRow, type HabitDefinition } from '@/entities/planning';
 import { CloseDayDialog, useCloseDay } from '@/features/close-day';
 import { ReopenDayDialog, useReopenDay } from '@/features/reopen-day';
 import {
@@ -18,7 +18,6 @@ import {
   addDays,
   compareLocalDates,
   formatLocalDate,
-  isoWeekday,
   type LocalDate,
 } from '@/shared/lib/local-date/local-date';
 import { Button } from '@/shared/ui/button';
@@ -69,7 +68,7 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
   const { state, reload } = useDayPage(date);
   const [editorOpen, setEditorOpen] = useState(false);
   const [habitEditorOpen, setHabitEditorOpen] = useState(false);
-  const [habitSeriesEditor, setHabitSeriesEditor] = useState<HabitOccurrence>();
+  const [habitSeriesEditor, setHabitSeriesEditor] = useState<HabitDefinition>();
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const manageTask = useManageTask(reload);
@@ -95,6 +94,12 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
   // A deleted occurrence stays in the projection for history, but the day's
   // own list only shows the habits that still apply to it.
   const visibleHabits = ready?.habits.filter((habit) => habit.outcome !== 'deleted') ?? [];
+  // An occurrence knows only the rule revision it was materialized from, which
+  // goes stale as soon as the series is edited. Every series-level command is
+  // driven from the definition instead.
+  const habitDefinitions = new Map(
+    (ready?.habitDefinitions ?? []).map((definition) => [definition.id, definition]),
+  );
   const load = Number(ready?.plannedLoadMinutes ?? 0);
   const dateEyebrow = formatLocalDate(date, 'ru-RU', {
     weekday: 'long',
@@ -381,45 +386,53 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
                   </div>
                 ) : (
                   <ul className={styles.habits} aria-label="Привычки">
-                    {visibleHabits.map((occurrence) => (
-                      <HabitRow
-                        key={occurrence.id}
-                        occurrence={occurrence}
-                        {...(ready.day.status === 'open' &&
-                        (occurrence.outcome === 'pending' || occurrence.outcome === 'completed')
-                          ? {
-                              onToggle: () => {
-                                void (occurrence.outcome === 'completed'
-                                  ? habitOutcome.clear(occurrence.id, ready.day.revision)
-                                  : habitOutcome.record(
-                                      occurrence.id,
-                                      'completed',
-                                      ready.day.revision,
-                                    ));
-                              },
-                            }
-                          : {})}
-                        actions={
-                          <HabitOutcomeControl
-                            occurrence={occurrence}
-                            dayStatus={ready.day.status}
-                            onCorrect={() =>
-                              habitOutcome.correct(occurrence.id, ready.day.revision)
-                            }
-                            onDelete={() => habitOutcome.remove(occurrence.id, ready.day.revision)}
-                            onEdit={(title) =>
-                              habitOutcome.edit(occurrence.id, title, ready.day.revision)
-                            }
-                            onEditSeries={() => {
-                              setHabitSeriesEditor(occurrence);
-                            }}
-                            onStopSeries={() =>
-                              manageHabit.stop(occurrence.definitionId, occurrence.ruleRevision)
-                            }
-                          />
-                        }
-                      />
-                    ))}
+                    {visibleHabits.map((occurrence) => {
+                      const definition = habitDefinitions.get(occurrence.definitionId);
+                      return (
+                        <HabitRow
+                          key={occurrence.id}
+                          occurrence={occurrence}
+                          {...(ready.day.status === 'open' &&
+                          (occurrence.outcome === 'pending' || occurrence.outcome === 'completed')
+                            ? {
+                                onToggle: () => {
+                                  void (occurrence.outcome === 'completed'
+                                    ? habitOutcome.clear(occurrence.id, ready.day.revision)
+                                    : habitOutcome.record(
+                                        occurrence.id,
+                                        'completed',
+                                        ready.day.revision,
+                                      ));
+                                },
+                              }
+                            : {})}
+                          actions={
+                            <HabitOutcomeControl
+                              occurrence={occurrence}
+                              dayStatus={ready.day.status}
+                              onCorrect={() =>
+                                habitOutcome.correct(occurrence.id, ready.day.revision)
+                              }
+                              onDelete={() =>
+                                habitOutcome.remove(occurrence.id, ready.day.revision)
+                              }
+                              onEdit={(title) =>
+                                habitOutcome.edit(occurrence.id, title, ready.day.revision)
+                              }
+                              {...(definition === undefined
+                                ? {}
+                                : {
+                                    onEditSeries: () => {
+                                      setHabitSeriesEditor(definition);
+                                    },
+                                    onStopSeries: () =>
+                                      manageHabit.stop(definition.id, definition.revision),
+                                  })}
+                            />
+                          }
+                        />
+                      );
+                    })}
                   </ul>
                 )}
                 <footer className={styles.cardFooter}>
@@ -476,14 +489,14 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
           open
           mode="update"
           clock={clock}
-          initialTitle={habitSeriesEditor.definitionSnapshot.title}
-          {...(habitSeriesEditor.definitionSnapshot.durationMinutes === undefined
+          initialTitle={habitSeriesEditor.title}
+          {...(habitSeriesEditor.durationMinutes === undefined
             ? {}
-            : { initialDurationMinutes: habitSeriesEditor.definitionSnapshot.durationMinutes })}
-          initialRule={{
-            startDate: habitSeriesEditor.date,
-            weekdays: [isoWeekday(habitSeriesEditor.date)],
-          }}
+            : { initialDurationMinutes: habitSeriesEditor.durationMinutes })}
+          {...(() => {
+            const rule = latestRecurrenceRule(habitSeriesEditor.ruleVersions);
+            return rule === undefined ? {} : { initialRule: rule };
+          })()}
           onClose={() => {
             setHabitSeriesEditor(undefined);
           }}
@@ -495,17 +508,17 @@ export function DayPage({ date, clock = createSystemClock() }: DayPageProps) {
              */
             if (
               !(await manageHabit.setDuration({
-                definitionId: habitSeriesEditor.definitionId,
+                definitionId: habitSeriesEditor.id,
                 durationMinutes,
-                revision: habitSeriesEditor.ruleRevision,
+                revision: habitSeriesEditor.revision,
               }))
             ) {
               return false;
             }
             return manageHabit.update({
-              definitionId: habitSeriesEditor.definitionId,
+              definitionId: habitSeriesEditor.id,
               rule,
-              revision: habitSeriesEditor.ruleRevision,
+              revision: habitSeriesEditor.revision,
             });
           }}
         />

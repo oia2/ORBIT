@@ -1,7 +1,9 @@
-import type { TaskOccurrenceId } from '@/shared/lib/ids';
+import type { HabitDefinitionId, TaskOccurrenceId, TaskSeriesId } from '@/shared/lib/ids';
 import { startOfWeek, type LocalDate } from '@/shared/lib/local-date/local-date';
 
 import type { Day, ScoreBreakdown } from '@/entities/planning/model/day';
+import type { HabitDefinition } from '@/entities/planning/model/habit';
+import type { TaskSeries } from '@/entities/planning/model/task';
 import type {
   BacklogView,
   DayPlanningFacts,
@@ -19,10 +21,12 @@ import {
   getDay,
   getDaysByWeekStart,
   getEventsByOccurrence,
+  getHabitDefinition,
   getHabitOccurrencesByDate,
   getPlanEntriesByDate,
   getPlanEntriesByOccurrence,
   getTaskOccurrence,
+  getTaskSeries,
   getWeek,
 } from './store';
 import type { PlanningTransaction } from './transaction';
@@ -156,6 +160,30 @@ export async function getWeekView(
   };
 }
 
+/**
+ * The definitions behind a day's habit occurrences, deduplicated. Only the
+ * habits the day actually shows are read: the editor needs their schedule and
+ * revision, and a definition with nothing on this day has nothing to edit here.
+ */
+async function readHabitDefinitionsFor(
+  trx: PlanningTransaction,
+  habits: readonly { readonly definitionId: HabitDefinitionId }[],
+): Promise<readonly HabitDefinition[]> {
+  const ids = [...new Set(habits.map((habit) => habit.definitionId))];
+  const definitions = await Promise.all(ids.map((id) => getHabitDefinition(trx, id)));
+  return definitions.filter((definition) => definition !== undefined);
+}
+
+/** The series behind a day's recurring tasks; one-off tasks contribute nothing. */
+async function readTaskSeriesFor(
+  trx: PlanningTransaction,
+  seriesIds: readonly (TaskSeriesId | undefined)[],
+): Promise<readonly TaskSeries[]> {
+  const ids = [...new Set(seriesIds.filter((id) => id !== undefined))];
+  const series = await Promise.all(ids.map((id) => getTaskSeries(trx, id)));
+  return series.filter((entry) => entry !== undefined);
+}
+
 export async function getDayView(trx: PlanningTransaction, date: LocalDate): Promise<DayView> {
   const day = await getDay(trx, date);
   if (day === undefined) {
@@ -165,6 +193,11 @@ export async function getDayView(trx: PlanningTransaction, date: LocalDate): Pro
   const facts = await readDayFacts(trx, day);
   return {
     ...facts,
+    habitDefinitions: await readHabitDefinitionsFor(trx, facts.habits),
+    taskSeries: await readTaskSeriesFor(
+      trx,
+      facts.tasks.map(({ occurrence }) => occurrence.seriesId),
+    ),
     unfinishedTaskIds: facts.tasks
       .filter(({ occurrence }) =>
         occurrence.state === 'active' &&

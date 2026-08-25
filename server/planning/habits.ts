@@ -205,11 +205,20 @@ export async function updateHabitRule(
   if (guard !== undefined) throw new DomainFailure(guard);
 
   const updatedRevision = nextRevision(definition.revision);
+  /*
+   * A habit's schedule change reaches today, unlike a task series' (001
+   * SC-005). Adding a weekday is how a user says "I want to track this today",
+   * and making them wait until tomorrow for a habit they can still do reads as
+   * the edit not having worked. Nothing already recorded moves: today's
+   * occurrence, if one was formed, is preserved by
+   * `shouldPreserveOccurrenceForRuleChange` whatever the new rule says.
+   */
   const versions = applyRecurrenceRuleChange({
     ruleVersions: definition.ruleVersions,
     currentLocalDate: ctx.clock.currentLocalDate(),
     revision: updatedRevision,
     nextRule: ruleValidation.value,
+    from: 'current-date',
   });
   if (!versions.ok) throw recurrenceValidationFailure(versions.error);
 

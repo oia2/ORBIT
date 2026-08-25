@@ -18,6 +18,7 @@ import {
   buildUnavailableScoreBreakdown,
   buildPlannedTaskEntry,
   buildScoreBreakdown,
+  buildTaskSeries,
 } from '../../../../tests/fixtures/planning';
 
 import { WeekPage } from './WeekPage';
@@ -29,8 +30,14 @@ describe('WeekPage', () => {
     const user = userEvent.setup();
     const weekStart = localDate('2026-05-18');
     const date = localDate('2026-05-20');
+    const series = buildTaskSeries({
+      id: entityId<'task-series'>('123e4567-e89b-42d3-a456-426614174201'),
+      // Ahead of the occurrence's ruleRevision, as it is once the series has
+      // been edited: the update dialog must still be reachable.
+      revision: revision(2),
+    });
     const occurrence = buildIncompleteTaskOccurrence({
-      seriesId: entityId<'task-series'>('123e4567-e89b-42d3-a456-426614174201'),
+      seriesId: series.id,
       nominalDate: date,
       ruleRevision: revision(0),
       notes: 'Одна и та же заметка',
@@ -60,6 +67,8 @@ describe('WeekPage', () => {
       ],
       score,
       plannedLoadMinutes: nonNegativeDurationMinutes(75),
+      habitDefinitions: [],
+      taskSeries: [series],
       unfinishedTaskIds: [occurrence.id],
     };
     const otherDayView = {
@@ -77,6 +86,8 @@ describe('WeekPage', () => {
       habits: [],
       score: otherScore,
       plannedLoadMinutes: nonNegativeDurationMinutes(45),
+      habitDefinitions: [],
+      taskSeries: [],
       unfinishedTaskIds: [otherOccurrence.id],
     };
     const weekView = {
@@ -103,6 +114,9 @@ describe('WeekPage', () => {
         value: 50,
       }),
     };
+    const stopTaskSeries = vi
+      .fn()
+      .mockResolvedValue({ ok: true, value: undefined, affectedDates: [], affectedWeeks: [] });
     const repository = {
       ensureCalendarWeek: vi
         .fn()
@@ -117,6 +131,7 @@ describe('WeekPage', () => {
           value: requestedDate === date ? dayView : otherDayView,
         }),
       ),
+      stopTaskSeries,
     } as unknown as PlanningRepository;
     render(
       <MemoryRouter>
@@ -153,7 +168,22 @@ describe('WeekPage', () => {
     await user.click(screen.getByRole('button', { name: /отмена/i }));
     await user.click(within(taskRow).getByLabelText(/действия с задачей/i));
     await user.click(screen.getByRole('button', { name: 'Изменить повтор' }));
-    expect(screen.getByRole('dialog', { name: /изменить повтор задачи/i })).toBeVisible();
+    const seriesDialog = screen.getByRole('dialog', { name: /изменить повтор задачи/i });
+    expect(seriesDialog).toBeVisible();
+    // The series' own schedule, not the weekday the opened occurrence falls on.
+    for (const label of ['Понедельник', 'Среда', 'Пятница']) {
+      expect(within(seriesDialog).getByRole('checkbox', { name: label })).toBeChecked();
+    }
+    expect(within(seriesDialog).getByRole('checkbox', { name: 'Вторник' })).not.toBeChecked();
+
+    await user.click(within(seriesDialog).getByRole('button', { name: /остановить повтор/i }));
+    // The series' revision, not the occurrence's stale ruleRevision.
+    await waitFor(() => {
+      expect(stopTaskSeries).toHaveBeenCalledWith({
+        seriesId: series.id,
+        expectedRevision: revision(2),
+      });
+    });
   });
 
   it('keeps completed Weekly Progress frozen even when current day projections differ', async () => {
@@ -176,6 +206,8 @@ describe('WeekPage', () => {
       habits: [],
       score: liveScore,
       plannedLoadMinutes: nonNegativeDurationMinutes(45),
+      habitDefinitions: [],
+      taskSeries: [],
       unfinishedTaskIds: [],
     };
     const repository = {
@@ -317,6 +349,8 @@ describe('003 US8: expanding the whole week planner at once', () => {
             habits: [],
             score: emptyScore,
             plannedLoadMinutes: nonNegativeDurationMinutes(0),
+            habitDefinitions: [],
+            taskSeries: [],
             unfinishedTaskIds: [],
           },
         }),
