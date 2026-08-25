@@ -190,7 +190,8 @@ test('creates, changes and stops recurrence while preserving explicit facts and 
     testInfo.project.name,
   );
   dialog = page.getByRole('dialog', { name: /изменить повтор привычки/i });
-  await expect(dialog.getByText(labelPattern(dayMonthYearLabel(EFFECTIVE_FROM)))).toBeVisible();
+  // Unlike a task series, a habit's rule change reaches the current day.
+  await expect(dialog.getByText(labelPattern(dayMonthYearLabel(todayISO())))).toBeVisible();
   await dialog.getByLabel(labelPattern(weekdayLabel(THURSDAY))).check();
   await activate(page, dialog.getByRole('button', { name: /сохранить/i }), testInfo.project.name);
   await expect(dialog).toBeHidden();

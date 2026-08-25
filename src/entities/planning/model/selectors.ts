@@ -49,7 +49,15 @@ export interface PlanningTaskProjection extends ProjectedTaskMembership {
   readonly hasChanges: boolean;
 }
 
-export interface OpenDayPlanningView extends Omit<DayView, 'day' | 'tasks'> {
+/**
+ * `habitDefinitions` and `taskSeries` are dropped: they are part of the
+ * server's day projection so a recurrence editor can reach the series, and this
+ * in-model selector works purely from the occurrences it is handed.
+ */
+export interface OpenDayPlanningView extends Omit<
+  DayView,
+  'day' | 'tasks' | 'habitDefinitions' | 'taskSeries'
+> {
   readonly day: OpenDay;
   readonly tasks: readonly PlanningTaskProjection[];
 }

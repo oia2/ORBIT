@@ -28,8 +28,9 @@ export type {
 } from './model/history';
 export type { Day, DailyStateEntry, ScoreBreakdown as ScoreBreakdownValue } from './model/day';
 export type { ProjectedTaskMembership } from './model/history';
-export type { HabitOccurrence, HabitOutcome } from './model/habit';
+export type { HabitDefinition, HabitOccurrence, HabitOutcome } from './model/habit';
 export type { RecurrenceRule, IsoWeekday } from './model/recurrence';
+export { latestRecurrenceRule } from './model/recurrence';
 export { createOneOffTask, isDatedTaskOccurrence, isValidLocalTime } from './model/task';
 export { calculateWeeklyProgressFromClosedDays } from './model/week-completion';
 export { calculateCompletionScore } from './model/scoring';

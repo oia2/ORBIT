@@ -4,7 +4,9 @@ import { Link } from 'react-router';
 import {
   PeriodStatus,
   TaskRow,
+  latestRecurrenceRule,
   type DayView,
+  type HabitDefinition,
   type HabitOccurrence,
   type HabitOutcome,
   type ProjectedTaskMembership,
@@ -24,7 +26,6 @@ import {
   addDays,
   formatLocalDate,
   getLocalDateParts,
-  isoWeekday,
   weekDates,
   type LocalDate,
 } from '@/shared/lib/local-date/local-date';
@@ -85,8 +86,15 @@ interface HabitWeekRow {
   readonly id: string;
   readonly title: string;
   readonly outcomes: ReadonlyMap<LocalDate, HabitOutcome>;
-  /** Any occurrence of the series, used to edit or stop the whole recurrence. */
+  /** Any occurrence of the series, used for the per-day snapshot it carries. */
   readonly occurrence: HabitOccurrence;
+  /**
+   * The series itself. Editing or stopping a recurrence is driven from here,
+   * never from the occurrence: an occurrence's `ruleRevision` is the revision
+   * it was materialized from, which no longer matches the definition once the
+   * series has been edited.
+   */
+  readonly definition: HabitDefinition | undefined;
 }
 
 function buildHabitRows(dayViews: readonly DayView[]): readonly HabitWeekRow[] {
@@ -97,8 +105,14 @@ function buildHabitRows(dayViews: readonly DayView[]): readonly HabitWeekRow[] {
       readonly title: string;
       readonly outcomes: Map<LocalDate, HabitOutcome>;
       readonly occurrence: HabitOccurrence;
+      readonly definition: HabitDefinition | undefined;
     }
   >();
+  const definitions = new Map(
+    dayViews.flatMap((dayView) =>
+      dayView.habitDefinitions.map((definition) => [String(definition.id), definition] as const),
+    ),
+  );
 
   for (const dayView of dayViews) {
     for (const habit of dayView.habits) {
@@ -109,6 +123,7 @@ function buildHabitRows(dayViews: readonly DayView[]): readonly HabitWeekRow[] {
         title: habit.definitionSnapshot.title,
         outcomes: new Map<LocalDate, HabitOutcome>(),
         occurrence: habit,
+        definition: definitions.get(id),
       };
       row.outcomes.set(dayView.day.date, habit.outcome);
       grouped.set(id, row);
@@ -153,7 +168,7 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
   >();
   const [completionOpen, setCompletionOpen] = useState(false);
   const [habitEditorOpen, setHabitEditorOpen] = useState(false);
-  const [habitSeriesEditor, setHabitSeriesEditor] = useState<HabitOccurrence>();
+  const [habitSeriesEditor, setHabitSeriesEditor] = useState<HabitDefinition>();
   const today = clock.currentLocalDate();
   const [expandedPlannerDays, setExpandedPlannerDays] = useState<ReadonlySet<LocalDate>>(
     () => new Set([today]),
@@ -195,6 +210,11 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
   const plannedTaskCount = ready?.dayViews.reduce((sum, day) => sum + day.tasks.length, 0) ?? 0;
   const taskRate = reviewProgress === undefined ? undefined : percent(reviewProgress.task.rate);
   const habitRows = buildHabitRows(ready?.dayViews ?? []);
+  const taskSeries = new Map(
+    (ready?.dayViews ?? []).flatMap((dayView) =>
+      dayView.taskSeries.map((series) => [String(series.id), series] as const),
+    ),
+  );
   const dates = weekDates(weekStart);
   // Individual `<details>` toggling keeps writing to the same set, so per-day
   // expansion still works independently afterwards (003 FR-042).
@@ -595,31 +615,32 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
                           })}
                         </div>
                         <ActionMenu triggerLabel={`Действия с привычкой «${habit.title}»`}>
-                          {(close) => (
-                            <>
-                              <Button
-                                variant="quiet"
-                                onClick={() => {
-                                  close();
-                                  setHabitSeriesEditor(habit.occurrence);
-                                }}
-                              >
-                                Изменить повтор
-                              </Button>
-                              <Button
-                                variant="danger"
-                                onClick={() => {
-                                  close();
-                                  void manageHabit.stop(
-                                    habit.occurrence.definitionId,
-                                    habit.occurrence.ruleRevision,
-                                  );
-                                }}
-                              >
-                                Удалить
-                              </Button>
-                            </>
-                          )}
+                          {(close) => {
+                            const definition = habit.definition;
+                            if (definition === undefined) return null;
+                            return (
+                              <>
+                                <Button
+                                  variant="quiet"
+                                  onClick={() => {
+                                    close();
+                                    setHabitSeriesEditor(definition);
+                                  }}
+                                >
+                                  Изменить повтор
+                                </Button>
+                                <Button
+                                  variant="danger"
+                                  onClick={() => {
+                                    close();
+                                    void manageHabit.stop(definition.id, definition.revision);
+                                  }}
+                                >
+                                  Удалить
+                                </Button>
+                              </>
+                            );
+                          }}
                         </ActionMenu>
                       </div>
                     ))}
@@ -847,14 +868,14 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
           open
           mode="update"
           clock={clock}
-          initialTitle={habitSeriesEditor.definitionSnapshot.title}
-          {...(habitSeriesEditor.definitionSnapshot.durationMinutes === undefined
+          initialTitle={habitSeriesEditor.title}
+          {...(habitSeriesEditor.durationMinutes === undefined
             ? {}
-            : { initialDurationMinutes: habitSeriesEditor.definitionSnapshot.durationMinutes })}
-          initialRule={{
-            startDate: habitSeriesEditor.date,
-            weekdays: [isoWeekday(habitSeriesEditor.date)],
-          }}
+            : { initialDurationMinutes: habitSeriesEditor.durationMinutes })}
+          {...(() => {
+            const rule = latestRecurrenceRule(habitSeriesEditor.ruleVersions);
+            return rule === undefined ? {} : { initialRule: rule };
+          })()}
           onClose={() => {
             setHabitSeriesEditor(undefined);
           }}
@@ -866,17 +887,17 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
              */
             if (
               !(await manageHabit.setDuration({
-                definitionId: habitSeriesEditor.definitionId,
+                definitionId: habitSeriesEditor.id,
                 durationMinutes,
-                revision: habitSeriesEditor.ruleRevision,
+                revision: habitSeriesEditor.revision,
               }))
             ) {
               return false;
             }
             return manageHabit.update({
-              definitionId: habitSeriesEditor.definitionId,
+              definitionId: habitSeriesEditor.id,
               rule,
-              revision: habitSeriesEditor.ruleRevision,
+              revision: habitSeriesEditor.revision,
             });
           }}
         />
@@ -920,9 +941,12 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
       ) : (
         (() => {
           const occurrence = recurrenceEditor.task.occurrence;
-          const seriesId = occurrence.seriesId;
-          const ruleRevision = occurrence.ruleRevision;
-          if (seriesId === undefined || ruleRevision === undefined) return null;
+          // Driven by the series, never by the occurrence: an occurrence carries
+          // the weekday it happens to fall on and the rule revision it was
+          // materialized from, neither of which is the series' own state.
+          const series = taskSeries.get(occurrence.seriesId ?? '');
+          if (series === undefined) return null;
+          const initialRule = latestRecurrenceRule(series.ruleVersions);
           return (
             <TaskRecurrenceDialog
               open
@@ -932,23 +956,18 @@ export function WeekPage({ weekStart, clock = createSystemClock() }: WeekPagePro
               initialDuration={
                 recurrenceEditor.task.membership.plannedSnapshot.plannedDurationMinutes
               }
-              initialRule={{
-                startDate: occurrence.nominalDate ?? recurrenceEditor.task.membership.date,
-                weekdays: [
-                  isoWeekday(occurrence.nominalDate ?? recurrenceEditor.task.membership.date),
-                ],
-              }}
+              {...(initialRule === undefined ? {} : { initialRule })}
               onClose={() => {
                 setRecurrenceEditor(undefined);
               }}
               onSubmit={({ rule }) =>
                 manageTask.updateSeries({
-                  seriesId,
+                  seriesId: series.id,
                   rule,
-                  revision: ruleRevision,
+                  revision: series.revision,
                 })
               }
-              onStop={() => manageTask.stopSeries(seriesId, ruleRevision)}
+              onStop={() => manageTask.stopSeries(series.id, series.revision)}
             />
           );
         })()

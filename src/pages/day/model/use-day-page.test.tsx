@@ -39,6 +39,8 @@ describe('useDayPage', () => {
           habits: [],
           score: unavailable,
           plannedLoadMinutes: 0,
+          habitDefinitions: [],
+          taskSeries: [],
           unfinishedTaskIds: [],
         },
       }),

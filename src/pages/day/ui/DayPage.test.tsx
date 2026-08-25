@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router';
@@ -8,11 +8,13 @@ import { TaskEditorDialog } from '@/features/manage-task';
 import { localDate } from '@/shared/lib/local-date/local-date';
 import { durationMinutes, nonNegativeDurationMinutes } from '@/shared/lib/ids';
 import {
+  buildHabitDefinition,
   buildHabitOccurrence,
   buildIncompleteTaskOccurrence,
   buildOpenDay,
   buildOpenWeek,
   buildPlannedTaskEntry,
+  buildRevision,
   buildScoreBreakdown,
 } from '../../../../tests/fixtures/planning';
 
@@ -40,6 +42,8 @@ describe('DayPage', () => {
       ],
       score: buildScoreBreakdown(),
       plannedLoadMinutes: nonNegativeDurationMinutes(75),
+      habitDefinitions: [],
+      taskSeries: [],
       unfinishedTaskIds: [occurrence.id],
     };
     const repository = {
@@ -104,6 +108,8 @@ describe('DayPage', () => {
       habits: [],
       score: buildScoreBreakdown(),
       plannedLoadMinutes: nonNegativeDurationMinutes(0),
+      habitDefinitions: [],
+      taskSeries: [],
       unfinishedTaskIds: [],
     };
     const repository = {
@@ -131,6 +137,70 @@ describe('DayPage', () => {
     expect(document.querySelector('[data-od-id="day-tasks"]')).toContainElement(addTask);
     await user.click(addTask);
     expect(screen.getByRole('dialog', { name: /новая задача/i })).toBeVisible();
+  });
+
+  it('edits and stops a habit series from its definition, not from the day it is opened on', async () => {
+    const user = userEvent.setup();
+    const date = localDate('2026-05-20');
+    // A Wednesday: the day the menu is opened on is one of three scheduled
+    // weekdays, and it must not become the whole schedule.
+    const definition = buildHabitDefinition({ revision: buildRevision(3) });
+    const view = {
+      day: buildOpenDay(),
+      tasks: [],
+      habits: [buildHabitOccurrence({ date, ruleRevision: buildRevision(0) })],
+      score: buildScoreBreakdown(),
+      plannedLoadMinutes: nonNegativeDurationMinutes(0),
+      habitDefinitions: [definition],
+      unfinishedTaskIds: [],
+    };
+    const stopHabitDefinition = vi
+      .fn()
+      .mockResolvedValue({ ok: true, value: undefined, affectedDates: [], affectedWeeks: [] });
+    const repository = {
+      ensureCalendarWeek: vi
+        .fn()
+        .mockResolvedValue({ ok: true, value: date, affectedDates: [], affectedWeeks: [] }),
+      prepareOpenPeriod: vi
+        .fn()
+        .mockResolvedValue({ ok: true, value: undefined, affectedDates: [], affectedWeeks: [] }),
+      getDayView: vi.fn().mockResolvedValue({ ok: true, value: view }),
+      getWeekView: vi.fn().mockResolvedValue({
+        ok: true,
+        value: { week: buildOpenWeek(), days: [] },
+      }),
+      stopHabitDefinition,
+    } as unknown as PlanningRepository;
+    render(
+      <MemoryRouter>
+        <PlanningRepositoryProvider repository={repository}>
+          <DayPage date={date} />
+        </PlanningRepositoryProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: /действия с привычкой/i }));
+    await user.click(screen.getByRole('button', { name: /изменить повтор/i }));
+
+    const dialog = screen.getByRole('dialog', { name: /изменить повтор привычки/i });
+    for (const label of ['Понедельник', 'Среда', 'Пятница']) {
+      expect(within(dialog).getByRole('checkbox', { name: label })).toBeChecked();
+    }
+    for (const label of ['Вторник', 'Четверг', 'Суббота', 'Воскресенье']) {
+      expect(within(dialog).getByRole('checkbox', { name: label })).not.toBeChecked();
+    }
+
+    await user.click(within(dialog).getByRole('button', { name: /отмена/i }));
+    await user.click(screen.getByRole('button', { name: /действия с привычкой/i }));
+    await user.click(screen.getByRole('button', { name: /остановить повтор/i }));
+
+    // The definition's own revision, not the occurrence's stale ruleRevision.
+    await waitFor(() => {
+      expect(stopHabitDefinition).toHaveBeenCalledWith({
+        definitionId: definition.id,
+        expectedRevision: buildRevision(3),
+      });
+    });
   });
 
   it('renders dated planning actions and factual load without capacity semantics', () => {

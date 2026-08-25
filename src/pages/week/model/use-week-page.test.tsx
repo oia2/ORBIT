@@ -47,6 +47,8 @@ describe('useWeekPage', () => {
             habits: [],
             score,
             plannedLoadMinutes: 0,
+            habitDefinitions: [],
+            taskSeries: [],
             unfinishedTaskIds: [],
           },
         }),

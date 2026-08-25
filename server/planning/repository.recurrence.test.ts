@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { latestRecurrenceRule } from '@/entities/planning/model/recurrence';
 import { createFixedClock, instant } from '@/shared/lib/local-date/clock';
 import { localDate } from '@/shared/lib/local-date/local-date';
 import { dayPosition, durationMinutes, revision } from '@/shared/lib/ids';
@@ -216,6 +217,168 @@ describe('PostgreSQL planning repository — US3', () => {
     ).toBe(true);
   });
 
+  it('projects the habit definition a day’s recurrence editor needs, and keeps it usable after an edit', async () => {
+    const definition = await repository.createHabitDefinition({
+      title: 'Journal',
+      recurrenceRule: { startDate: MONDAY, weekdays: [1, 2] },
+    });
+    if (!definition.ok) throw new Error(definition.error.code);
+    await repository.prepareOpenPeriod({ kind: 'week', weekStart: MONDAY });
+
+    const initialView = await repository.getDayView(TUESDAY);
+    if (!initialView.ok) throw new Error(initialView.error.code);
+    expect(initialView.value.habitDefinitions).toHaveLength(1);
+    const [initialDefinition] = initialView.value.habitDefinitions;
+    if (initialDefinition === undefined) throw new Error('missing habit definition');
+    // The whole schedule, not just the weekday of the day being looked at.
+    expect(latestRecurrenceRule(initialDefinition.ruleVersions)).toMatchObject({
+      startDate: MONDAY,
+      weekdays: [1, 2],
+    });
+
+    await expect(
+      repository.updateHabitRule({
+        definitionId: definition.value,
+        recurrenceRule: { startDate: MONDAY, weekdays: [1, 2, 4] },
+        expectedRevision: initialDefinition.revision,
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const editedView = await repository.getDayView(TUESDAY);
+    if (!editedView.ok) throw new Error(editedView.error.code);
+    const [editedDefinition] = editedView.value.habitDefinitions;
+    const occurrence = editedView.value.habits[0];
+    if (editedDefinition === undefined || occurrence === undefined) {
+      throw new Error('missing habit projection');
+    }
+    // The change takes effect tomorrow, so today's occurrence still points at
+    // the revision it was materialized from. Guarding a series command with it
+    // is what used to make a second edit or a stop fail for the rest of the day.
+    expect(occurrence.ruleRevision).toBe(initialDefinition.revision);
+    expect(editedDefinition.revision).not.toBe(occurrence.ruleRevision);
+    expect(latestRecurrenceRule(editedDefinition.ruleVersions)).toMatchObject({
+      weekdays: [1, 2, 4],
+    });
+
+    await expect(
+      repository.stopHabitDefinition({
+        definitionId: definition.value,
+        expectedRevision: occurrence.ruleRevision,
+      }),
+    ).resolves.toMatchObject({ ok: false, error: { code: 'RevisionConflict' } });
+    await expect(
+      repository.stopHabitDefinition({
+        definitionId: definition.value,
+        expectedRevision: editedDefinition.revision,
+      }),
+    ).resolves.toMatchObject({ ok: true });
+  });
+
+  it('materializes a weekday added to a habit today on that same day', async () => {
+    // The clock's current date is Tuesday; the habit runs on Mondays only.
+    const definition = await repository.createHabitDefinition({
+      title: 'Journal',
+      recurrenceRule: { startDate: MONDAY, weekdays: [1] },
+    });
+    if (!definition.ok) throw new Error(definition.error.code);
+    await repository.prepareOpenPeriod({ kind: 'week', weekStart: MONDAY });
+    expect(
+      (await database.getAllHabitOccurrences()).some((occurrence) => occurrence.date === TUESDAY),
+    ).toBe(false);
+
+    await expect(
+      repository.updateHabitRule({
+        definitionId: definition.value,
+        recurrenceRule: { startDate: MONDAY, weekdays: [1, 2] },
+        expectedRevision: revision(0),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    await repository.prepareOpenPeriod({ kind: 'week', weekStart: MONDAY });
+
+    const tuesday = (await database.getAllHabitOccurrences()).find(
+      (occurrence) => occurrence.date === TUESDAY,
+    );
+    expect(tuesday).toMatchObject({ outcome: 'pending', ruleRevision: revision(1) });
+    const view = await repository.getDayView(TUESDAY);
+    if (!view.ok) throw new Error(view.error.code);
+    expect(view.value.habits).toHaveLength(1);
+  });
+
+  it('keeps the current day’s habit record when its weekday is dropped today', async () => {
+    const definition = await repository.createHabitDefinition({
+      title: 'Journal',
+      recurrenceRule: { startDate: MONDAY, weekdays: [1, 2] },
+    });
+    if (!definition.ok) throw new Error(definition.error.code);
+    await repository.prepareOpenPeriod({ kind: 'week', weekStart: MONDAY });
+    const before = (await database.getAllHabitOccurrences()).find(
+      (occurrence) => occurrence.date === TUESDAY,
+    );
+    if (before === undefined) throw new Error('missing Tuesday occurrence');
+
+    await expect(
+      repository.updateHabitRule({
+        definitionId: definition.value,
+        recurrenceRule: { startDate: MONDAY, weekdays: [4] },
+        expectedRevision: revision(0),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    await repository.prepareOpenPeriod({ kind: 'week', weekStart: MONDAY });
+
+    // Today is no longer scheduled, but what it already formed is not erased.
+    expect(await database.getHabitOccurrence(before.id)).toMatchObject({ id: before.id });
+    // A future day that lost its weekday is reconciled away as before.
+    expect(
+      (await database.getAllHabitOccurrences()).some((occurrence) => occurrence.date === FRIDAY),
+    ).toBe(false);
+  });
+
+  it('projects the task series a recurrence editor needs, and keeps it usable after an edit', async () => {
+    const series = await repository.createTaskSeries({
+      template: { title: 'Focus block', plannedDurationMinutes: durationMinutes(25) },
+      recurrenceRule: { startDate: MONDAY, weekdays: [1, 2] },
+    });
+    if (!series.ok) throw new Error(series.error.code);
+    await repository.prepareOpenPeriod({ kind: 'week', weekStart: MONDAY });
+
+    const initialView = await repository.getDayView(TUESDAY);
+    if (!initialView.ok) throw new Error(initialView.error.code);
+    const [initialSeries] = initialView.value.taskSeries;
+    if (initialSeries === undefined) throw new Error('missing task series');
+    expect(latestRecurrenceRule(initialSeries.ruleVersions)).toMatchObject({ weekdays: [1, 2] });
+
+    await expect(
+      repository.updateTaskSeriesRule({
+        seriesId: series.value,
+        recurrenceRule: { startDate: MONDAY, weekdays: [1, 2, 4] },
+        expectedRevision: initialSeries.revision,
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const editedView = await repository.getDayView(TUESDAY);
+    if (!editedView.ok) throw new Error(editedView.error.code);
+    const [editedSeries] = editedView.value.taskSeries;
+    const occurrence = editedView.value.tasks[0]?.occurrence;
+    if (editedSeries === undefined || occurrence === undefined) {
+      throw new Error('missing task projection');
+    }
+    expect(occurrence.ruleRevision).toBe(initialSeries.revision);
+    expect(editedSeries.revision).not.toBe(occurrence.ruleRevision);
+
+    await expect(
+      repository.stopTaskSeries({
+        seriesId: series.value,
+        expectedRevision: occurrence.ruleRevision ?? revision(0),
+      }),
+    ).resolves.toMatchObject({ ok: false, error: { code: 'RevisionConflict' } });
+    await expect(
+      repository.stopTaskSeries({
+        seriesId: series.value,
+        expectedRevision: editedSeries.revision,
+      }),
+    ).resolves.toMatchObject({ ok: true });
+  });
+
   it('retains automatic miss and correction events and enforces owning-day revisions', async () => {
     const definition = await repository.createHabitDefinition({
       title: 'Journal',
@@ -313,9 +476,15 @@ describe('PostgreSQL planning repository — US3', () => {
       isException: true,
       outcomeEvents: [{ source: 'user' }],
     });
+    // A habit's rule change starts on the current date, so the Tuesday edit is a
+    // version of its own rather than being folded into the Wednesday boundary.
     expect(await database.getHabitDefinition(definition.value)).toMatchObject({
       revision: revision(2),
-      ruleVersions: [{ state: 'active' }, { effectiveFrom: WEDNESDAY, state: 'stopped' }],
+      ruleVersions: [
+        { effectiveFrom: MONDAY, effectiveThrough: MONDAY, state: 'active' },
+        { effectiveFrom: TUESDAY, effectiveThrough: TUESDAY, state: 'active' },
+        { effectiveFrom: WEDNESDAY, state: 'stopped' },
+      ],
     });
   });
 });

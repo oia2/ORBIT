@@ -66,6 +66,8 @@ describe('DayPage presentation branches', () => {
       habits: [],
       score,
       plannedLoadMinutes: nonNegativeDurationMinutes(0),
+      habitDefinitions: [],
+      taskSeries: [],
       unfinishedTaskIds: [],
     };
 
@@ -116,6 +118,8 @@ describe('DayPage presentation branches', () => {
       habits: [buildHabitOccurrence({ outcome: 'completed' })],
       score,
       plannedLoadMinutes: nonNegativeDurationMinutes(45),
+      habitDefinitions: [],
+      taskSeries: [],
       unfinishedTaskIds: [],
     };
 
@@ -168,6 +172,8 @@ describe('003 US3: reopening a closed day from the Day page', () => {
       habits: [],
       score: buildScoreBreakdown(),
       plannedLoadMinutes: nonNegativeDurationMinutes(30),
+      habitDefinitions: [],
+      taskSeries: [],
       unfinishedTaskIds: [],
     };
   }
@@ -243,6 +249,8 @@ describe('003 US3: reopening a closed day from the Day page', () => {
       habits: [],
       score: buildUnavailableScoreBreakdown(),
       plannedLoadMinutes: nonNegativeDurationMinutes(0),
+      habitDefinitions: [],
+      taskSeries: [],
       unfinishedTaskIds: [],
     });
 

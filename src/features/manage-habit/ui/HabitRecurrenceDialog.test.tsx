@@ -61,7 +61,7 @@ describe('HabitRecurrenceDialog', () => {
     expect(screen.getByLabelText(/среда/i)).not.toBeChecked();
   });
 
-  it('offers update and stop with the final D+1 boundary', () => {
+  it('announces that the change takes effect on the current date', () => {
     render(
       <HabitRecurrenceDialog
         open
@@ -76,7 +76,10 @@ describe('HabitRecurrenceDialog', () => {
         onSubmit={vi.fn().mockResolvedValue(true)}
       />,
     );
-    expect(screen.getByText(/21 мая 2026/i)).toBeInTheDocument();
+    // A habit's rule change reaches today, so a weekday added here shows up at
+    // once rather than a day later.
+    expect(screen.getByText(/20 мая 2026/i)).toBeInTheDocument();
+    expect(screen.queryByText(/21 мая 2026/i)).not.toBeInTheDocument();
     // Stopping a recurrence now lives in the habit row's menu, not this dialog.
     expect(screen.queryByRole('button', { name: /остановить повтор/i })).not.toBeInTheDocument();
   });

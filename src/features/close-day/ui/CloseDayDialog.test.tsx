@@ -23,6 +23,8 @@ const view = {
   habits: [],
   score: buildScoreBreakdown(),
   plannedLoadMinutes: nonNegativeDurationMinutes(45),
+  habitDefinitions: [],
+  taskSeries: [],
   unfinishedTaskIds: [occurrence.id],
 };
 

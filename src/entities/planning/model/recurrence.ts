@@ -211,8 +211,25 @@ interface RecurrenceChangeBase {
   readonly revision: Revision;
 }
 
+/**
+ * When a new rule starts governing.
+ *
+ * `next-date` is 001 FR/SC-005: the current day keeps exactly what it already
+ * had and the change begins tomorrow.
+ *
+ * `current-date` lets the change reach today as well, so a weekday the user
+ * adds produces an occurrence straight away instead of making them wait a day
+ * for something they just asked for. It is not retroactive: earlier versions
+ * keep their ranges, and `shouldPreserveOccurrenceForRuleChange` protects every
+ * occurrence dated on or before today, so a weekday the user removes still
+ * leaves today's already-formed row — and its recorded outcome — in place.
+ */
+export type RecurrenceChangeBoundary = 'next-date' | 'current-date';
+
 export interface ApplyRecurrenceRuleChangeInput extends RecurrenceChangeBase {
   readonly nextRule: RecurrenceRule;
+  /** Defaults to `next-date`. */
+  readonly from?: RecurrenceChangeBoundary;
 }
 
 export interface StopRecurrenceInput {
@@ -221,11 +238,16 @@ export interface StopRecurrenceInput {
   readonly revision: Revision;
 }
 
-function prepareVersionsForNextDate(
+/**
+ * Trims the stored history so a new version can start on `boundary`: versions
+ * that begin on or after it are dropped — which is what coalesces repeated
+ * changes within one day — and the one still running is closed the day before.
+ */
+function prepareVersionsBefore(
   versions: readonly RecurrenceRuleVersion[],
-  currentLocalDate: LocalDate,
+  boundary: LocalDate,
 ): RecurrenceRuleVersion[] {
-  const boundary = addDays(currentLocalDate, 1);
+  const through = addDays(boundary, -1);
   const retained = versions
     .filter((version) => compareLocalDates(version.effectiveFrom, boundary) < 0)
     .sort((left, right) => compareLocalDates(left.effectiveFrom, right.effectiveFrom));
@@ -233,12 +255,11 @@ function prepareVersionsForNextDate(
   const last = retained.at(-1);
   if (
     last !== undefined &&
-    (last.effectiveThrough === undefined ||
-      compareLocalDates(last.effectiveThrough, currentLocalDate) > 0)
+    (last.effectiveThrough === undefined || compareLocalDates(last.effectiveThrough, through) > 0)
   ) {
     retained[retained.length - 1] = {
       ...last,
-      effectiveThrough: currentLocalDate,
+      effectiveThrough: through,
     };
   }
 
@@ -253,10 +274,12 @@ export function applyRecurrenceRuleChange(
     return validation;
   }
 
-  const versions = prepareVersionsForNextDate(input.ruleVersions, input.currentLocalDate);
+  const boundary =
+    input.from === 'current-date' ? input.currentLocalDate : addDays(input.currentLocalDate, 1);
+  const versions = prepareVersionsBefore(input.ruleVersions, boundary);
   versions.push({
     revision: input.revision,
-    effectiveFrom: addDays(input.currentLocalDate, 1),
+    effectiveFrom: boundary,
     state: 'active',
     rule: validation.value,
   });
@@ -264,8 +287,9 @@ export function applyRecurrenceRuleChange(
   return ok(versions);
 }
 
+/** Stopping always waits for the next date: today's plan is left as it stands. */
 export function stopRecurrence(input: StopRecurrenceInput): readonly RecurrenceRuleVersion[] {
-  const versions = prepareVersionsForNextDate(input.ruleVersions, input.currentLocalDate);
+  const versions = prepareVersionsBefore(input.ruleVersions, addDays(input.currentLocalDate, 1));
   versions.push({
     revision: input.revision,
     effectiveFrom: addDays(input.currentLocalDate, 1),
@@ -289,4 +313,24 @@ export function shouldPreserveOccurrenceForRuleChange(
     occurrence.isException ||
     occurrence.isUserDeleted
   );
+}
+
+/**
+ * The rule a recurrence editor should show: the one carried by the newest
+ * version, which is what governs the series from here on.
+ *
+ * It is deliberately not `effectiveRecurrenceVersionOn(versions, today)`. A
+ * rule change takes effect tomorrow (`applyRecurrenceRuleChange`), so reading
+ * "today" would hand the editor the rule the user has just replaced, and
+ * saving that back would silently undo their own edit. Returns `undefined`
+ * when the series has been stopped and there is no rule to edit.
+ */
+export function latestRecurrenceRule(
+  versions: readonly RecurrenceRuleVersion[],
+): RecurrenceRule | undefined {
+  const latest = [...versions]
+    .sort((left, right) => compareLocalDates(left.effectiveFrom, right.effectiveFrom))
+    .at(-1);
+
+  return latest?.state === 'active' ? latest.rule : undefined;
 }

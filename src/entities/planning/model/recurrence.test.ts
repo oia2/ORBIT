@@ -10,6 +10,7 @@ import {
   effectiveRecurrenceVersionOn,
   isRecurrenceApplicableOn,
   isRecurrenceDateApplicable,
+  latestRecurrenceRule,
   shouldPreserveOccurrenceForRuleChange,
   stopRecurrence,
   validateRecurrenceRule,
@@ -311,5 +312,154 @@ describe('effective recurrence versions', () => {
         isUserDeleted: true,
       }),
     ).toBe(true);
+  });
+});
+
+describe('the rule a recurrence editor should show', () => {
+  it('shows the change made today rather than the rule it replaced', () => {
+    const initial = expectValue(createInitialRecurrenceVersion(mondayRule, revision(0)));
+    const changed = expectValue(
+      applyRecurrenceRuleChange({
+        ruleVersions: [initial],
+        currentLocalDate: MONDAY,
+        nextRule: { startDate: localDate('2026-08-01'), weekdays: [2, 4] },
+        revision: revision(1),
+      }),
+    );
+
+    // The old rule is still the one in force today — reading "today" would hand
+    // the editor [1] and saving it back would undo the user's own change.
+    expect(effectiveRecurrenceVersionOn(changed, MONDAY)).toMatchObject({
+      rule: { weekdays: [1] },
+    });
+    expect(latestRecurrenceRule(changed)).toMatchObject({
+      startDate: localDate('2026-08-01'),
+      weekdays: [2, 4],
+    });
+  });
+
+  it('keeps the original start date so an edit never rewrites past history', () => {
+    const initial = expectValue(createInitialRecurrenceVersion(mondayRule, revision(0)));
+
+    expect(latestRecurrenceRule([initial])).toMatchObject({
+      startDate: localDate('2026-08-01'),
+    });
+  });
+
+  it('has no rule to offer once the series is stopped', () => {
+    const initial = expectValue(createInitialRecurrenceVersion(mondayRule, revision(0)));
+    const stopped = stopRecurrence({
+      ruleVersions: [initial],
+      currentLocalDate: MONDAY,
+      revision: revision(1),
+    });
+
+    expect(latestRecurrenceRule(stopped)).toBeUndefined();
+  });
+
+  it('ignores version order in the stored history', () => {
+    const initial = expectValue(createInitialRecurrenceVersion(mondayRule, revision(0)));
+    const changed = expectValue(
+      applyRecurrenceRuleChange({
+        ruleVersions: [initial],
+        currentLocalDate: MONDAY,
+        nextRule: { startDate: MONDAY, weekdays: [3] },
+        revision: revision(1),
+      }),
+    );
+
+    expect(latestRecurrenceRule([...changed].reverse())).toMatchObject({ weekdays: [3] });
+  });
+});
+
+describe('a change that starts on the current date', () => {
+  it('governs today while leaving every earlier date on the rule it ran under', () => {
+    const initial = expectValue(
+      createInitialRecurrenceVersion(
+        { startDate: localDate('2026-08-03'), weekdays: [1] },
+        revision(0),
+      ),
+    );
+    const changed = expectValue(
+      applyRecurrenceRuleChange({
+        ruleVersions: [initial],
+        currentLocalDate: MONDAY,
+        nextRule: { startDate: localDate('2026-08-03'), weekdays: [1, 2] },
+        revision: revision(1),
+        from: 'current-date',
+      }),
+    );
+
+    expect(changed).toHaveLength(2);
+    expect(changed[0]).toMatchObject({ effectiveThrough: localDate('2026-08-09') });
+    expect(changed[1]).toMatchObject({ effectiveFrom: MONDAY, rule: { weekdays: [1, 2] } });
+    // The weekday added today is applicable today, not a day later.
+    expect(isRecurrenceApplicableOn(changed, TUESDAY)).toBe(true);
+    // The Monday a week earlier still answers under the rule that ran then.
+    expect(effectiveRecurrenceVersionOn(changed, localDate('2026-08-03'))).toMatchObject({
+      revision: revision(0),
+    });
+  });
+
+  it('never removes what today already recorded', () => {
+    const initial = expectValue(createInitialRecurrenceVersion(mondayRule, revision(0)));
+    const changed = expectValue(
+      applyRecurrenceRuleChange({
+        ruleVersions: [initial],
+        currentLocalDate: MONDAY,
+        nextRule: { startDate: localDate('2026-08-01'), weekdays: [3] },
+        revision: revision(1),
+        from: 'current-date',
+      }),
+    );
+
+    // Monday is no longer scheduled, but the occurrence it already formed is
+    // protected from the reconciliation that would otherwise drop it.
+    expect(isRecurrenceApplicableOn(changed, MONDAY)).toBe(false);
+    expect(
+      shouldPreserveOccurrenceForRuleChange({
+        occurrenceDate: MONDAY,
+        currentLocalDate: MONDAY,
+        isException: false,
+        isUserDeleted: false,
+      }),
+    ).toBe(true);
+  });
+
+  it('still coalesces repeated changes made on the same day', () => {
+    const initial = expectValue(createInitialRecurrenceVersion(mondayRule, revision(0)));
+    const first = expectValue(
+      applyRecurrenceRuleChange({
+        ruleVersions: [initial],
+        currentLocalDate: MONDAY,
+        nextRule: { startDate: localDate('2026-08-01'), weekdays: [2] },
+        revision: revision(1),
+        from: 'current-date',
+      }),
+    );
+    const final = expectValue(
+      applyRecurrenceRuleChange({
+        ruleVersions: first,
+        currentLocalDate: MONDAY,
+        nextRule: { startDate: localDate('2026-08-01'), weekdays: [3] },
+        revision: revision(2),
+        from: 'current-date',
+      }),
+    );
+
+    expect(final.filter((version) => version.effectiveFrom === MONDAY)).toHaveLength(1);
+    expect(final.at(-1)).toMatchObject({ revision: revision(2), rule: { weekdays: [3] } });
+  });
+
+  it('leaves a stop on the next date, so today keeps its plan', () => {
+    const initial = expectValue(createInitialRecurrenceVersion(mondayRule, revision(0)));
+    const stopped = stopRecurrence({
+      ruleVersions: [initial],
+      currentLocalDate: MONDAY,
+      revision: revision(1),
+    });
+
+    expect(stopped.at(-1)).toMatchObject({ effectiveFrom: TUESDAY, state: 'stopped' });
+    expect(isRecurrenceApplicableOn(stopped, MONDAY)).toBe(true);
   });
 });

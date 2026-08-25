@@ -78,6 +78,8 @@ describe('WeekPage presentation branches', () => {
       habits: [],
       score,
       plannedLoadMinutes: nonNegativeDurationMinutes(0),
+      habitDefinitions: [],
+      taskSeries: [],
       unfinishedTaskIds: [],
     };
 
@@ -120,6 +122,8 @@ describe('WeekPage presentation branches', () => {
       habits: [],
       score,
       plannedLoadMinutes: nonNegativeDurationMinutes(0),
+      habitDefinitions: [],
+      taskSeries: [],
       unfinishedTaskIds: [],
     };
     const week = buildCompletedWeek({
