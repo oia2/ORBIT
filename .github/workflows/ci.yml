@@ -1,0 +1,108 @@
+# The gates from `npm run verify`, split into jobs so a failure names the suite
+# that broke rather than the whole script.
+#
+# Visual comparisons (`npm run test:visual`) are deliberately absent. The
+# baselines in `e2e/visual/__screenshots__/` carry no platform suffix, so they
+# are valid for the machine that approved them; re-rendering them on a hosted
+# Linux runner would diff on font rasterisation alone and report a design
+# regression that did not happen.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# A superseded run proves nothing about the commit that replaced it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  # Every suite creates its own database on this server: the server suites use
+  # one per Vitest worker, the E2E run recreates `orbit_e2e`. Nothing writes to
+  # the database this string names.
+  DATABASE_URL: postgres://orbit:orbit@localhost:5432/orbit
+
+jobs:
+  static:
+    name: format + lint + typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+
+  tests:
+    name: unit + server (PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # The image docker-compose.yml runs, because the schema's constraints
+        # are part of what the server suites prove.
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: orbit
+          POSTGRES_PASSWORD: orbit
+          POSTGRES_DB: orbit
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U orbit -d orbit"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Domain, UI and server suites with coverage thresholds
+        run: npm run test:coverage
+      - name: Server suites under a non-UTC timezone (SC-007)
+        run: npm run test:server:tz
+
+  e2e:
+    name: e2e (Playwright)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: orbit
+          POSTGRES_PASSWORD: orbit
+          POSTGRES_DB: orbit
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U orbit -d orbit"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+      - name: Journeys, touch reflow and accessibility
+        run: npm run test:e2e
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
